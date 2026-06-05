@@ -1,0 +1,1 @@
+- [Whispered App Stack](whispered-stack.md) — key decisions: metro blockList fix, Clerk proxy dev vs prod, WS path, auth patterns

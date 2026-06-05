@@ -25,7 +25,6 @@ const domain = process.env.EXPO_PUBLIC_DOMAIN;
 if (domain) setBaseUrl(`https://${domain}`);
 
 const publishableKey = process.env.EXPO_PUBLIC_CLERK_PUBLISHABLE_KEY ?? "";
-const proxyUrl = process.env.EXPO_PUBLIC_CLERK_PROXY_URL || undefined;
 
 const queryClient = new QueryClient();
 
@@ -106,7 +105,6 @@ export default function RootLayout() {
         <ClerkProvider
           publishableKey={publishableKey}
           tokenCache={tokenCache}
-          proxyUrl={proxyUrl}
         >
           <ClerkLoaded>
             <QueryClientProvider client={queryClient}>
