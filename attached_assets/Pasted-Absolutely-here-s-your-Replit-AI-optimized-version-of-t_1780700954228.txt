@@ -1,0 +1,367 @@
+Absolutely — here’s your Replit AI–optimized version of the same prompt. It keeps all features intact, but is structured the way Replit AI understands best (clear stack, architecture, and implementation instructions).
+
+⸻
+
+💗 Whispered — Private Couples App (Replit AI Build Prompt)
+
+Build a full-stack, production-ready mobile-first couples app called Whispered.
+
+This is a private, invite-only app for exactly ONE couple (two users total). There is no public system, no social network, and no multi-couple marketplace. Everything is shared only between two linked accounts.
+
+The app should feel:
+
+* 🌙 calm, private, and emotional
+* ❤️ relationship-focused
+* ✨ premium and modern
+* 📱 mobile-first (React Native or Expo preferred)
+
+⸻
+
+🧠 Recommended Tech Stack
+
+Use a modern full-stack setup:
+
+Frontend
+
+* React Native (Expo) OR Next.js mobile-first UI
+* Clean component-based architecture
+* Tailwind or styled components for UI styling
+
+Backend
+
+* Node.js (Express or Next API routes)
+* Real-time messaging via WebSockets or Supabase Realtime
+
+Database
+
+* Supabase (preferred) or PostgreSQL
+* Storage for images and voice notes
+
+Auth
+
+* Clerk or Supabase Auth (separate accounts for each partner)
+
+⸻
+
+🔐 Authentication & Couple Linking
+
+* Each user has a separate account
+* After login, users join via invite code system
+* Only TWO users can exist in a relationship
+* Once linked, both users share one private “relationship space”
+
+⸻
+
+🏠 Dashboard (Home Screen)
+
+A customizable emotional hub showing:
+
+* ❤️ Days together counter
+* 📅 Anniversary countdown
+* 💬 Recent messages preview
+* 📸 Latest memory highlight
+* 🎯 Goal progress summary
+* 😊 Partner mood status
+* 🔥 Love streak status
+* 📊 Relationship stats summary
+
+Requirements:
+
+* Widget-based system (toggle + reorder widgets)
+* Shared dashboard between both users
+* Clean card UI with soft animations
+* Mobile-first layout
+
+⸻
+
+💬 Chat System (REAL-TIME)
+
+Build a full real-time messaging system:
+
+Core features:
+
+* Instant messaging (WebSockets / Supabase Realtime)
+* Persistent message history
+* Timestamps
+* Read receipts (seen/delivered)
+* Typing indicators
+* Edit messages
+* Delete messages
+* Unsend messages
+
+Media support:
+
+* Text messages
+* Emojis + reactions (basic + custom)
+* Image uploads
+    * crop
+    * rotate
+    * soft filters
+    * captions
+* Voice notes (max 1–2 minutes)
+* Message search by keyword
+
+Constraints:
+
+* No GIFs
+* No stickers
+* Keep UI clean and minimal
+
+⸻
+
+📸 Memories System
+
+Private shared photo timeline:
+
+* Upload images with captions
+* Automatic date stamping
+* Scrollable timeline/gallery
+* View-only interaction (no likes/comments)
+* Search by caption or date
+* Export feature:
+    * Download images + captions only
+
+⸻
+
+🎯 Shared Goals System
+
+* Create shared relationship goals
+* Set due dates
+* Track progress visually (percent complete)
+* Mark completion
+* Add reminders/notifications
+* Dashboard integration
+
+⸻
+
+📓 Shared Journal
+
+A private shared diary:
+
+* Text entries
+* Optional images
+* Date/time stamps
+* Chronological feed
+* Fully shared between both users
+* Searchable
+
+⸻
+
+😊 Mood System
+
+* Each partner sets daily mood
+* Mood is shared with partner
+* Displayed on dashboard
+* Simple moods:
+    * happy
+    * calm
+    * okay
+    * sad
+    * loved
+
+⸻
+
+🌅 Daily Prompts System
+
+* One shared daily question
+* Both users answer privately
+* Answers are hidden until both respond
+* Once both respond → reveal simultaneously
+* Stored in “Daily Reflection” archive
+
+⸻
+
+🔥 Love Streak System
+
+Tracks daily relationship consistency:
+
+* Based on engagement (chat, prompts, mood check-ins)
+* STRICT MODE:
+    * missing a day resets streak
+* Dashboard display
+* Milestone celebrations (7, 30, 100 days)
+
+⸻
+
+📅 Relationship Timeline
+
+Auto-generated milestone tracking:
+
+* First message
+* First memory
+* First goal completion
+* Streak milestones
+* Days together milestones
+
+Displayed as a scrollable timeline feed.
+
+⸻
+
+🔔 Notifications System
+
+Push + in-app notifications:
+
+* New messages
+* Mood updates
+* Goal progress
+* New memories
+* Daily prompt reminders
+
+Keep notifications subtle (not spammy).
+
+⸻
+
+🔍 Global Search System
+
+Search across:
+
+* Chat messages
+* Memories
+* Journal entries
+
+Features:
+
+* Keyword search
+* Highlight results
+* Jump-to-location navigation
+
+⸻
+
+🎨 Theme System
+
+* Shared visual themes between both users
+* Options:
+    * calm 🌙
+    * warm ❤️
+    * playful 😄
+    * elegant ✨
+* Changes:
+    * colors
+    * accents
+    * UI mood styling
+
+⸻
+
+🌅 Daily Welcome Experience
+
+On app open:
+
+* Time-based greeting:
+    * “Good morning ❤️”
+    * “Good evening 🌙”
+* Quick summary:
+    * partner mood
+    * streak status
+    * new messages
+    * today’s prompt status
+    * recent activity
+
+⸻
+
+☁️ Backup & Sync System
+
+* Full cloud backup of:
+    * chat
+    * memories
+    * journal
+    * goals
+    * moods
+    * streaks
+    * stats
+* Automatic restore on login from new device
+
+⸻
+
+🎛️ Dashboard Customization
+
+* Users can enable/disable widgets
+* Drag-and-drop layout system
+* Shared configuration between both users
+* Widgets include:
+    * streak
+    * messages
+    * memories
+    * mood
+    * stats
+    * goals
+
+⸻
+
+📊 Relationship Stats
+
+Track:
+
+* total messages
+* total memories
+* days together
+* streak length
+* prompt completion rate
+* mood history count
+
+Displayed in a soft emotional style (not corporate analytics).
+
+⸻
+
+🌙 Signature Feature — Whisper Moments
+
+A core emotional feature:
+
+Users can send hidden messages that unlock later based on conditions:
+
+Reveal conditions:
+
+* time delay ⏳
+* both users online ❤️
+* streak milestone 🔥
+* anniversary date 📅
+* after daily prompt completion 🌅
+
+Content types:
+
+* text
+* voice notes
+* images
+* journal-style entries
+
+This is the emotional core of the app.
+
+⸻
+
+🚀 Final Goal
+
+Build a fully working production-grade mobile-first app that includes:
+
+* authentication
+* invite-only couple linking
+* real-time chat system
+* memories system
+* shared goals
+* journal
+* mood tracking
+* daily prompts
+* love streaks
+* relationship timeline
+* notifications
+* search system
+* themes
+* onboarding flow
+* dashboard customization
+* backup system
+* Whisper moments (signature feature)
+
+The app must be:
+
+* fully functional
+* mobile-optimized
+* real-time where required
+* ready to demo immediately
+
+⸻
+
+If you want next, I can:
+
+* ￼ simplify this so Replit builds it faster ⚡
+* or ￼ split it into backend + frontend architecture (so it doesn’t break)
+* or ￼ help you fix whatever Replit generates
+
+Just tell me 👍
