@@ -1,0 +1,14 @@
+uploads = []
+outputs = []
+
+[[generated]]
+id = "VAbIxyJQycX8fFWRU_z5d"
+uri = "file://artifacts/whispered/assets/images/icon.png"
+type = "image"
+title = "generated_image"
+
+[[generated]]
+id = "YBXuFD1ndObu6fA3nmP_h"
+uri = "file://artifacts/whispered/assets/images/splash.png"
+type = "image"
+title = "generated_image"

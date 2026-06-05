@@ -1,6 +1,5 @@
 openapi: 3.1.0
 info:
-  # Do not change the title, if the title changes, the import paths will be broken
   title: Api
   version: 0.1.0
   description: API specification
@@ -10,13 +9,16 @@ servers:
 tags:
   - name: health
     description: Health operations
+  - name: couple
+    description: Couple management
+  - name: messages
+    description: Chat messages
 paths:
   /healthz:
     get:
       operationId: healthCheck
       tags: [health]
       summary: Health check
-      description: Returns server health status
       responses:
         "200":
           description: Healthy
@@ -24,6 +26,144 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/HealthStatus"
+  /couple/create:
+    post:
+      operationId: createCouple
+      tags: [couple]
+      summary: Create a new couple and get an invite code
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                displayName:
+                  type: string
+                startDate:
+                  type: string
+      responses:
+        "200":
+          description: Couple created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CoupleResponse"
+  /couple/join:
+    post:
+      operationId: joinCouple
+      tags: [couple]
+      summary: Join a couple with an invite code
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [inviteCode]
+              properties:
+                inviteCode:
+                  type: string
+                displayName:
+                  type: string
+      responses:
+        "200":
+          description: Joined couple
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CoupleResponse"
+        "404":
+          description: Invalid invite code
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+  /couple/me:
+    get:
+      operationId: getMyCouple
+      tags: [couple]
+      summary: Get current user's couple
+      responses:
+        "200":
+          description: Couple info
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CoupleResponse"
+        "404":
+          description: No couple
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+  /messages:
+    get:
+      operationId: getMessages
+      tags: [messages]
+      summary: Get message history
+      parameters:
+        - name: before
+          in: query
+          schema:
+            type: string
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 50
+      responses:
+        "200":
+          description: Messages
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Message"
+  /messages/{id}:
+    delete:
+      operationId: deleteMessage
+      tags: [messages]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Deleted
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SuccessResponse"
+    patch:
+      operationId: editMessage
+      tags: [messages]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [content]
+              properties:
+                content:
+                  type: string
+      responses:
+        "200":
+          description: Updated message
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Message"
 components:
   schemas:
     HealthStatus:
@@ -33,4 +173,62 @@ components:
           type: string
       required:
         - status
-
+    CoupleResponse:
+      type: object
+      required: [id, user1Id, inviteCode, startDate, isLinked]
+      properties:
+        id:
+          type: string
+        user1Id:
+          type: string
+        user2Id:
+          type: string
+          nullable: true
+        inviteCode:
+          type: string
+        startDate:
+          type: string
+        isLinked:
+          type: boolean
+        partnerDisplayName:
+          type: string
+          nullable: true
+    Message:
+      type: object
+      required: [id, coupleId, senderId, content, type, isDeleted, createdAt]
+      properties:
+        id:
+          type: string
+        coupleId:
+          type: string
+        senderId:
+          type: string
+        content:
+          type: string
+        type:
+          type: string
+        mediaUrl:
+          type: string
+          nullable: true
+        isDeleted:
+          type: boolean
+        editedAt:
+          type: string
+          nullable: true
+        seenAt:
+          type: string
+          nullable: true
+        createdAt:
+          type: string
+    ErrorResponse:
+      type: object
+      required: [error]
+      properties:
+        error:
+          type: string
+    SuccessResponse:
+      type: object
+      required: [success]
+      properties:
+        success:
+          type: boolean
