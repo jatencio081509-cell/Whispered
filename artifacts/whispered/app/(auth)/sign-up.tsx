@@ -43,13 +43,13 @@ export default function SignUpScreen() {
     setError("");
     try {
       const parts = name.trim().split(" ");
-      await signUp.create({
+      const created = await signUp.create({
         emailAddress: email.trim(),
         password,
         ...(parts[0] && { firstName: parts[0] }),
         ...(parts[1] && { lastName: parts.slice(1).join(" ") }),
       });
-      await signUp.prepareEmailAddressVerification({ strategy: "email_code" });
+      await created.prepareEmailAddressVerification({ strategy: "email_code" });
       setStep("verify");
     } catch (err: unknown) {
       const clerkErr = err as { errors?: { message: string; longMessage?: string }[] };
