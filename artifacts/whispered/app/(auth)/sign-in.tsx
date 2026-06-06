@@ -22,7 +22,7 @@ export default function SignInScreen() {
   const colors = useColors();
   const router = useRouter();
   const insets = useSafeAreaInsets();
-  const { isLoaded, signIn, setActive } = useSignIn();
+  const { signIn, setActive } = useSignIn();
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -31,8 +31,8 @@ export default function SignInScreen() {
   const [error, setError] = useState("");
 
   const handleSignIn = async () => {
-    if (!isLoaded || !signIn) {
-      Alert.alert("Not ready", "Clerk is still loading. Please wait a moment.");
+    if (!signIn) {
+      Alert.alert("Not ready", "Please wait a moment and try again.");
       return;
     }
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);

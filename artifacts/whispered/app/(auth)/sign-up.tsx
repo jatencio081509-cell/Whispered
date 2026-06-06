@@ -22,7 +22,7 @@ export default function SignUpScreen() {
   const colors = useColors();
   const router = useRouter();
   const insets = useSafeAreaInsets();
-  const { isLoaded, signUp, setActive } = useSignUp();
+  const { signUp, setActive } = useSignUp();
 
   const [step, setStep] = useState<"details" | "verify">("details");
   const [name, setName] = useState("");
@@ -34,8 +34,8 @@ export default function SignUpScreen() {
   const [error, setError] = useState("");
 
   const handleSignUp = async () => {
-    if (!isLoaded || !signUp) {
-      Alert.alert("Not ready", "Clerk is still loading. Please wait a moment.");
+    if (!signUp) {
+      Alert.alert("Not ready", "Please wait a moment and try again.");
       return;
     }
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
@@ -65,7 +65,7 @@ export default function SignUpScreen() {
   };
 
   const handleVerify = async () => {
-    if (!isLoaded || !signUp) return;
+    if (!signUp) return;
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     setLoading(true);
     setError("");
