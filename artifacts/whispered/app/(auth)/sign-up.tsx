@@ -77,35 +77,40 @@ export default function SignUpScreen() {
     setError("");
     try {
       const liveSignUp = clerk.client?.signUp ?? signUp;
-      const result = await liveSignUp.attemptEmailAddressVerification({ code });
-      if (result.status === "complete" || result.status === "missing_requirements") {
-        await setActive({ session: result.createdSessionId });
-        router.replace("/(auth)/link-partner");
-      } else {
-        setError("Verification incomplete. Please try again.");
-      }
+      await liveSignUp.attemptEmailAddressVerification({ code });
     } catch (err: unknown) {
       const clerkErr = err as { errors?: { code?: string; message: string }[] };
       const errCode = clerkErr?.errors?.[0]?.code;
-      const msg = clerkErr?.errors?.[0]?.message || "Invalid code. Please try again.";
-
-      // If already verified, the account is complete — just activate the session
-      if (
+      const msg = clerkErr?.errors?.[0]?.message ?? "";
+      const isAlreadyVerified =
         errCode === "form_identifier_already_verified" ||
         msg.toLowerCase().includes("already verified") ||
-        msg.toLowerCase().includes("already been verified")
-      ) {
-        const liveSignUp = clerk.client?.signUp;
-        const sessionId = liveSignUp?.createdSessionId;
-        if (sessionId) {
-          await setActive({ session: sessionId });
-          router.replace("/(auth)/link-partner");
-          return;
-        }
+        msg.toLowerCase().includes("already been verified");
+      // Only bail on actual bad-code errors, not "already verified"
+      if (!isAlreadyVerified) {
+        setError(msg || "Invalid code. Please try again.");
+        setLoading(false);
+        return;
       }
+    }
 
+    // After attempt (success or already-verified), read the live client state
+    try {
+      const liveSignUp = clerk.client?.signUp;
+      const sessionId =
+        liveSignUp?.createdSessionId ??
+        clerk.client?.sessions?.[0]?.id;
+
+      if (sessionId) {
+        await setActive({ session: sessionId });
+        router.replace("/(auth)/link-partner");
+      } else {
+        setError("Could not activate session. Please try signing in.");
+      }
+    } catch (err: unknown) {
+      const msg = (err instanceof Error ? err.message : "Something went wrong.");
       setError(msg);
-      Alert.alert("Verification error", msg);
+      Alert.alert("Error", msg);
     } finally {
       setLoading(false);
     }
