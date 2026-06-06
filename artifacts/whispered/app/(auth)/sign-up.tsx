@@ -11,7 +11,7 @@ import {
   TextInput,
   View,
 } from "react-native";
-import { useSignUp } from "@clerk/expo";
+import { useSignUp, useClerk } from "@clerk/expo";
 import { useRouter } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Feather } from "@expo/vector-icons";
@@ -23,6 +23,7 @@ export default function SignUpScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const { signUp, setActive } = useSignUp();
+  const clerk = useClerk();
 
   const [step, setStep] = useState<"details" | "verify">("details");
   const [name, setName] = useState("");
@@ -43,17 +44,19 @@ export default function SignUpScreen() {
     setError("");
     try {
       const parts = name.trim().split(" ");
-      const created = await signUp.create({
+      await signUp.create({
         emailAddress: email.trim(),
         password,
         ...(parts[0] && { firstName: parts[0] }),
         ...(parts[1] && { lastName: parts.slice(1).join(" ") }),
       });
 
-      // Debug: show status and available methods
-      const methods = Object.getOwnPropertyNames(Object.getPrototypeOf(created)).join(", ");
-      Alert.alert("Debug", `status: ${created.status}\nmethods: ${methods}`);
-      return;
+      // After create(), the live resource is on clerk.client.signUp
+      const liveSignUp = clerk.client?.signUp;
+      if (liveSignUp?.prepareEmailAddressVerification) {
+        await liveSignUp.prepareEmailAddressVerification({ strategy: "email_code" });
+      }
+      setStep("verify");
     } catch (err: unknown) {
       const clerkErr = err as { errors?: { message: string; longMessage?: string }[] };
       const msg =
@@ -73,7 +76,9 @@ export default function SignUpScreen() {
     setLoading(true);
     setError("");
     try {
-      const result = await signUp.attemptEmailAddressVerification({ code });
+      // Use clerk.client.signUp for the live resource
+      const liveSignUp = clerk.client?.signUp ?? signUp;
+      const result = await liveSignUp.attemptEmailAddressVerification({ code });
       if (result.status === "complete") {
         await setActive({ session: result.createdSessionId });
         router.replace("/(auth)/link-partner");
@@ -155,7 +160,17 @@ export default function SignUpScreen() {
 
             <Pressable
               style={styles.resendBtn}
-              onPress={async () => { try { await signUp?.create({ emailAddress: email.trim(), password }); } catch {} }}
+              onPress={async () => {
+                try {
+                  const liveSignUp = clerk.client?.signUp;
+                  if (liveSignUp?.prepareEmailAddressVerification) {
+                    await liveSignUp.prepareEmailAddressVerification({ strategy: "email_code" });
+                    Alert.alert("Code sent", "A new code has been sent to your email.");
+                  }
+                } catch {
+                  Alert.alert("Error", "Could not resend code. Please try again.");
+                }
+              }}
             >
               <Text style={[styles.resendText, { color: colors.mutedForeground }]}>Resend code</Text>
             </Pressable>
