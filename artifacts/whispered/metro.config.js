@@ -10,4 +10,9 @@ config.resolver.blockList = /node_modules[/\\]\.pnpm[/\\].*_tmp_\d+[/\\].*/;
 const workspaceRoot = path.resolve(__dirname, "../..");
 config.watchFolders = [workspaceRoot];
 
+// Expo Go compatibility: stub native-only packages not bundled in Expo Go
+config.resolver.extraNodeModules = {
+  "expo-glass-effect": path.resolve(__dirname, "mocks/expo-glass-effect.js"),
+};
+
 module.exports = config;
