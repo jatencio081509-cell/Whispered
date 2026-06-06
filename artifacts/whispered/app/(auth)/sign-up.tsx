@@ -11,7 +11,7 @@ import {
   View,
 } from "react-native";
 import { useSignUp } from "@clerk/expo";
-import { type Href, useRouter } from "expo-router";
+import { useRouter } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Feather } from "@expo/vector-icons";
 import { useColors } from "@/hooks/useColors";
@@ -21,7 +21,7 @@ export default function SignUpScreen() {
   const colors = useColors();
   const router = useRouter();
   const insets = useSafeAreaInsets();
-  const { signUp, errors, fetchStatus } = useSignUp();
+  const { isLoaded, signUp, setActive } = useSignUp();
 
   const [step, setStep] = useState<"details" | "verify">("details");
   const [name, setName] = useState("");
@@ -29,36 +29,55 @@ export default function SignUpScreen() {
   const [password, setPassword] = useState("");
   const [code, setCode] = useState("");
   const [showPassword, setShowPassword] = useState(false);
-
-  const isLoading = fetchStatus === "fetching";
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
 
   const handleSignUp = async () => {
+    if (!isLoaded) return;
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-    const { error } = await signUp.password({ emailAddress: email, password });
-    if (error) return;
-    await signUp.verifications.sendEmailCode();
-    setStep("verify");
-  };
-
-  const handleVerify = async () => {
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-    await signUp.verifications.verifyEmailCode({ code });
-    if (signUp.status === "complete") {
-      await signUp.finalize({
-        navigate: ({ decorateUrl }) => {
-          const url = decorateUrl("/");
-          if (url.startsWith("http")) return;
-          router.replace("/(auth)/link-partner" as Href);
-        },
+    setLoading(true);
+    setError("");
+    try {
+      await signUp.create({
+        emailAddress: email,
+        password,
+        firstName: name.split(" ")[0] || name,
+        lastName: name.split(" ").slice(1).join(" ") || undefined,
       });
+      await signUp.prepareEmailAddressVerification({ strategy: "email_code" });
+      setStep("verify");
+    } catch (err: unknown) {
+      const msg =
+        (err as { errors?: { message: string }[] })?.errors?.[0]?.message ||
+        "Something went wrong. Please try again.";
+      setError(msg);
+    } finally {
+      setLoading(false);
     }
   };
 
-  const errorMsg =
-    errors?.fields?.emailAddress?.message ||
-    errors?.fields?.password?.message ||
-    errors?.fields?.code?.message ||
-    errors?.global?.message;
+  const handleVerify = async () => {
+    if (!isLoaded) return;
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    setLoading(true);
+    setError("");
+    try {
+      const result = await signUp.attemptEmailAddressVerification({ code });
+      if (result.status === "complete") {
+        await setActive({ session: result.createdSessionId });
+        router.replace("/(auth)/link-partner");
+      } else {
+        setError("Verification incomplete. Please try again.");
+      }
+    } catch (err: unknown) {
+      const msg =
+        (err as { errors?: { message: string }[] })?.errors?.[0]?.message ||
+        "Invalid code. Please try again.";
+      setError(msg);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   if (step === "verify") {
     return (
@@ -114,7 +133,7 @@ export default function SignUpScreen() {
               autoFocus
             />
 
-            {errorMsg ? (
+            {error ? (
               <View
                 style={[
                   styles.errorBox,
@@ -123,7 +142,7 @@ export default function SignUpScreen() {
               >
                 <Feather name="alert-circle" size={14} color={colors.destructive} />
                 <Text style={[styles.errorText, { color: colors.destructive }]}>
-                  {errorMsg}
+                  {error}
                 </Text>
               </View>
             ) : null}
@@ -133,20 +152,17 @@ export default function SignUpScreen() {
                 styles.submitBtn,
                 {
                   backgroundColor: colors.primary,
-                  opacity: !code || isLoading || pressed ? 0.7 : 1,
+                  opacity: !code || loading || pressed ? 0.7 : 1,
                 },
               ]}
               onPress={handleVerify}
-              disabled={!code || isLoading}
+              disabled={!code || loading}
             >
-              {isLoading ? (
+              {loading ? (
                 <ActivityIndicator color={colors.primaryForeground} />
               ) : (
                 <Text
-                  style={[
-                    styles.submitText,
-                    { color: colors.primaryForeground },
-                  ]}
+                  style={[styles.submitText, { color: colors.primaryForeground }]}
                 >
                   Verify
                 </Text>
@@ -155,7 +171,9 @@ export default function SignUpScreen() {
 
             <Pressable
               style={styles.resendBtn}
-              onPress={() => signUp.verifications.sendEmailCode()}
+              onPress={() =>
+                signUp.prepareEmailAddressVerification({ strategy: "email_code" })
+              }
             >
               <Text style={[styles.resendText, { color: colors.mutedForeground }]}>
                 Resend code
@@ -188,7 +206,9 @@ export default function SignUpScreen() {
         </Pressable>
 
         <View style={styles.header}>
-          <Text style={[styles.title, { color: colors.text }]}>Create account</Text>
+          <Text style={[styles.title, { color: colors.text }]}>
+            Create account
+          </Text>
           <Text style={[styles.subtitle, { color: colors.mutedForeground }]}>
             Start your private space
           </Text>
@@ -273,7 +293,7 @@ export default function SignUpScreen() {
             </View>
           </View>
 
-          {errorMsg ? (
+          {error ? (
             <View
               style={[
                 styles.errorBox,
@@ -282,7 +302,7 @@ export default function SignUpScreen() {
             >
               <Feather name="alert-circle" size={14} color={colors.destructive} />
               <Text style={[styles.errorText, { color: colors.destructive }]}>
-                {errorMsg}
+                {error}
               </Text>
             </View>
           ) : null}
@@ -293,20 +313,17 @@ export default function SignUpScreen() {
               {
                 backgroundColor: colors.primary,
                 opacity:
-                  !email || !password || isLoading || pressed ? 0.7 : 1,
+                  !email || !password || loading || pressed ? 0.7 : 1,
               },
             ]}
             onPress={handleSignUp}
-            disabled={!email || !password || isLoading}
+            disabled={!email || !password || loading}
           >
-            {isLoading ? (
+            {loading ? (
               <ActivityIndicator color={colors.primaryForeground} />
             ) : (
               <Text
-                style={[
-                  styles.submitText,
-                  { color: colors.primaryForeground },
-                ]}
+                style={[styles.submitText, { color: colors.primaryForeground }]}
               >
                 Create account
               </Text>

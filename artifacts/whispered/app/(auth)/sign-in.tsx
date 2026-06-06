@@ -11,7 +11,7 @@ import {
   View,
 } from "react-native";
 import { useSignIn } from "@clerk/expo";
-import { type Href, useRouter } from "expo-router";
+import { useRouter } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Feather } from "@expo/vector-icons";
 import { useColors } from "@/hooks/useColors";
@@ -21,34 +21,39 @@ export default function SignInScreen() {
   const colors = useColors();
   const router = useRouter();
   const insets = useSafeAreaInsets();
-  const { signIn, errors, fetchStatus } = useSignIn();
+  const { isLoaded, signIn, setActive } = useSignIn();
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
-
-  const isLoading = fetchStatus === "fetching";
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
 
   const handleSignIn = async () => {
+    if (!isLoaded) return;
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-    const { error } = await signIn.password({ emailAddress: email, password });
-    if (error) return;
-
-    if (signIn.status === "complete") {
-      await signIn.finalize({
-        navigate: ({ decorateUrl }) => {
-          const url = decorateUrl("/");
-          if (url.startsWith("http")) return;
-          router.replace("/(tabs)" as Href);
-        },
+    setLoading(true);
+    setError("");
+    try {
+      const result = await signIn.create({
+        identifier: email,
+        password,
       });
+      if (result.status === "complete") {
+        await setActive({ session: result.createdSessionId });
+        router.replace("/(tabs)");
+      } else {
+        setError("Sign in incomplete. Please try again.");
+      }
+    } catch (err: unknown) {
+      const msg =
+        (err as { errors?: { message: string }[] })?.errors?.[0]?.message ||
+        "Invalid email or password.";
+      setError(msg);
+    } finally {
+      setLoading(false);
     }
   };
-
-  const errorMsg =
-    errors?.fields?.emailAddress?.message ||
-    errors?.fields?.password?.message ||
-    errors?.global?.message;
 
   return (
     <KeyboardAvoidingView
@@ -71,7 +76,9 @@ export default function SignInScreen() {
         </Pressable>
 
         <View style={styles.header}>
-          <Text style={[styles.title, { color: colors.text }]}>Welcome back</Text>
+          <Text style={[styles.title, { color: colors.text }]}>
+            Welcome back
+          </Text>
           <Text style={[styles.subtitle, { color: colors.mutedForeground }]}>
             Sign in to continue
           </Text>
@@ -136,16 +143,20 @@ export default function SignInScreen() {
             </View>
           </View>
 
-          {errorMsg ? (
+          {error ? (
             <View
               style={[
                 styles.errorBox,
                 { backgroundColor: `${colors.destructive}15` },
               ]}
             >
-              <Feather name="alert-circle" size={14} color={colors.destructive} />
+              <Feather
+                name="alert-circle"
+                size={14}
+                color={colors.destructive}
+              />
               <Text style={[styles.errorText, { color: colors.destructive }]}>
-                {errorMsg}
+                {error}
               </Text>
             </View>
           ) : null}
@@ -155,14 +166,13 @@ export default function SignInScreen() {
               styles.submitBtn,
               {
                 backgroundColor: colors.primary,
-                opacity:
-                  !email || !password || isLoading || pressed ? 0.7 : 1,
+                opacity: !email || !password || loading || pressed ? 0.7 : 1,
               },
             ]}
             onPress={handleSignIn}
-            disabled={!email || !password || isLoading}
+            disabled={!email || !password || loading}
           >
-            {isLoading ? (
+            {loading ? (
               <ActivityIndicator color={colors.primaryForeground} />
             ) : (
               <Text
@@ -217,11 +227,7 @@ const styles = StyleSheet.create({
     fontFamily: "Inter_400Regular",
   },
   inputWithIcon: { paddingRight: 48 },
-  eyeBtn: {
-    position: "absolute",
-    right: 14,
-    top: 16,
-  },
+  eyeBtn: { position: "absolute", right: 14, top: 16 },
   errorBox: {
     flexDirection: "row",
     alignItems: "center",
@@ -237,10 +243,7 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     marginTop: 4,
   },
-  submitText: {
-    fontSize: 16,
-    fontFamily: "Inter_600SemiBold",
-  },
+  submitText: { fontSize: 16, fontFamily: "Inter_600SemiBold" },
   footer: { flexDirection: "row", justifyContent: "center", flexWrap: "wrap" },
   footerText: { fontSize: 14, fontFamily: "Inter_400Regular" },
   footerLink: { fontSize: 14, fontFamily: "Inter_600SemiBold" },
