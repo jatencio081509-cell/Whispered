@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import {
   ActivityIndicator,
   Alert,
@@ -23,7 +23,17 @@ export default function SignUpScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const { signUp, setActive } = useSignUp();
+  const { signIn } = useSignIn();
   const clerk = useClerk();
+
+  // When the signUp hook updates to "complete" after verification, activate the session
+  useEffect(() => {
+    if (signUp?.status === "complete" && signUp?.createdSessionId) {
+      setActive({ session: signUp.createdSessionId })
+        .then(() => router.replace("/(auth)/link-partner"))
+        .catch(() => router.replace("/(auth)/sign-in"));
+    }
+  }, [signUp?.status, signUp?.createdSessionId]);
 
   const [step, setStep] = useState<"details" | "verify">("details");
   const [name, setName] = useState("");
@@ -78,6 +88,7 @@ export default function SignUpScreen() {
     try {
       const liveSignUp = clerk.client?.signUp ?? signUp;
       await liveSignUp.attemptEmailAddressVerification({ code });
+      // useEffect above will fire when signUp.status becomes "complete"
     } catch (err: unknown) {
       const clerkErr = err as { errors?: { code?: string; message: string }[] };
       const errCode = clerkErr?.errors?.[0]?.code;
@@ -86,33 +97,14 @@ export default function SignUpScreen() {
         errCode === "form_identifier_already_verified" ||
         msg.toLowerCase().includes("already verified") ||
         msg.toLowerCase().includes("already been verified");
-      // Only bail on actual bad-code errors, not "already verified"
-      if (!isAlreadyVerified) {
+      if (isAlreadyVerified) {
+        // Verification already done — useEffect will handle it if signUp updated,
+        // otherwise fall back to sign-in page
+        router.replace("/(auth)/sign-in");
+      } else {
         setError(msg || "Invalid code. Please try again.");
         setLoading(false);
-        return;
       }
-    }
-
-    // After attempt (success or already-verified), read the live client state
-    try {
-      const liveSignUp = clerk.client?.signUp;
-      const sessionId =
-        liveSignUp?.createdSessionId ??
-        clerk.client?.sessions?.[0]?.id;
-
-      if (sessionId) {
-        await setActive({ session: sessionId });
-        router.replace("/(auth)/link-partner");
-      } else {
-        setError("Could not activate session. Please try signing in.");
-      }
-    } catch (err: unknown) {
-      const msg = (err instanceof Error ? err.message : "Something went wrong.");
-      setError(msg);
-      Alert.alert("Error", msg);
-    } finally {
-      setLoading(false);
     }
   };
 
