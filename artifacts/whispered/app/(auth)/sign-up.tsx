@@ -43,13 +43,13 @@ export default function SignUpScreen() {
     setError("");
     try {
       const parts = name.trim().split(" ");
-      const created = await signUp.create({
+      await signUp.create({
         emailAddress: email.trim(),
         password,
         ...(parts[0] && { firstName: parts[0] }),
         ...(parts[1] && { lastName: parts.slice(1).join(" ") }),
       });
-      await created.prepareEmailAddressVerification({ strategy: "email_code" });
+      // Clerk auto-sends verification email on create — go straight to verify step
       setStep("verify");
     } catch (err: unknown) {
       const clerkErr = err as { errors?: { message: string; longMessage?: string }[] };
@@ -152,7 +152,7 @@ export default function SignUpScreen() {
 
             <Pressable
               style={styles.resendBtn}
-              onPress={() => signUp?.prepareEmailAddressVerification({ strategy: "email_code" })}
+              onPress={async () => { try { await signUp?.create({ emailAddress: email.trim(), password }); } catch {} }}
             >
               <Text style={[styles.resendText, { color: colors.mutedForeground }]}>Resend code</Text>
             </Pressable>
