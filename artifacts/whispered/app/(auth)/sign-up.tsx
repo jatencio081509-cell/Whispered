@@ -43,14 +43,17 @@ export default function SignUpScreen() {
     setError("");
     try {
       const parts = name.trim().split(" ");
-      await signUp.create({
+      const created = await signUp.create({
         emailAddress: email.trim(),
         password,
         ...(parts[0] && { firstName: parts[0] }),
         ...(parts[1] && { lastName: parts.slice(1).join(" ") }),
       });
-      // Clerk auto-sends verification email on create — go straight to verify step
-      setStep("verify");
+
+      // Debug: show status and available methods
+      const methods = Object.getOwnPropertyNames(Object.getPrototypeOf(created)).join(", ");
+      Alert.alert("Debug", `status: ${created.status}\nmethods: ${methods}`);
+      return;
     } catch (err: unknown) {
       const clerkErr = err as { errors?: { message: string; longMessage?: string }[] };
       const msg =
