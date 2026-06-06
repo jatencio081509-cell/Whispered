@@ -182,6 +182,15 @@ export default function SignInScreen() {
               </Text>
             )}
           </Pressable>
+
+          <Pressable
+            style={styles.forgotBtn}
+            onPress={() => router.push("/(auth)/forgot-password")}
+          >
+            <Text style={[styles.forgotText, { color: colors.mutedForeground }]}>
+              Forgot password?
+            </Text>
+          </Pressable>
         </View>
 
         <View style={styles.footer}>
@@ -244,6 +253,8 @@ const styles = StyleSheet.create({
     marginTop: 4,
   },
   submitText: { fontSize: 16, fontFamily: "Inter_600SemiBold" },
+  forgotBtn: { alignItems: "center", paddingVertical: 4 },
+  forgotText: { fontSize: 14, fontFamily: "Inter_400Regular" },
   footer: { flexDirection: "row", justifyContent: "center", flexWrap: "wrap" },
   footerText: { fontSize: 14, fontFamily: "Inter_400Regular" },
   footerLink: { fontSize: 14, fontFamily: "Inter_600SemiBold" },
