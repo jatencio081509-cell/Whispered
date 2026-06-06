@@ -76,19 +76,34 @@ export default function SignUpScreen() {
     setLoading(true);
     setError("");
     try {
-      // Use clerk.client.signUp for the live resource
       const liveSignUp = clerk.client?.signUp ?? signUp;
       const result = await liveSignUp.attemptEmailAddressVerification({ code });
-      if (result.status === "complete") {
+      if (result.status === "complete" || result.status === "missing_requirements") {
         await setActive({ session: result.createdSessionId });
         router.replace("/(auth)/link-partner");
       } else {
         setError("Verification incomplete. Please try again.");
       }
     } catch (err: unknown) {
-      const clerkErr = err as { errors?: { message: string }[] };
-      const msg =
-        clerkErr?.errors?.[0]?.message || "Invalid code. Please try again.";
+      const clerkErr = err as { errors?: { code?: string; message: string }[] };
+      const errCode = clerkErr?.errors?.[0]?.code;
+      const msg = clerkErr?.errors?.[0]?.message || "Invalid code. Please try again.";
+
+      // If already verified, the account is complete — just activate the session
+      if (
+        errCode === "form_identifier_already_verified" ||
+        msg.toLowerCase().includes("already verified") ||
+        msg.toLowerCase().includes("already been verified")
+      ) {
+        const liveSignUp = clerk.client?.signUp;
+        const sessionId = liveSignUp?.createdSessionId;
+        if (sessionId) {
+          await setActive({ session: sessionId });
+          router.replace("/(auth)/link-partner");
+          return;
+        }
+      }
+
       setError(msg);
       Alert.alert("Verification error", msg);
     } finally {
