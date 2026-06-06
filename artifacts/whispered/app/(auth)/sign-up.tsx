@@ -29,25 +29,12 @@ export default function SignUpScreen() {
   useEffect(() => {
     console.log("📊 SignUp status changed:", signUp?.status);
     console.log("🔑 SignUp sessionId:", signUp?.createdSessionId);
-    console.log("📋 Full signUp object:", JSON.stringify(signUp, null, 2));
     
     if (signUp?.status === "complete" && signUp?.createdSessionId) {
       console.log("✅ SignUp complete with session! Setting active...");
       setActive({ session: signUp.createdSessionId })
         .then(() => {
           console.log("✅ Session activated, navigating to link-partner");
-          router.replace("/(auth)/link-partner");
-        })
-        .catch((err) => {
-          console.log("❌ Failed to set active session:", err);
-          router.replace("/(auth)/sign-in");
-        });
-    } else if (signUp?.status && signUp?.createdSessionId) {
-      console.log("⚠️ SignUp has sessionId but status is not complete:", signUp.status);
-      console.log("🔄 Attempting to set active session anyway...");
-      setActive({ session: signUp.createdSessionId })
-        .then(() => {
-          console.log("✅ Session activated despite non-complete status");
           router.replace("/(auth)/link-partner");
         })
         .catch((err) => {
@@ -98,15 +85,38 @@ export default function SignUpScreen() {
       console.log("🔐 Verifying email with code:", code);
       const liveSignUp = clerk.client?.signUp ?? signUp;
       const result = await liveSignUp.attemptEmailAddressVerification({ code });
-      console.log("✅ Verification result:", JSON.stringify(result, null, 2));
-      console.log("📊 Result status:", result.status);
-      console.log("🔑 Result sessionId:", result.createdSessionId);
+      console.log("✅ Verification result status:", result.status);
+      console.log("🔑 Verification result sessionId:", result.createdSessionId);
+      
+      // After verification succeeds, manually set the active session
+      if (result.status === "complete" && result.createdSessionId) {
+        console.log("🎉 Verification complete, setting active session...");
+        await setActive({ session: result.createdSessionId });
+        router.replace("/(auth)/link-partner");
+      } else if (result.createdSessionId) {
+        console.log("⚠️ Status not complete but session exists, attempting to set active...");
+        try {
+          await setActive({ session: result.createdSessionId });
+          console.log("✅ Session set successfully");
+          router.replace("/(auth)/link-partner");
+        } catch (sessionErr) {
+          console.log("❌ Failed to set session:", sessionErr);
+          setError("Could not activate session. Please sign in with your new account.");
+          router.replace("/(auth)/sign-in");
+        }
+      } else {
+        console.log("❌ No session returned from verification");
+        setError("Verification failed. Please try again.");
+      }
     } catch (err: unknown) {
       const clerkErr = err as { errors?: { code?: string; message: string }[] };
       const errCode = clerkErr?.errors?.[0]?.code;
       const msg = clerkErr?.errors?.[0]?.message ?? "";
+      console.log("❌ Verification error:", msg, "Code:", errCode);
+      
       const isAlreadyVerified = errCode === "form_identifier_already_verified" || msg.toLowerCase().includes("already verified");
       if (isAlreadyVerified) {
+        console.log("ℹ️ Email already verified, redirecting to sign in");
         router.replace("/(auth)/sign-in");
       } else {
         setError(msg || "Invalid code. Please try again.");
