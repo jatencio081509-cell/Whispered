@@ -1,7 +1,6 @@
-import React, { useEffect, useRef, useState } from "react";
+import React, { useEffect, useState } from "react";
 import {
   ActivityIndicator,
-  Animated,
   FlatList,
   Image,
   Modal,
@@ -34,13 +33,10 @@ export default function MemoriesScreen() {
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
   const [caption, setCaption] = useState("");
   const [isUploading, setIsUploading] = useState(false);
-
   const topPad = Platform.OS === "web" ? insets.top + 67 : insets.top;
 
   useEffect(() => {
-    AsyncStorage.getItem("memories").then((data) => {
-      if (data) setMemories(JSON.parse(data));
-    });
+    AsyncStorage.getItem("memories").then((data) => { if (data) setMemories(JSON.parse(data)); });
   }, []);
 
   const saveMemories = (updated: Memory[]) => {
@@ -51,181 +47,82 @@ export default function MemoriesScreen() {
   const pickImage = async () => {
     const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
     if (status !== "granted") return;
-
-    const result = await ImagePicker.launchImageLibraryAsync({
-      mediaTypes: "images",
-      quality: 0.8,
-      allowsEditing: true,
-      aspect: [4, 3],
-    });
-
-    if (!result.canceled && result.assets[0]) {
-      setSelectedImage(result.assets[0].uri);
-      setShowModal(true);
-    }
+    const result = await ImagePicker.launchImageLibraryAsync({ mediaTypes: "images", quality: 0.8, allowsEditing: true, aspect: [4, 3] });
+    if (!result.canceled && result.assets[0]) { setSelectedImage(result.assets[0].uri); setShowModal(true); }
   };
 
   const addMemory = async () => {
     if (!selectedImage) return;
     setIsUploading(true);
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-
-    const newMemory: Memory = {
-      id: Date.now().toString(36),
-      uri: selectedImage,
-      caption: caption.trim(),
-      date: new Date().toISOString(),
-    };
-
-    const updated = [newMemory, ...memories];
-    saveMemories(updated);
-    setShowModal(false);
-    setSelectedImage(null);
-    setCaption("");
-    setIsUploading(false);
+    const newMemory: Memory = { id: Date.now().toString(36), uri: selectedImage, caption: caption.trim(), date: new Date().toISOString() };
+    saveMemories([newMemory, ...memories]);
+    setShowModal(false); setSelectedImage(null); setCaption(""); setIsUploading(false);
     Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
   };
 
   const deleteMemory = (id: string) => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-    const updated = memories.filter((m) => m.id !== id);
-    saveMemories(updated);
+    saveMemories(memories.filter((m) => m.id !== id));
   };
 
-  const formatDate = (iso: string) => {
-    return new Date(iso).toLocaleDateString(undefined, {
-      month: "long",
-      day: "numeric",
-      year: "numeric",
-    });
-  };
-
-  const numCols = 2;
+  const formatDate = (iso: string) => new Date(iso).toLocaleDateString(undefined, { month: "long", day: "numeric", year: "numeric" });
 
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>
-      {/* Header */}
-      <View
-        style={[
-          styles.header,
-          { paddingTop: topPad + 12, borderBottomColor: colors.border },
-        ]}
-      >
+      <View style={styles.scanLine} />
+      <View style={[styles.header, { paddingTop: topPad + 12, borderBottomColor: colors.border }]}>
         <Text style={[styles.headerTitle, { color: colors.text }]}>Memories</Text>
         <Pressable
-          style={({ pressed }) => [
-            styles.addBtn,
-            { backgroundColor: colors.primary, opacity: pressed ? 0.8 : 1 },
-          ]}
+          style={({ pressed }) => [styles.addBtn, { opacity: pressed ? 0.8 : 1, borderColor: colors.border }]}
           onPress={pickImage}
         >
-          <Feather name="plus" size={20} color={colors.primaryForeground} />
+          <Feather name="plus" size={20} color={colors.primary} />
         </Pressable>
       </View>
 
       {memories.length === 0 ? (
         <View style={styles.empty}>
-          <View
-            style={[
-              styles.emptyIcon,
-              { backgroundColor: `${colors.accent}20` },
-            ]}
-          >
-            <Feather name="image" size={32} color={colors.accent} />
+          <View style={[styles.emptyIcon, { backgroundColor: "rgba(0,229,255,0.08)", borderColor: colors.border, borderWidth: 1 }]}>
+            <Feather name="image" size={32} color={colors.primary} />
           </View>
-          <Text style={[styles.emptyTitle, { color: colors.text }]}>
-            No memories yet
-          </Text>
-          <Text style={[styles.emptySubtitle, { color: colors.mutedForeground }]}>
-            Add your first photo memory together
-          </Text>
-          <Pressable
-            style={[styles.emptyBtn, { backgroundColor: colors.primary }]}
-            onPress={pickImage}
-          >
-            <Feather name="plus" size={16} color={colors.primaryForeground} />
-            <Text style={[styles.emptyBtnText, { color: colors.primaryForeground }]}>
-              Add memory
-            </Text>
+          <Text style={[styles.emptyTitle, { color: colors.text }]}>No memories yet</Text>
+          <Text style={[styles.emptySubtitle, { color: colors.mutedForeground }]}>Add your first photo memory together</Text>
+          <Pressable style={[styles.emptyBtn, { borderColor: colors.primary, borderWidth: 1 }]} onPress={pickImage}>
+            <Feather name="plus" size={16} color={colors.primary} />
+            <Text style={[styles.emptyBtnText, { color: colors.primary }]}>Add memory</Text>
           </Pressable>
         </View>
       ) : (
         <FlatList
           data={memories}
-          numColumns={numCols}
+          numColumns={2}
           keyExtractor={(m) => m.id}
-          contentContainerStyle={[
-            styles.grid,
-            { paddingBottom: insets.bottom + 100 },
-          ]}
+          contentContainerStyle={[styles.grid, { paddingBottom: insets.bottom + 100 }]}
           columnWrapperStyle={styles.row}
           renderItem={({ item: mem }) => (
             <Pressable
-              style={[
-                styles.memCard,
-                { backgroundColor: colors.card, borderColor: colors.border },
-              ]}
+              style={[styles.memCard, { backgroundColor: colors.card, borderColor: colors.border }]}
               onLongPress={() => deleteMemory(mem.id)}
             >
-              <Image
-                source={{ uri: mem.uri }}
-                style={styles.memImage}
-                resizeMode="cover"
-              />
+              <Image source={{ uri: mem.uri }} style={styles.memImage} resizeMode="cover" />
               <View style={styles.memInfo}>
-                {mem.caption ? (
-                  <Text
-                    style={[styles.memCaption, { color: colors.text }]}
-                    numberOfLines={2}
-                  >
-                    {mem.caption}
-                  </Text>
-                ) : null}
-                <Text style={[styles.memDate, { color: colors.mutedForeground }]}>
-                  {formatDate(mem.date)}
-                </Text>
+                {mem.caption ? <Text style={[styles.memCaption, { color: colors.text }]} numberOfLines={2}>{mem.caption}</Text> : null}
+                <Text style={[styles.memDate, { color: colors.mutedForeground }]}>{formatDate(mem.date)}</Text>
               </View>
             </Pressable>
           )}
         />
       )}
 
-      {/* Add Memory Modal */}
-      <Modal
-        visible={showModal}
-        transparent
-        animationType="slide"
-        onRequestClose={() => setShowModal(false)}
-      >
+      <Modal visible={showModal} transparent animationType="slide" onRequestClose={() => setShowModal(false)}>
         <View style={styles.modalOverlay}>
-          <View
-            style={[
-              styles.modalSheet,
-              { backgroundColor: colors.card, borderColor: colors.border },
-            ]}
-          >
-            <View style={styles.modalHandle} />
-            <Text style={[styles.modalTitle, { color: colors.text }]}>
-              Add memory
-            </Text>
-
-            {selectedImage ? (
-              <Image
-                source={{ uri: selectedImage }}
-                style={styles.previewImage}
-                resizeMode="cover"
-              />
-            ) : null}
-
+          <View style={[styles.modalSheet, { backgroundColor: colors.card, borderColor: colors.border }]}>
+            <View style={[styles.modalHandle, { backgroundColor: colors.border }]} />
+            <Text style={[styles.modalTitle, { color: colors.text }]}>Add memory</Text>
+            {selectedImage ? <Image source={{ uri: selectedImage }} style={styles.previewImage} resizeMode="cover" /> : null}
             <TextInput
-              style={[
-                styles.captionInput,
-                {
-                  backgroundColor: colors.input,
-                  borderColor: colors.border,
-                  color: colors.text,
-                },
-              ]}
+              style={[styles.captionInput, { backgroundColor: colors.input, borderColor: colors.border, color: colors.text }]}
               value={caption}
               onChangeText={setCaption}
               placeholder="Add a caption..."
@@ -233,39 +130,18 @@ export default function MemoriesScreen() {
               multiline
               maxLength={200}
             />
-
             <View style={styles.modalButtons}>
               <Pressable
-                style={[
-                  styles.modalCancelBtn,
-                  { borderColor: colors.border },
-                ]}
-                onPress={() => {
-                  setShowModal(false);
-                  setSelectedImage(null);
-                  setCaption("");
-                }}
+                style={[styles.modalCancelBtn, { borderColor: colors.border }]}
+                onPress={() => { setShowModal(false); setSelectedImage(null); setCaption(""); }}
               >
-                <Text style={[styles.modalCancelText, { color: colors.mutedForeground }]}>
-                  Cancel
-                </Text>
+                <Text style={[styles.modalCancelText, { color: colors.mutedForeground }]}>Cancel</Text>
               </Pressable>
-              <Pressable
-                style={[
-                  styles.modalSaveBtn,
-                  { backgroundColor: colors.primary },
-                ]}
-                onPress={addMemory}
-                disabled={isUploading}
-              >
+              <Pressable style={[styles.modalSaveBtn, { backgroundColor: colors.primary }]} onPress={addMemory} disabled={isUploading}>
                 {isUploading ? (
                   <ActivityIndicator color={colors.primaryForeground} size="small" />
                 ) : (
-                  <Text
-                    style={[styles.modalSaveText, { color: colors.primaryForeground }]}
-                  >
-                    Save memory
-                  </Text>
+                  <Text style={[styles.modalSaveText, { color: colors.primaryForeground }]}>Save memory</Text>
                 )}
               </Pressable>
             </View>
@@ -278,105 +154,32 @@ export default function MemoriesScreen() {
 
 const styles = StyleSheet.create({
   container: { flex: 1 },
-  header: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    paddingHorizontal: 20,
-    paddingBottom: 12,
-    borderBottomWidth: 1,
-  },
-  headerTitle: { fontSize: 22, fontFamily: "Inter_700Bold" },
-  addBtn: {
-    width: 38,
-    height: 38,
-    borderRadius: 19,
-    alignItems: "center",
-    justifyContent: "center",
-  },
+  scanLine: { position: "absolute", top: 0, left: 0, right: 0, height: 1, backgroundColor: "rgba(0,229,255,0.3)", zIndex: 10 },
+  header: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", paddingHorizontal: 20, paddingBottom: 12, borderBottomWidth: 1 },
+  headerTitle: { fontSize: 24, fontFamily: "Inter_700Bold", letterSpacing: -0.3 },
+  addBtn: { width: 38, height: 38, borderRadius: 12, borderWidth: 1, alignItems: "center", justifyContent: "center" },
   empty: { flex: 1, alignItems: "center", justifyContent: "center", gap: 14, padding: 32 },
-  emptyIcon: {
-    width: 72,
-    height: 72,
-    borderRadius: 24,
-    alignItems: "center",
-    justifyContent: "center",
-  },
+  emptyIcon: { width: 72, height: 72, borderRadius: 24, alignItems: "center", justifyContent: "center" },
   emptyTitle: { fontSize: 18, fontFamily: "Inter_600SemiBold" },
   emptySubtitle: { fontSize: 14, fontFamily: "Inter_400Regular", textAlign: "center" },
-  emptyBtn: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 8,
-    paddingHorizontal: 20,
-    paddingVertical: 12,
-    borderRadius: 12,
-    marginTop: 8,
-  },
+  emptyBtn: { flexDirection: "row", alignItems: "center", gap: 8, paddingHorizontal: 20, paddingVertical: 12, borderRadius: 12, marginTop: 8 },
   emptyBtnText: { fontSize: 14, fontFamily: "Inter_500Medium" },
   grid: { padding: 12, gap: 10 },
   row: { gap: 10 },
-  memCard: {
-    flex: 1,
-    borderRadius: 14,
-    overflow: "hidden",
-    borderWidth: 1,
-  },
+  memCard: { flex: 1, borderRadius: 16, overflow: "hidden", borderWidth: 1 },
   memImage: { width: "100%", height: 160 },
   memInfo: { padding: 10, gap: 4 },
   memCaption: { fontSize: 12, fontFamily: "Inter_500Medium", lineHeight: 16 },
   memDate: { fontSize: 11, fontFamily: "Inter_400Regular" },
-  modalOverlay: {
-    flex: 1,
-    backgroundColor: "rgba(0,0,0,0.6)",
-    justifyContent: "flex-end",
-  },
-  modalSheet: {
-    borderTopLeftRadius: 24,
-    borderTopRightRadius: 24,
-    borderWidth: 1,
-    padding: 24,
-    gap: 16,
-  },
-  modalHandle: {
-    width: 36,
-    height: 4,
-    borderRadius: 2,
-    backgroundColor: "#555",
-    alignSelf: "center",
-    marginBottom: 4,
-  },
+  modalOverlay: { flex: 1, backgroundColor: "rgba(0,0,0,0.7)", justifyContent: "flex-end" },
+  modalSheet: { borderTopLeftRadius: 24, borderTopRightRadius: 24, borderWidth: 1, padding: 24, gap: 16 },
+  modalHandle: { width: 36, height: 4, borderRadius: 2, alignSelf: "center", marginBottom: 4 },
   modalTitle: { fontSize: 18, fontFamily: "Inter_700Bold" },
-  previewImage: {
-    width: "100%",
-    height: 200,
-    borderRadius: 12,
-  },
-  captionInput: {
-    minHeight: 80,
-    borderRadius: 12,
-    borderWidth: 1,
-    padding: 14,
-    fontSize: 14,
-    fontFamily: "Inter_400Regular",
-    textAlignVertical: "top",
-  },
+  previewImage: { width: "100%", height: 200, borderRadius: 14 },
+  captionInput: { minHeight: 80, borderRadius: 12, borderWidth: 1, padding: 14, fontSize: 14, fontFamily: "Inter_400Regular", textAlignVertical: "top" },
   modalButtons: { flexDirection: "row", gap: 12 },
-  modalCancelBtn: {
-    flex: 1,
-    height: 48,
-    borderRadius: 12,
-    alignItems: "center",
-    justifyContent: "center",
-    borderWidth: 1,
-  },
+  modalCancelBtn: { flex: 1, height: 48, borderRadius: 12, alignItems: "center", justifyContent: "center", borderWidth: 1 },
   modalCancelText: { fontSize: 14, fontFamily: "Inter_500Medium" },
-  modalSaveBtn: {
-    flex: 1,
-    height: 48,
-    borderRadius: 12,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  modalSaveText: { fontSize: 14, fontFamily: "Inter_600SemiBold" },
+  modalSaveBtn: { flex: 1, height: 48, borderRadius: 12, alignItems: "center", justifyContent: "center" },
+  modalSaveText: { fontSize: 14, fontFamily: "Inter_600SemiBold", color: "#030712" },
 });

@@ -11,6 +11,7 @@ import {
   TextInput,
   View,
 } from "react-native";
+import { LinearGradient } from "expo-linear-gradient";
 import { useSignIn } from "@clerk/expo";
 import { useRouter } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
@@ -39,10 +40,7 @@ export default function SignInScreen() {
     setLoading(true);
     setError("");
     try {
-      const result = await signIn.create({
-        identifier: email.trim(),
-        password,
-      });
+      const result = await signIn.create({ identifier: email.trim(), password });
       if (result.status === "complete") {
         await setActive({ session: result.createdSessionId });
         router.replace("/(tabs)");
@@ -67,6 +65,7 @@ export default function SignInScreen() {
       style={[styles.container, { backgroundColor: colors.background }]}
       behavior={Platform.OS === "ios" ? "padding" : "height"}
     >
+      <View style={styles.scanLine} />
       <ScrollView
         contentContainerStyle={[
           styles.inner,
@@ -75,7 +74,7 @@ export default function SignInScreen() {
         keyboardShouldPersistTaps="handled"
       >
         <Pressable style={styles.backBtn} onPress={() => router.back()} hitSlop={12}>
-          <Feather name="arrow-left" size={22} color={colors.text} />
+          <Feather name="arrow-left" size={22} color={colors.primary} />
         </Pressable>
 
         <View style={styles.header}>
@@ -89,10 +88,7 @@ export default function SignInScreen() {
           <View>
             <Text style={[styles.label, { color: colors.mutedForeground }]}>Email</Text>
             <TextInput
-              style={[
-                styles.input,
-                { backgroundColor: colors.input, borderColor: colors.border, color: colors.text },
-              ]}
+              style={[styles.input, { backgroundColor: colors.input, borderColor: colors.border, color: colors.text }]}
               value={email}
               onChangeText={setEmail}
               placeholder="your@email.com"
@@ -107,65 +103,47 @@ export default function SignInScreen() {
             <Text style={[styles.label, { color: colors.mutedForeground }]}>Password</Text>
             <View>
               <TextInput
-                style={[
-                  styles.input,
-                  styles.inputWithIcon,
-                  { backgroundColor: colors.input, borderColor: colors.border, color: colors.text },
-                ]}
+                style={[styles.input, styles.inputWithIcon, { backgroundColor: colors.input, borderColor: colors.border, color: colors.text }]}
                 value={password}
                 onChangeText={setPassword}
                 placeholder="Enter your password"
                 placeholderTextColor={colors.mutedForeground}
                 secureTextEntry={!showPassword}
               />
-              <Pressable
-                style={styles.eyeBtn}
-                onPress={() => setShowPassword(!showPassword)}
-                hitSlop={8}
-              >
-                <Feather
-                  name={showPassword ? "eye-off" : "eye"}
-                  size={18}
-                  color={colors.mutedForeground}
-                />
+              <Pressable style={styles.eyeBtn} onPress={() => setShowPassword(!showPassword)} hitSlop={8}>
+                <Feather name={showPassword ? "eye-off" : "eye"} size={18} color={colors.mutedForeground} />
               </Pressable>
             </View>
           </View>
 
           {error ? (
-            <View style={[styles.errorBox, { backgroundColor: `${colors.destructive}15` }]}>
+            <View style={[styles.errorBox, { backgroundColor: `${colors.destructive}15`, borderColor: `${colors.destructive}30` }]}>
               <Feather name="alert-circle" size={14} color={colors.destructive} />
               <Text style={[styles.errorText, { color: colors.destructive }]}>{error}</Text>
             </View>
           ) : null}
 
           <Pressable
-            style={({ pressed }) => [
-              styles.submitBtn,
-              {
-                backgroundColor: colors.primary,
-                opacity: !email || !password || loading || pressed ? 0.7 : 1,
-              },
-            ]}
+            style={({ pressed }) => [styles.submitBtn, { opacity: !email || !password || loading || pressed ? 0.6 : 1 }]}
             onPress={handleSignIn}
             disabled={!email || !password || loading}
           >
-            {loading ? (
-              <ActivityIndicator color={colors.primaryForeground} />
-            ) : (
-              <Text style={[styles.submitText, { color: colors.primaryForeground }]}>
-                Sign in
-              </Text>
-            )}
+            <LinearGradient
+              colors={["#00E5FF", "#0072FF"]}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 1, y: 0 }}
+              style={styles.submitGradient}
+            >
+              {loading ? (
+                <ActivityIndicator color="#030712" />
+              ) : (
+                <Text style={styles.submitText}>Sign in</Text>
+              )}
+            </LinearGradient>
           </Pressable>
 
-          <Pressable
-            style={styles.forgotBtn}
-            onPress={() => router.push("/(auth)/forgot-password")}
-          >
-            <Text style={[styles.forgotText, { color: colors.mutedForeground }]}>
-              Forgot password?
-            </Text>
+          <Pressable style={styles.forgotBtn} onPress={() => router.push("/(auth)/forgot-password")}>
+            <Text style={[styles.forgotText, { color: colors.mutedForeground }]}>Forgot password?</Text>
           </Pressable>
         </View>
 
@@ -184,45 +162,22 @@ export default function SignInScreen() {
 
 const styles = StyleSheet.create({
   container: { flex: 1 },
+  scanLine: { position: "absolute", top: 0, left: 0, right: 0, height: 1, backgroundColor: "rgba(0,229,255,0.3)", zIndex: 10 },
   inner: { paddingHorizontal: 24, gap: 28 },
   backBtn: { width: 40 },
   header: { gap: 6 },
   title: { fontSize: 28, fontFamily: "Inter_700Bold", letterSpacing: -0.5 },
   subtitle: { fontSize: 15, fontFamily: "Inter_400Regular" },
   form: { gap: 20 },
-  label: {
-    fontSize: 13,
-    fontFamily: "Inter_500Medium",
-    marginBottom: 8,
-    letterSpacing: 0.3,
-    textTransform: "uppercase",
-  },
-  input: {
-    height: 52,
-    borderRadius: 12,
-    borderWidth: 1,
-    paddingHorizontal: 16,
-    fontSize: 15,
-    fontFamily: "Inter_400Regular",
-  },
+  label: { fontSize: 11, fontFamily: "Inter_500Medium", marginBottom: 8, letterSpacing: 1.5, textTransform: "uppercase" },
+  input: { height: 52, borderRadius: 12, borderWidth: 1, paddingHorizontal: 16, fontSize: 15, fontFamily: "Inter_400Regular" },
   inputWithIcon: { paddingRight: 48 },
   eyeBtn: { position: "absolute", right: 14, top: 16 },
-  errorBox: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 8,
-    padding: 12,
-    borderRadius: 10,
-  },
+  errorBox: { flexDirection: "row", alignItems: "center", gap: 8, padding: 12, borderRadius: 10, borderWidth: 1 },
   errorText: { fontSize: 13, fontFamily: "Inter_400Regular", flex: 1 },
-  submitBtn: {
-    height: 54,
-    borderRadius: 14,
-    alignItems: "center",
-    justifyContent: "center",
-    marginTop: 4,
-  },
-  submitText: { fontSize: 16, fontFamily: "Inter_600SemiBold" },
+  submitBtn: { borderRadius: 14, overflow: "hidden", marginTop: 4 },
+  submitGradient: { height: 54, alignItems: "center", justifyContent: "center" },
+  submitText: { fontSize: 16, fontFamily: "Inter_600SemiBold", color: "#030712", letterSpacing: 0.3 },
   forgotBtn: { alignItems: "center", paddingVertical: 4 },
   forgotText: { fontSize: 14, fontFamily: "Inter_400Regular" },
   footer: { flexDirection: "row", justifyContent: "center", flexWrap: "wrap" },

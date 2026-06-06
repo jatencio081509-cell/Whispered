@@ -5,7 +5,7 @@ import { Icon, Label, NativeTabs } from "expo-router/unstable-native-tabs";
 import { SymbolView } from "expo-symbols";
 import { Feather } from "@expo/vector-icons";
 import React from "react";
-import { Platform, StyleSheet, View, useColorScheme } from "react-native";
+import { Platform, StyleSheet, View } from "react-native";
 import { useColors } from "@/hooks/useColors";
 
 function NativeTabLayout() {
@@ -33,22 +33,20 @@ function NativeTabLayout() {
 
 function ClassicTabLayout() {
   const colors = useColors();
-  const colorScheme = useColorScheme();
-  const isDark = colorScheme === "dark";
   const isIOS = Platform.OS === "ios";
   const isWeb = Platform.OS === "web";
 
   return (
     <Tabs
       screenOptions={{
-        tabBarActiveTintColor: colors.primary,
+        tabBarActiveTintColor: "#00E5FF",
         tabBarInactiveTintColor: colors.mutedForeground,
         headerShown: false,
         tabBarStyle: {
           position: "absolute",
-          backgroundColor: isIOS ? "transparent" : colors.surface,
+          backgroundColor: "transparent",
           borderTopWidth: 1,
-          borderTopColor: colors.border,
+          borderTopColor: "rgba(0,229,255,0.15)",
           elevation: 0,
           height: isWeb ? 84 : 60,
         },
@@ -59,16 +57,12 @@ function ClassicTabLayout() {
         },
         tabBarBackground: () =>
           isIOS ? (
-            <BlurView
-              intensity={90}
-              tint="dark"
-              style={StyleSheet.absoluteFill}
-            />
+            <BlurView intensity={80} tint="dark" style={StyleSheet.absoluteFill} />
           ) : (
             <View
               style={[
                 StyleSheet.absoluteFill,
-                { backgroundColor: colors.surface, borderTopWidth: 1, borderTopColor: colors.border },
+                { backgroundColor: "#04060E", borderTopWidth: 1, borderTopColor: "rgba(0,229,255,0.15)" },
               ]}
             />
           ),
