@@ -83,9 +83,8 @@ export default function SignUpScreen() {
         router.replace("/(auth)/sign-in");
       } else {
         setError(msg || "Invalid code. Please try again.");
-        setLoading(false);
       }
-    }
+    } finally { setLoading(false); }
   };
 
   if (step === "verify") {
