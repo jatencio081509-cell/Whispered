@@ -27,10 +27,33 @@ export default function SignUpScreen() {
   const clerk = useClerk();
 
   useEffect(() => {
+    console.log("📊 SignUp status changed:", signUp?.status);
+    console.log("🔑 SignUp sessionId:", signUp?.createdSessionId);
+    console.log("📋 Full signUp object:", JSON.stringify(signUp, null, 2));
+    
     if (signUp?.status === "complete" && signUp?.createdSessionId) {
+      console.log("✅ SignUp complete with session! Setting active...");
       setActive({ session: signUp.createdSessionId })
-        .then(() => router.replace("/(auth)/link-partner"))
-        .catch(() => router.replace("/(auth)/sign-in"));
+        .then(() => {
+          console.log("✅ Session activated, navigating to link-partner");
+          router.replace("/(auth)/link-partner");
+        })
+        .catch((err) => {
+          console.log("❌ Failed to set active session:", err);
+          router.replace("/(auth)/sign-in");
+        });
+    } else if (signUp?.status && signUp?.createdSessionId) {
+      console.log("⚠️ SignUp has sessionId but status is not complete:", signUp.status);
+      console.log("🔄 Attempting to set active session anyway...");
+      setActive({ session: signUp.createdSessionId })
+        .then(() => {
+          console.log("✅ Session activated despite non-complete status");
+          router.replace("/(auth)/link-partner");
+        })
+        .catch((err) => {
+          console.log("❌ Failed to set active session:", err);
+          router.replace("/(auth)/sign-in");
+        });
     }
   }, [signUp?.status, signUp?.createdSessionId]);
 
@@ -72,8 +95,12 @@ export default function SignUpScreen() {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     setLoading(true); setError("");
     try {
+      console.log("🔐 Verifying email with code:", code);
       const liveSignUp = clerk.client?.signUp ?? signUp;
-      await liveSignUp.attemptEmailAddressVerification({ code });
+      const result = await liveSignUp.attemptEmailAddressVerification({ code });
+      console.log("✅ Verification result:", JSON.stringify(result, null, 2));
+      console.log("📊 Result status:", result.status);
+      console.log("🔑 Result sessionId:", result.createdSessionId);
     } catch (err: unknown) {
       const clerkErr = err as { errors?: { code?: string; message: string }[] };
       const errCode = clerkErr?.errors?.[0]?.code;
