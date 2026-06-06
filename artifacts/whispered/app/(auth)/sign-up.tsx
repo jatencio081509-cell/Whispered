@@ -10,18 +10,22 @@ import {
   TextInput,
   View,
 } from "react-native";
-import { useSignUp } from "@clerk/expo";
+import { useSignUp, useOAuth } from "@clerk/expo";
 import { useRouter } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Feather } from "@expo/vector-icons";
+import * as WebBrowser from "expo-web-browser";
 import { useColors } from "@/hooks/useColors";
 import * as Haptics from "expo-haptics";
+
+WebBrowser.maybeCompleteAuthSession();
 
 export default function SignUpScreen() {
   const colors = useColors();
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const { isLoaded, signUp, setActive } = useSignUp();
+  const { startOAuthFlow } = useOAuth({ strategy: "oauth_google" });
 
   const [step, setStep] = useState<"details" | "verify">("details");
   const [name, setName] = useState("");
@@ -30,19 +34,48 @@ export default function SignUpScreen() {
   const [code, setCode] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [googleLoading, setGoogleLoading] = useState(false);
   const [error, setError] = useState("");
 
+  const handleGoogleSignUp = async () => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+    setGoogleLoading(true);
+    setError("");
+    try {
+      const { createdSessionId, setActive: oauthSetActive, signUp: oauthSignUp } =
+        await startOAuthFlow();
+      if (createdSessionId && oauthSetActive) {
+        await oauthSetActive({ session: createdSessionId });
+        if (oauthSignUp?.status === "complete") {
+          router.replace("/(auth)/link-partner");
+        } else {
+          router.replace("/(tabs)");
+        }
+      }
+    } catch (err: unknown) {
+      const msg =
+        (err as { errors?: { message: string }[] })?.errors?.[0]?.message ||
+        "Google sign-in failed. Please try again.";
+      setError(msg);
+    } finally {
+      setGoogleLoading(false);
+    }
+  };
+
   const handleSignUp = async () => {
-    if (!isLoaded) return;
+    if (!isLoaded || !signUp) return;
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     setLoading(true);
     setError("");
     try {
+      const firstName = name.trim().split(" ")[0] || undefined;
+      const lastName =
+        name.trim().split(" ").slice(1).join(" ") || undefined;
       await signUp.create({
-        emailAddress: email,
+        emailAddress: email.trim(),
         password,
-        firstName: name.split(" ")[0] || name,
-        lastName: name.split(" ").slice(1).join(" ") || undefined,
+        firstName,
+        lastName,
       });
       await signUp.prepareEmailAddressVerification({ strategy: "email_code" });
       setStep("verify");
@@ -57,7 +90,7 @@ export default function SignUpScreen() {
   };
 
   const handleVerify = async () => {
-    if (!isLoaded) return;
+    if (!isLoaded || !signUp) return;
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     setLoading(true);
     setError("");
@@ -88,19 +121,13 @@ export default function SignUpScreen() {
         <ScrollView
           contentContainerStyle={[
             styles.inner,
-            {
-              paddingTop: insets.top + 20,
-              paddingBottom: insets.bottom + 24,
-            },
+            { paddingTop: insets.top + 20, paddingBottom: insets.bottom + 24 },
           ]}
           keyboardShouldPersistTaps="handled"
         >
           <View style={styles.header}>
             <View
-              style={[
-                styles.iconCircle,
-                { backgroundColor: `${colors.primary}20` },
-              ]}
+              style={[styles.iconCircle, { backgroundColor: `${colors.primary}20` }]}
             >
               <Feather name="mail" size={28} color={colors.primary} />
             </View>
@@ -135,10 +162,7 @@ export default function SignUpScreen() {
 
             {error ? (
               <View
-                style={[
-                  styles.errorBox,
-                  { backgroundColor: `${colors.destructive}15` },
-                ]}
+                style={[styles.errorBox, { backgroundColor: `${colors.destructive}15` }]}
               >
                 <Feather name="alert-circle" size={14} color={colors.destructive} />
                 <Text style={[styles.errorText, { color: colors.destructive }]}>
@@ -161,9 +185,7 @@ export default function SignUpScreen() {
               {loading ? (
                 <ActivityIndicator color={colors.primaryForeground} />
               ) : (
-                <Text
-                  style={[styles.submitText, { color: colors.primaryForeground }]}
-                >
+                <Text style={[styles.submitText, { color: colors.primaryForeground }]}>
                   Verify
                 </Text>
               )}
@@ -172,7 +194,7 @@ export default function SignUpScreen() {
             <Pressable
               style={styles.resendBtn}
               onPress={() =>
-                signUp.prepareEmailAddressVerification({ strategy: "email_code" })
+                signUp?.prepareEmailAddressVerification({ strategy: "email_code" })
               }
             >
               <Text style={[styles.resendText, { color: colors.mutedForeground }]}>
@@ -197,21 +219,47 @@ export default function SignUpScreen() {
         ]}
         keyboardShouldPersistTaps="handled"
       >
-        <Pressable
-          style={styles.backBtn}
-          onPress={() => router.back()}
-          hitSlop={12}
-        >
+        <Pressable style={styles.backBtn} onPress={() => router.back()} hitSlop={12}>
           <Feather name="arrow-left" size={22} color={colors.text} />
         </Pressable>
 
         <View style={styles.header}>
-          <Text style={[styles.title, { color: colors.text }]}>
-            Create account
-          </Text>
+          <Text style={[styles.title, { color: colors.text }]}>Create account</Text>
           <Text style={[styles.subtitle, { color: colors.mutedForeground }]}>
             Start your private space
           </Text>
+        </View>
+
+        <Pressable
+          style={({ pressed }) => [
+            styles.googleBtn,
+            {
+              backgroundColor: colors.card,
+              borderColor: colors.border,
+              opacity: googleLoading || pressed ? 0.7 : 1,
+            },
+          ]}
+          onPress={handleGoogleSignUp}
+          disabled={googleLoading}
+        >
+          {googleLoading ? (
+            <ActivityIndicator color={colors.text} size="small" />
+          ) : (
+            <>
+              <Text style={styles.googleIcon}>G</Text>
+              <Text style={[styles.googleText, { color: colors.text }]}>
+                Continue with Google
+              </Text>
+            </>
+          )}
+        </Pressable>
+
+        <View style={styles.dividerRow}>
+          <View style={[styles.dividerLine, { backgroundColor: colors.border }]} />
+          <Text style={[styles.dividerText, { color: colors.mutedForeground }]}>
+            or
+          </Text>
+          <View style={[styles.dividerLine, { backgroundColor: colors.border }]} />
         </View>
 
         <View style={styles.form}>
@@ -222,11 +270,7 @@ export default function SignUpScreen() {
             <TextInput
               style={[
                 styles.input,
-                {
-                  backgroundColor: colors.input,
-                  borderColor: colors.border,
-                  color: colors.text,
-                },
+                { backgroundColor: colors.input, borderColor: colors.border, color: colors.text },
               ]}
               value={name}
               onChangeText={setName}
@@ -237,17 +281,11 @@ export default function SignUpScreen() {
           </View>
 
           <View>
-            <Text style={[styles.label, { color: colors.mutedForeground }]}>
-              Email
-            </Text>
+            <Text style={[styles.label, { color: colors.mutedForeground }]}>Email</Text>
             <TextInput
               style={[
                 styles.input,
-                {
-                  backgroundColor: colors.input,
-                  borderColor: colors.border,
-                  color: colors.text,
-                },
+                { backgroundColor: colors.input, borderColor: colors.border, color: colors.text },
               ]}
               value={email}
               onChangeText={setEmail}
@@ -259,19 +297,13 @@ export default function SignUpScreen() {
           </View>
 
           <View>
-            <Text style={[styles.label, { color: colors.mutedForeground }]}>
-              Password
-            </Text>
+            <Text style={[styles.label, { color: colors.mutedForeground }]}>Password</Text>
             <View>
               <TextInput
                 style={[
                   styles.input,
                   styles.inputWithIcon,
-                  {
-                    backgroundColor: colors.input,
-                    borderColor: colors.border,
-                    color: colors.text,
-                  },
+                  { backgroundColor: colors.input, borderColor: colors.border, color: colors.text },
                 ]}
                 value={password}
                 onChangeText={setPassword}
@@ -295,10 +327,7 @@ export default function SignUpScreen() {
 
           {error ? (
             <View
-              style={[
-                styles.errorBox,
-                { backgroundColor: `${colors.destructive}15` },
-              ]}
+              style={[styles.errorBox, { backgroundColor: `${colors.destructive}15` }]}
             >
               <Feather name="alert-circle" size={14} color={colors.destructive} />
               <Text style={[styles.errorText, { color: colors.destructive }]}>
@@ -312,8 +341,7 @@ export default function SignUpScreen() {
               styles.submitBtn,
               {
                 backgroundColor: colors.primary,
-                opacity:
-                  !email || !password || loading || pressed ? 0.7 : 1,
+                opacity: !email || !password || loading || pressed ? 0.7 : 1,
               },
             ]}
             onPress={handleSignUp}
@@ -322,9 +350,7 @@ export default function SignUpScreen() {
             {loading ? (
               <ActivityIndicator color={colors.primaryForeground} />
             ) : (
-              <Text
-                style={[styles.submitText, { color: colors.primaryForeground }]}
-              >
+              <Text style={[styles.submitText, { color: colors.primaryForeground }]}>
                 Create account
               </Text>
             )}
@@ -338,9 +364,7 @@ export default function SignUpScreen() {
             Already have an account?{" "}
           </Text>
           <Pressable onPress={() => router.replace("/(auth)/sign-in")}>
-            <Text style={[styles.footerLink, { color: colors.primary }]}>
-              Sign in
-            </Text>
+            <Text style={[styles.footerLink, { color: colors.primary }]}>Sign in</Text>
           </Pressable>
         </View>
       </ScrollView>
@@ -350,9 +374,9 @@ export default function SignUpScreen() {
 
 const styles = StyleSheet.create({
   container: { flex: 1 },
-  inner: { paddingHorizontal: 24, gap: 32 },
+  inner: { paddingHorizontal: 24, gap: 24 },
   backBtn: { width: 40 },
-  header: { alignItems: "center", gap: 10 },
+  header: { alignItems: "center", gap: 8 },
   iconCircle: {
     width: 72,
     height: 72,
@@ -361,16 +385,30 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     marginBottom: 4,
   },
-  title: {
-    fontSize: 28,
+  title: { fontSize: 28, fontFamily: "Inter_700Bold", letterSpacing: -0.5 },
+  subtitle: { fontSize: 15, fontFamily: "Inter_400Regular", textAlign: "center" },
+  googleBtn: {
+    height: 54,
+    borderRadius: 14,
+    borderWidth: 1,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 10,
+  },
+  googleIcon: {
+    fontSize: 18,
     fontFamily: "Inter_700Bold",
-    letterSpacing: -0.5,
+    color: "#4285F4",
   },
-  subtitle: {
-    fontSize: 15,
-    fontFamily: "Inter_400Regular",
-    textAlign: "center",
+  googleText: { fontSize: 15, fontFamily: "Inter_600SemiBold" },
+  dividerRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 12,
   },
+  dividerLine: { flex: 1, height: 1 },
+  dividerText: { fontSize: 13, fontFamily: "Inter_400Regular" },
   form: { gap: 20 },
   label: {
     fontSize: 13,

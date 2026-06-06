@@ -10,33 +10,63 @@ import {
   TextInput,
   View,
 } from "react-native";
-import { useSignIn } from "@clerk/expo";
+import { useSignIn, useOAuth } from "@clerk/expo";
 import { useRouter } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Feather } from "@expo/vector-icons";
+import * as WebBrowser from "expo-web-browser";
 import { useColors } from "@/hooks/useColors";
 import * as Haptics from "expo-haptics";
+
+WebBrowser.maybeCompleteAuthSession();
 
 export default function SignInScreen() {
   const colors = useColors();
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const { isLoaded, signIn, setActive } = useSignIn();
+  const { startOAuthFlow } = useOAuth({ strategy: "oauth_google" });
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [googleLoading, setGoogleLoading] = useState(false);
   const [error, setError] = useState("");
 
+  const handleGoogleSignIn = async () => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+    setGoogleLoading(true);
+    setError("");
+    try {
+      const { createdSessionId, setActive: oauthSetActive, signUp: oauthSignUp } =
+        await startOAuthFlow();
+      if (createdSessionId && oauthSetActive) {
+        await oauthSetActive({ session: createdSessionId });
+        if (oauthSignUp?.status === "complete") {
+          router.replace("/(auth)/link-partner");
+        } else {
+          router.replace("/(tabs)");
+        }
+      }
+    } catch (err: unknown) {
+      const msg =
+        (err as { errors?: { message: string }[] })?.errors?.[0]?.message ||
+        "Google sign-in failed. Please try again.";
+      setError(msg);
+    } finally {
+      setGoogleLoading(false);
+    }
+  };
+
   const handleSignIn = async () => {
-    if (!isLoaded) return;
+    if (!isLoaded || !signIn) return;
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     setLoading(true);
     setError("");
     try {
       const result = await signIn.create({
-        identifier: email,
+        identifier: email.trim(),
         password,
       });
       if (result.status === "complete") {
@@ -67,36 +97,54 @@ export default function SignInScreen() {
         ]}
         keyboardShouldPersistTaps="handled"
       >
-        <Pressable
-          style={styles.backBtn}
-          onPress={() => router.back()}
-          hitSlop={12}
-        >
+        <Pressable style={styles.backBtn} onPress={() => router.back()} hitSlop={12}>
           <Feather name="arrow-left" size={22} color={colors.text} />
         </Pressable>
 
         <View style={styles.header}>
-          <Text style={[styles.title, { color: colors.text }]}>
-            Welcome back
-          </Text>
+          <Text style={[styles.title, { color: colors.text }]}>Welcome back</Text>
           <Text style={[styles.subtitle, { color: colors.mutedForeground }]}>
             Sign in to continue
           </Text>
         </View>
 
+        <Pressable
+          style={({ pressed }) => [
+            styles.googleBtn,
+            {
+              backgroundColor: colors.card,
+              borderColor: colors.border,
+              opacity: googleLoading || pressed ? 0.7 : 1,
+            },
+          ]}
+          onPress={handleGoogleSignIn}
+          disabled={googleLoading}
+        >
+          {googleLoading ? (
+            <ActivityIndicator color={colors.text} size="small" />
+          ) : (
+            <>
+              <Text style={styles.googleIcon}>G</Text>
+              <Text style={[styles.googleText, { color: colors.text }]}>
+                Continue with Google
+              </Text>
+            </>
+          )}
+        </Pressable>
+
+        <View style={styles.dividerRow}>
+          <View style={[styles.dividerLine, { backgroundColor: colors.border }]} />
+          <Text style={[styles.dividerText, { color: colors.mutedForeground }]}>or</Text>
+          <View style={[styles.dividerLine, { backgroundColor: colors.border }]} />
+        </View>
+
         <View style={styles.form}>
           <View>
-            <Text style={[styles.label, { color: colors.mutedForeground }]}>
-              Email
-            </Text>
+            <Text style={[styles.label, { color: colors.mutedForeground }]}>Email</Text>
             <TextInput
               style={[
                 styles.input,
-                {
-                  backgroundColor: colors.input,
-                  borderColor: colors.border,
-                  color: colors.text,
-                },
+                { backgroundColor: colors.input, borderColor: colors.border, color: colors.text },
               ]}
               value={email}
               onChangeText={setEmail}
@@ -109,19 +157,13 @@ export default function SignInScreen() {
           </View>
 
           <View>
-            <Text style={[styles.label, { color: colors.mutedForeground }]}>
-              Password
-            </Text>
+            <Text style={[styles.label, { color: colors.mutedForeground }]}>Password</Text>
             <View>
               <TextInput
                 style={[
                   styles.input,
                   styles.inputWithIcon,
-                  {
-                    backgroundColor: colors.input,
-                    borderColor: colors.border,
-                    color: colors.text,
-                  },
+                  { backgroundColor: colors.input, borderColor: colors.border, color: colors.text },
                 ]}
                 value={password}
                 onChangeText={setPassword}
@@ -145,16 +187,9 @@ export default function SignInScreen() {
 
           {error ? (
             <View
-              style={[
-                styles.errorBox,
-                { backgroundColor: `${colors.destructive}15` },
-              ]}
+              style={[styles.errorBox, { backgroundColor: `${colors.destructive}15` }]}
             >
-              <Feather
-                name="alert-circle"
-                size={14}
-                color={colors.destructive}
-              />
+              <Feather name="alert-circle" size={14} color={colors.destructive} />
               <Text style={[styles.errorText, { color: colors.destructive }]}>
                 {error}
               </Text>
@@ -175,9 +210,7 @@ export default function SignInScreen() {
             {loading ? (
               <ActivityIndicator color={colors.primaryForeground} />
             ) : (
-              <Text
-                style={[styles.submitText, { color: colors.primaryForeground }]}
-              >
+              <Text style={[styles.submitText, { color: colors.primaryForeground }]}>
                 Sign in
               </Text>
             )}
@@ -198,9 +231,7 @@ export default function SignInScreen() {
             Don&apos;t have an account?{" "}
           </Text>
           <Pressable onPress={() => router.replace("/(auth)/sign-up")}>
-            <Text style={[styles.footerLink, { color: colors.primary }]}>
-              Sign up
-            </Text>
+            <Text style={[styles.footerLink, { color: colors.primary }]}>Sign up</Text>
           </Pressable>
         </View>
       </ScrollView>
@@ -210,15 +241,29 @@ export default function SignInScreen() {
 
 const styles = StyleSheet.create({
   container: { flex: 1 },
-  inner: { paddingHorizontal: 24, gap: 32 },
+  inner: { paddingHorizontal: 24, gap: 24 },
   backBtn: { width: 40 },
   header: { gap: 6 },
-  title: {
-    fontSize: 28,
-    fontFamily: "Inter_700Bold",
-    letterSpacing: -0.5,
-  },
+  title: { fontSize: 28, fontFamily: "Inter_700Bold", letterSpacing: -0.5 },
   subtitle: { fontSize: 15, fontFamily: "Inter_400Regular" },
+  googleBtn: {
+    height: 54,
+    borderRadius: 14,
+    borderWidth: 1,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 10,
+  },
+  googleIcon: {
+    fontSize: 18,
+    fontFamily: "Inter_700Bold",
+    color: "#4285F4",
+  },
+  googleText: { fontSize: 15, fontFamily: "Inter_600SemiBold" },
+  dividerRow: { flexDirection: "row", alignItems: "center", gap: 12 },
+  dividerLine: { flex: 1, height: 1 },
+  dividerText: { fontSize: 13, fontFamily: "Inter_400Regular" },
   form: { gap: 20 },
   label: {
     fontSize: 13,
