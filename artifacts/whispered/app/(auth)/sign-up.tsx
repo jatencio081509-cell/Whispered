@@ -1,6 +1,7 @@
 import React, { useState } from "react";
 import {
   ActivityIndicator,
+  Alert,
   KeyboardAvoidingView,
   Platform,
   Pressable,
@@ -10,22 +11,18 @@ import {
   TextInput,
   View,
 } from "react-native";
-import { useSignUp, useOAuth } from "@clerk/expo";
+import { useSignUp } from "@clerk/expo";
 import { useRouter } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Feather } from "@expo/vector-icons";
-import * as WebBrowser from "expo-web-browser";
 import { useColors } from "@/hooks/useColors";
 import * as Haptics from "expo-haptics";
-
-WebBrowser.maybeCompleteAuthSession();
 
 export default function SignUpScreen() {
   const colors = useColors();
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const { isLoaded, signUp, setActive } = useSignUp();
-  const { startOAuthFlow } = useOAuth({ strategy: "oauth_google" });
 
   const [step, setStep] = useState<"details" | "verify">("details");
   const [name, setName] = useState("");
@@ -34,56 +31,34 @@ export default function SignUpScreen() {
   const [code, setCode] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
-  const [googleLoading, setGoogleLoading] = useState(false);
   const [error, setError] = useState("");
 
-  const handleGoogleSignUp = async () => {
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-    setGoogleLoading(true);
-    setError("");
-    try {
-      const { createdSessionId, setActive: oauthSetActive, signUp: oauthSignUp } =
-        await startOAuthFlow();
-      if (createdSessionId && oauthSetActive) {
-        await oauthSetActive({ session: createdSessionId });
-        if (oauthSignUp?.status === "complete") {
-          router.replace("/(auth)/link-partner");
-        } else {
-          router.replace("/(tabs)");
-        }
-      }
-    } catch (err: unknown) {
-      const msg =
-        (err as { errors?: { message: string }[] })?.errors?.[0]?.message ||
-        "Google sign-in failed. Please try again.";
-      setError(msg);
-    } finally {
-      setGoogleLoading(false);
-    }
-  };
-
   const handleSignUp = async () => {
-    if (!isLoaded || !signUp) return;
+    if (!isLoaded || !signUp) {
+      Alert.alert("Not ready", "Clerk is still loading. Please wait a moment.");
+      return;
+    }
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     setLoading(true);
     setError("");
     try {
-      const firstName = name.trim().split(" ")[0] || undefined;
-      const lastName =
-        name.trim().split(" ").slice(1).join(" ") || undefined;
+      const parts = name.trim().split(" ");
       await signUp.create({
         emailAddress: email.trim(),
         password,
-        firstName,
-        lastName,
+        ...(parts[0] && { firstName: parts[0] }),
+        ...(parts[1] && { lastName: parts.slice(1).join(" ") }),
       });
       await signUp.prepareEmailAddressVerification({ strategy: "email_code" });
       setStep("verify");
     } catch (err: unknown) {
+      const clerkErr = err as { errors?: { message: string; longMessage?: string }[] };
       const msg =
-        (err as { errors?: { message: string }[] })?.errors?.[0]?.message ||
-        "Something went wrong. Please try again.";
+        clerkErr?.errors?.[0]?.longMessage ||
+        clerkErr?.errors?.[0]?.message ||
+        (err instanceof Error ? err.message : "Something went wrong.");
       setError(msg);
+      Alert.alert("Sign up error", msg);
     } finally {
       setLoading(false);
     }
@@ -103,10 +78,11 @@ export default function SignUpScreen() {
         setError("Verification incomplete. Please try again.");
       }
     } catch (err: unknown) {
+      const clerkErr = err as { errors?: { message: string }[] };
       const msg =
-        (err as { errors?: { message: string }[] })?.errors?.[0]?.message ||
-        "Invalid code. Please try again.";
+        clerkErr?.errors?.[0]?.message || "Invalid code. Please try again.";
       setError(msg);
+      Alert.alert("Verification error", msg);
     } finally {
       setLoading(false);
     }
@@ -126,14 +102,10 @@ export default function SignUpScreen() {
           keyboardShouldPersistTaps="handled"
         >
           <View style={styles.header}>
-            <View
-              style={[styles.iconCircle, { backgroundColor: `${colors.primary}20` }]}
-            >
+            <View style={[styles.iconCircle, { backgroundColor: `${colors.primary}20` }]}>
               <Feather name="mail" size={28} color={colors.primary} />
             </View>
-            <Text style={[styles.title, { color: colors.text }]}>
-              Check your email
-            </Text>
+            <Text style={[styles.title, { color: colors.text }]}>Check your email</Text>
             <Text style={[styles.subtitle, { color: colors.mutedForeground }]}>
               We sent a 6-digit code to {email}
             </Text>
@@ -144,11 +116,7 @@ export default function SignUpScreen() {
               style={[
                 styles.input,
                 styles.codeInput,
-                {
-                  backgroundColor: colors.input,
-                  borderColor: colors.border,
-                  color: colors.text,
-                },
+                { backgroundColor: colors.input, borderColor: colors.border, color: colors.text },
               ]}
               value={code}
               onChangeText={setCode}
@@ -161,23 +129,16 @@ export default function SignUpScreen() {
             />
 
             {error ? (
-              <View
-                style={[styles.errorBox, { backgroundColor: `${colors.destructive}15` }]}
-              >
+              <View style={[styles.errorBox, { backgroundColor: `${colors.destructive}15` }]}>
                 <Feather name="alert-circle" size={14} color={colors.destructive} />
-                <Text style={[styles.errorText, { color: colors.destructive }]}>
-                  {error}
-                </Text>
+                <Text style={[styles.errorText, { color: colors.destructive }]}>{error}</Text>
               </View>
             ) : null}
 
             <Pressable
               style={({ pressed }) => [
                 styles.submitBtn,
-                {
-                  backgroundColor: colors.primary,
-                  opacity: !code || loading || pressed ? 0.7 : 1,
-                },
+                { backgroundColor: colors.primary, opacity: !code || loading || pressed ? 0.7 : 1 },
               ]}
               onPress={handleVerify}
               disabled={!code || loading}
@@ -185,21 +146,15 @@ export default function SignUpScreen() {
               {loading ? (
                 <ActivityIndicator color={colors.primaryForeground} />
               ) : (
-                <Text style={[styles.submitText, { color: colors.primaryForeground }]}>
-                  Verify
-                </Text>
+                <Text style={[styles.submitText, { color: colors.primaryForeground }]}>Verify</Text>
               )}
             </Pressable>
 
             <Pressable
               style={styles.resendBtn}
-              onPress={() =>
-                signUp?.prepareEmailAddressVerification({ strategy: "email_code" })
-              }
+              onPress={() => signUp?.prepareEmailAddressVerification({ strategy: "email_code" })}
             >
-              <Text style={[styles.resendText, { color: colors.mutedForeground }]}>
-                Resend code
-              </Text>
+              <Text style={[styles.resendText, { color: colors.mutedForeground }]}>Resend code</Text>
             </Pressable>
           </View>
         </ScrollView>
@@ -230,43 +185,9 @@ export default function SignUpScreen() {
           </Text>
         </View>
 
-        <Pressable
-          style={({ pressed }) => [
-            styles.googleBtn,
-            {
-              backgroundColor: colors.card,
-              borderColor: colors.border,
-              opacity: googleLoading || pressed ? 0.7 : 1,
-            },
-          ]}
-          onPress={handleGoogleSignUp}
-          disabled={googleLoading}
-        >
-          {googleLoading ? (
-            <ActivityIndicator color={colors.text} size="small" />
-          ) : (
-            <>
-              <Text style={styles.googleIcon}>G</Text>
-              <Text style={[styles.googleText, { color: colors.text }]}>
-                Continue with Google
-              </Text>
-            </>
-          )}
-        </Pressable>
-
-        <View style={styles.dividerRow}>
-          <View style={[styles.dividerLine, { backgroundColor: colors.border }]} />
-          <Text style={[styles.dividerText, { color: colors.mutedForeground }]}>
-            or
-          </Text>
-          <View style={[styles.dividerLine, { backgroundColor: colors.border }]} />
-        </View>
-
         <View style={styles.form}>
           <View>
-            <Text style={[styles.label, { color: colors.mutedForeground }]}>
-              Your name
-            </Text>
+            <Text style={[styles.label, { color: colors.mutedForeground }]}>Your name</Text>
             <TextInput
               style={[
                 styles.input,
@@ -326,13 +247,9 @@ export default function SignUpScreen() {
           </View>
 
           {error ? (
-            <View
-              style={[styles.errorBox, { backgroundColor: `${colors.destructive}15` }]}
-            >
+            <View style={[styles.errorBox, { backgroundColor: `${colors.destructive}15` }]}>
               <Feather name="alert-circle" size={14} color={colors.destructive} />
-              <Text style={[styles.errorText, { color: colors.destructive }]}>
-                {error}
-              </Text>
+              <Text style={[styles.errorText, { color: colors.destructive }]}>{error}</Text>
             </View>
           ) : null}
 
@@ -374,9 +291,9 @@ export default function SignUpScreen() {
 
 const styles = StyleSheet.create({
   container: { flex: 1 },
-  inner: { paddingHorizontal: 24, gap: 24 },
+  inner: { paddingHorizontal: 24, gap: 28 },
   backBtn: { width: 40 },
-  header: { alignItems: "center", gap: 8 },
+  header: { gap: 8 },
   iconCircle: {
     width: 72,
     height: 72,
@@ -386,29 +303,7 @@ const styles = StyleSheet.create({
     marginBottom: 4,
   },
   title: { fontSize: 28, fontFamily: "Inter_700Bold", letterSpacing: -0.5 },
-  subtitle: { fontSize: 15, fontFamily: "Inter_400Regular", textAlign: "center" },
-  googleBtn: {
-    height: 54,
-    borderRadius: 14,
-    borderWidth: 1,
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-    gap: 10,
-  },
-  googleIcon: {
-    fontSize: 18,
-    fontFamily: "Inter_700Bold",
-    color: "#4285F4",
-  },
-  googleText: { fontSize: 15, fontFamily: "Inter_600SemiBold" },
-  dividerRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 12,
-  },
-  dividerLine: { flex: 1, height: 1 },
-  dividerText: { fontSize: 13, fontFamily: "Inter_400Regular" },
+  subtitle: { fontSize: 15, fontFamily: "Inter_400Regular" },
   form: { gap: 20 },
   label: {
     fontSize: 13,

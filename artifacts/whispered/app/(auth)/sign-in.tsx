@@ -1,6 +1,7 @@
 import React, { useState } from "react";
 import {
   ActivityIndicator,
+  Alert,
   KeyboardAvoidingView,
   Platform,
   Pressable,
@@ -10,57 +11,30 @@ import {
   TextInput,
   View,
 } from "react-native";
-import { useSignIn, useOAuth } from "@clerk/expo";
+import { useSignIn } from "@clerk/expo";
 import { useRouter } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Feather } from "@expo/vector-icons";
-import * as WebBrowser from "expo-web-browser";
 import { useColors } from "@/hooks/useColors";
 import * as Haptics from "expo-haptics";
-
-WebBrowser.maybeCompleteAuthSession();
 
 export default function SignInScreen() {
   const colors = useColors();
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const { isLoaded, signIn, setActive } = useSignIn();
-  const { startOAuthFlow } = useOAuth({ strategy: "oauth_google" });
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
-  const [googleLoading, setGoogleLoading] = useState(false);
   const [error, setError] = useState("");
 
-  const handleGoogleSignIn = async () => {
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-    setGoogleLoading(true);
-    setError("");
-    try {
-      const { createdSessionId, setActive: oauthSetActive, signUp: oauthSignUp } =
-        await startOAuthFlow();
-      if (createdSessionId && oauthSetActive) {
-        await oauthSetActive({ session: createdSessionId });
-        if (oauthSignUp?.status === "complete") {
-          router.replace("/(auth)/link-partner");
-        } else {
-          router.replace("/(tabs)");
-        }
-      }
-    } catch (err: unknown) {
-      const msg =
-        (err as { errors?: { message: string }[] })?.errors?.[0]?.message ||
-        "Google sign-in failed. Please try again.";
-      setError(msg);
-    } finally {
-      setGoogleLoading(false);
-    }
-  };
-
   const handleSignIn = async () => {
-    if (!isLoaded || !signIn) return;
+    if (!isLoaded || !signIn) {
+      Alert.alert("Not ready", "Clerk is still loading. Please wait a moment.");
+      return;
+    }
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     setLoading(true);
     setError("");
@@ -76,10 +50,13 @@ export default function SignInScreen() {
         setError("Sign in incomplete. Please try again.");
       }
     } catch (err: unknown) {
+      const clerkErr = err as { errors?: { message: string; longMessage?: string }[] };
       const msg =
-        (err as { errors?: { message: string }[] })?.errors?.[0]?.message ||
-        "Invalid email or password.";
+        clerkErr?.errors?.[0]?.longMessage ||
+        clerkErr?.errors?.[0]?.message ||
+        (err instanceof Error ? err.message : "Invalid email or password.");
       setError(msg);
+      Alert.alert("Sign in error", msg);
     } finally {
       setLoading(false);
     }
@@ -106,36 +83,6 @@ export default function SignInScreen() {
           <Text style={[styles.subtitle, { color: colors.mutedForeground }]}>
             Sign in to continue
           </Text>
-        </View>
-
-        <Pressable
-          style={({ pressed }) => [
-            styles.googleBtn,
-            {
-              backgroundColor: colors.card,
-              borderColor: colors.border,
-              opacity: googleLoading || pressed ? 0.7 : 1,
-            },
-          ]}
-          onPress={handleGoogleSignIn}
-          disabled={googleLoading}
-        >
-          {googleLoading ? (
-            <ActivityIndicator color={colors.text} size="small" />
-          ) : (
-            <>
-              <Text style={styles.googleIcon}>G</Text>
-              <Text style={[styles.googleText, { color: colors.text }]}>
-                Continue with Google
-              </Text>
-            </>
-          )}
-        </Pressable>
-
-        <View style={styles.dividerRow}>
-          <View style={[styles.dividerLine, { backgroundColor: colors.border }]} />
-          <Text style={[styles.dividerText, { color: colors.mutedForeground }]}>or</Text>
-          <View style={[styles.dividerLine, { backgroundColor: colors.border }]} />
         </View>
 
         <View style={styles.form}>
@@ -186,13 +133,9 @@ export default function SignInScreen() {
           </View>
 
           {error ? (
-            <View
-              style={[styles.errorBox, { backgroundColor: `${colors.destructive}15` }]}
-            >
+            <View style={[styles.errorBox, { backgroundColor: `${colors.destructive}15` }]}>
               <Feather name="alert-circle" size={14} color={colors.destructive} />
-              <Text style={[styles.errorText, { color: colors.destructive }]}>
-                {error}
-              </Text>
+              <Text style={[styles.errorText, { color: colors.destructive }]}>{error}</Text>
             </View>
           ) : null}
 
@@ -241,29 +184,11 @@ export default function SignInScreen() {
 
 const styles = StyleSheet.create({
   container: { flex: 1 },
-  inner: { paddingHorizontal: 24, gap: 24 },
+  inner: { paddingHorizontal: 24, gap: 28 },
   backBtn: { width: 40 },
   header: { gap: 6 },
   title: { fontSize: 28, fontFamily: "Inter_700Bold", letterSpacing: -0.5 },
   subtitle: { fontSize: 15, fontFamily: "Inter_400Regular" },
-  googleBtn: {
-    height: 54,
-    borderRadius: 14,
-    borderWidth: 1,
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-    gap: 10,
-  },
-  googleIcon: {
-    fontSize: 18,
-    fontFamily: "Inter_700Bold",
-    color: "#4285F4",
-  },
-  googleText: { fontSize: 15, fontFamily: "Inter_600SemiBold" },
-  dividerRow: { flexDirection: "row", alignItems: "center", gap: 12 },
-  dividerLine: { flex: 1, height: 1 },
-  dividerText: { fontSize: 13, fontFamily: "Inter_400Regular" },
   form: { gap: 20 },
   label: {
     fontSize: 13,
