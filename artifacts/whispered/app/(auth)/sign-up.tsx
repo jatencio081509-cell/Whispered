@@ -85,27 +85,35 @@ export default function SignUpScreen() {
       console.log("🔐 Verifying email with code:", code);
       const liveSignUp = clerk.client?.signUp ?? signUp;
       const result = await liveSignUp.attemptEmailAddressVerification({ code });
-      console.log("✅ Verification result status:", result.status);
-      console.log("🔑 Verification result sessionId:", result.createdSessionId);
       
-      // After verification succeeds, manually set the active session
+      console.log("✅ Verification result FULL OBJECT:", JSON.stringify(result, null, 2));
+      console.log("📊 Result status:", result.status);
+      console.log("🔑 Result createdSessionId:", result.createdSessionId);
+      console.log("👤 Result userId:", result.userId);
+      console.log("✉️ Result emailAddressId:", result.emailAddressId);
+      console.log("⚠️ Result warnings:", result.warnings);
+      console.log("🔍 Result keys:", Object.keys(result));
+      
+      // After verification succeeds, try to get the current user's session
       if (result.status === "complete" && result.createdSessionId) {
-        console.log("🎉 Verification complete, setting active session...");
+        console.log("🎉 Verification complete with session, setting active...");
         await setActive({ session: result.createdSessionId });
         router.replace("/(auth)/link-partner");
-      } else if (result.createdSessionId) {
-        console.log("⚠️ Status not complete but session exists, attempting to set active...");
-        try {
-          await setActive({ session: result.createdSessionId });
-          console.log("✅ Session set successfully");
+      } else if (result.userId) {
+        console.log("⚠️ Verification succeeded but no session in result. Trying to get active session from clerk...");
+        // Try to get the session from clerk after successful verification
+        const session = await clerk.session;
+        console.log("🔑 Current session from clerk:", session?.id);
+        if (session?.id) {
+          await setActive({ session: session.id });
           router.replace("/(auth)/link-partner");
-        } catch (sessionErr) {
-          console.log("❌ Failed to set session:", sessionErr);
-          setError("Could not activate session. Please sign in with your new account.");
-          router.replace("/(auth)/sign-in");
+        } else {
+          console.log("❌ No session available after verification");
+          setError("Verification succeeded but session not created. Try signing in.");
+          setTimeout(() => router.replace("/(auth)/sign-in"), 2000);
         }
       } else {
-        console.log("❌ No session returned from verification");
+        console.log("❌ Verification failed - no userId in result");
         setError("Verification failed. Please try again.");
       }
     } catch (err: unknown) {
