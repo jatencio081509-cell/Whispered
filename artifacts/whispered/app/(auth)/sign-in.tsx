@@ -40,39 +40,42 @@ export default function SignInScreen() {
     setLoading(true);
     setError("");
     try {
+      console.log("📝 Attempting sign in with:", email);
       const result = await signIn.create({ identifier: email.trim(), password });
-      console.log("Sign in result status:", result.status);
+      
+      console.log("✅ Sign in result:", JSON.stringify(result, null, 2));
+      console.log("📊 Status:", result.status);
+      console.log("🔑 Session ID:", result.createdSessionId);
+      console.log("👤 User ID:", result.userId);
       
       if (result.status === "complete") {
+        console.log("🎉 Status is complete, setting active session...");
         await setActive({ session: result.createdSessionId });
         router.replace("/(tabs)");
-      } else if (result.status === "needs_second_factor") {
-        // Handle MFA if needed
-        setError("Multi-factor authentication required. Please try again.");
-      } else if (result.status === "needs_identifier") {
-        // Try alternative signin flow
-        setError("Could not verify account. Please check your credentials.");
-      } else {
-        console.log("Unexpected sign in status:", result.status);
-        // Still try to set active session if one was created
-        if (result.createdSessionId) {
-          try {
-            await setActive({ session: result.createdSessionId });
-            router.replace("/(tabs)");
-          } catch (e) {
-            setError(`Sign in status: ${result.status}. Please try again.`);
-          }
-        } else {
-          setError("Sign in incomplete. Please try again.");
+      } else if (result.createdSessionId) {
+        console.log("⚠️ Status is not complete but session exists, attempting to set active anyway...");
+        try {
+          await setActive({ session: result.createdSessionId });
+          console.log("✅ Session set successfully despite non-complete status");
+          router.replace("/(tabs)");
+        } catch (sessionErr) {
+          console.log("❌ Failed to set active session:", sessionErr);
+          setError(`Could not activate session. Status: ${result.status}`);
         }
+      } else {
+        console.log("❌ No session created. Status:", result.status);
+        setError(`Sign in incomplete. Status: ${result.status}. Please try again.`);
       }
     } catch (err: unknown) {
-      const clerkErr = err as { errors?: { message: string; longMessage?: string }[] };
+      console.log("🔴 Sign in error:", err);
+      const clerkErr = err as { errors?: { message: string; longMessage?: string; code?: string }[] };
+      const errorCode = clerkErr?.errors?.[0]?.code;
       const msg =
         clerkErr?.errors?.[0]?.longMessage ||
         clerkErr?.errors?.[0]?.message ||
         (err instanceof Error ? err.message : "Invalid email or password.");
-      console.log("Sign in error:", msg);
+      console.log("Error code:", errorCode);
+      console.log("Error message:", msg);
       setError(msg);
       Alert.alert("Sign in error", msg);
     } finally {
