@@ -41,11 +41,30 @@ export default function SignInScreen() {
     setError("");
     try {
       const result = await signIn.create({ identifier: email.trim(), password });
+      console.log("Sign in result status:", result.status);
+      
       if (result.status === "complete") {
         await setActive({ session: result.createdSessionId });
         router.replace("/(tabs)");
+      } else if (result.status === "needs_second_factor") {
+        // Handle MFA if needed
+        setError("Multi-factor authentication required. Please try again.");
+      } else if (result.status === "needs_identifier") {
+        // Try alternative signin flow
+        setError("Could not verify account. Please check your credentials.");
       } else {
-        setError("Sign in incomplete. Please try again.");
+        console.log("Unexpected sign in status:", result.status);
+        // Still try to set active session if one was created
+        if (result.createdSessionId) {
+          try {
+            await setActive({ session: result.createdSessionId });
+            router.replace("/(tabs)");
+          } catch (e) {
+            setError(`Sign in status: ${result.status}. Please try again.`);
+          }
+        } else {
+          setError("Sign in incomplete. Please try again.");
+        }
       }
     } catch (err: unknown) {
       const clerkErr = err as { errors?: { message: string; longMessage?: string }[] };
@@ -53,6 +72,7 @@ export default function SignInScreen() {
         clerkErr?.errors?.[0]?.longMessage ||
         clerkErr?.errors?.[0]?.message ||
         (err instanceof Error ? err.message : "Invalid email or password.");
+      console.log("Sign in error:", msg);
       setError(msg);
       Alert.alert("Sign in error", msg);
     } finally {
