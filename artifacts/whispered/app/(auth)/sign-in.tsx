@@ -22,8 +22,9 @@ export default function SignInScreen() {
   const colors = useColors();
   const router = useRouter();
   const insets = useSafeAreaInsets();
-  const { signIn, setActive, isLoaded } = useSignIn();
+  const { signIn, isLoaded } = useSignIn();
   const clerk = useClerk();
+  const { setActive } = clerk;
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");

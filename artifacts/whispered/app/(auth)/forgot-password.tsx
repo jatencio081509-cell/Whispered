@@ -11,7 +11,7 @@ import {
   View,
 } from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
-import { useSignIn } from "@clerk/expo";
+import { useSignIn, useClerk } from "@clerk/expo";
 import { useRouter } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Feather } from "@expo/vector-icons";
@@ -24,7 +24,8 @@ export default function ForgotPasswordScreen() {
   const colors = useColors();
   const router = useRouter();
   const insets = useSafeAreaInsets();
-  const { isLoaded, signIn, setActive } = useSignIn();
+  const { isLoaded, signIn } = useSignIn();
+  const { setActive } = useClerk();
 
   const [step, setStep] = useState<Step>("email");
   const [email, setEmail] = useState("");

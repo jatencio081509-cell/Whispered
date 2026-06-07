@@ -23,8 +23,9 @@ export default function SignUpScreen() {
   const colors = useColors();
   const router = useRouter();
   const insets = useSafeAreaInsets();
-  const { signUp, setActive } = useSignUp();
+  const { signUp } = useSignUp();
   const clerk = useClerk();
+  const { setActive } = clerk;
 
   useEffect(() => {
     if (signUp?.status === "complete" && signUp?.createdSessionId) {

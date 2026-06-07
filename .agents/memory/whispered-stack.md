@@ -22,6 +22,7 @@ WS server listens at path `/api/ws` (mounted on the HTTP server). Replit's proxy
 - **Correct pattern:** `signUp.create(...)` on the hook ref, then `clerk.client!.signUp.prepareEmailAddressVerification(...)` and `clerk.client!.signUp.attemptEmailAddressVerification({ code })` on the live client ref.
 - On successful `attemptEmailAddressVerification`, get session from `result.createdSessionId ?? clerk.client?.lastActiveSession?.id`. If `result.status === "complete"` but `createdSessionId` is null, fall back to lastActiveSession before navigating.
 - Sign-in uses `useSignIn()` — `signIn.create({ identifier, password })` then check `status === 'complete'`.
+- **`setActive` is NOT returned by `useSignUp()` or `useSignIn()` in Clerk Expo v3** — always get it from `useClerk()`: `const { setActive } = useClerk()`. Destructuring from the other hooks returns `undefined` and causes a render crash.
 - Auth guard: use `<Redirect href="...">` (declarative), NOT `router.replace()` in effects — avoids mount-time navigation errors.
 
 ## api-zod duplicate export fix
