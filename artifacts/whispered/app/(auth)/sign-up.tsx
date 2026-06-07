@@ -27,20 +27,10 @@ export default function SignUpScreen() {
   const clerk = useClerk();
 
   useEffect(() => {
-    console.log("📊 SignUp status changed:", signUp?.status);
-    console.log("🔑 SignUp sessionId:", signUp?.createdSessionId);
-    
     if (signUp?.status === "complete" && signUp?.createdSessionId) {
-      console.log("✅ SignUp complete with session! Setting active...");
       setActive({ session: signUp.createdSessionId })
-        .then(() => {
-          console.log("✅ Session activated, navigating to link-partner");
-          router.replace("/(auth)/link-partner");
-        })
-        .catch((err) => {
-          console.log("❌ Failed to set active session:", err);
-          router.replace("/(auth)/sign-in");
-        });
+        .then(() => router.replace("/(auth)/link-partner"))
+        .catch(() => router.replace("/(auth)/sign-in"));
     }
   }, [signUp?.status, signUp?.createdSessionId]);
 
@@ -65,10 +55,7 @@ export default function SignUpScreen() {
         ...(parts[0] && { firstName: parts[0] }),
         ...(parts[1] && { lastName: parts.slice(1).join(" ") }),
       });
-      const liveSignUp = clerk.client?.signUp;
-      if (liveSignUp?.prepareEmailAddressVerification) {
-        await liveSignUp.prepareEmailAddressVerification({ strategy: "email_code" });
-      }
+      await signUp.prepareEmailAddressVerification({ strategy: "email_code" });
       setStep("verify");
     } catch (err: unknown) {
       const clerkErr = err as { errors?: { message: string; longMessage?: string }[] };
@@ -82,49 +69,29 @@ export default function SignUpScreen() {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     setLoading(true); setError("");
     try {
-      console.log("🔐 Verifying email with code:", code);
-      const liveSignUp = clerk.client?.signUp ?? signUp;
-      const result = await liveSignUp.attemptEmailAddressVerification({ code });
-      
-      console.log("✅ Verification result FULL OBJECT:", JSON.stringify(result, null, 2));
-      console.log("📊 Result status:", result.status);
-      console.log("🔑 Result createdSessionId:", result.createdSessionId);
-      console.log("👤 Result userId:", result.userId);
-      console.log("✉️ Result emailAddressId:", result.emailAddressId);
-      console.log("⚠️ Result warnings:", result.warnings);
-      console.log("🔍 Result keys:", Object.keys(result));
-      
-      // After verification succeeds, try to get the current user's session
-      if (result.status === "complete" && result.createdSessionId) {
-        console.log("🎉 Verification complete with session, setting active...");
-        await setActive({ session: result.createdSessionId });
-        router.replace("/(auth)/link-partner");
-      } else if (result.userId) {
-        console.log("⚠️ Verification succeeded but no session in result. Trying to get active session from clerk...");
-        // Try to get the session from clerk after successful verification
-        const session = await clerk.session;
-        console.log("🔑 Current session from clerk:", session?.id);
-        if (session?.id) {
-          await setActive({ session: session.id });
-          router.replace("/(auth)/link-partner");
-        } else {
-          console.log("❌ No session available after verification");
-          setError("Verification succeeded but session not created. Try signing in.");
-          setTimeout(() => router.replace("/(auth)/sign-in"), 2000);
+      // Always use the hook's signUp — it is the live reactive resource in Clerk v3.
+      // Using clerk.client?.signUp can return a stale/empty instance causing
+      // attemptEmailAddressVerification to silently fail.
+      const result = await signUp.attemptEmailAddressVerification({ code });
+
+      if (result.status === "complete") {
+        // createdSessionId is present when Clerk auto-creates the session
+        const sessionId = result.createdSessionId ?? clerk.client?.lastActiveSession?.id;
+        if (sessionId) {
+          await setActive({ session: sessionId });
         }
-      } else {
-        console.log("❌ Verification failed - no userId in result");
-        setError("Verification failed. Please try again.");
+        router.replace("/(auth)/link-partner");
       }
+      // If status is not yet "complete" (e.g. needs 2FA), the useEffect above
+      // will react to signUp.status changing and handle navigation.
     } catch (err: unknown) {
       const clerkErr = err as { errors?: { code?: string; message: string }[] };
       const errCode = clerkErr?.errors?.[0]?.code;
       const msg = clerkErr?.errors?.[0]?.message ?? "";
-      console.log("❌ Verification error:", msg, "Code:", errCode);
-      
-      const isAlreadyVerified = errCode === "form_identifier_already_verified" || msg.toLowerCase().includes("already verified");
+      const isAlreadyVerified =
+        errCode === "form_identifier_already_verified" ||
+        msg.toLowerCase().includes("already verified");
       if (isAlreadyVerified) {
-        console.log("ℹ️ Email already verified, redirecting to sign in");
         router.replace("/(auth)/sign-in");
       } else {
         setError(msg || "Invalid code. Please try again.");
@@ -187,11 +154,8 @@ export default function SignUpScreen() {
               style={styles.resendBtn}
               onPress={async () => {
                 try {
-                  const liveSignUp = clerk.client?.signUp;
-                  if (liveSignUp?.prepareEmailAddressVerification) {
-                    await liveSignUp.prepareEmailAddressVerification({ strategy: "email_code" });
-                    Alert.alert("Code sent", "A new code has been sent to your email.");
-                  }
+                  await signUp.prepareEmailAddressVerification({ strategy: "email_code" });
+                  Alert.alert("Code sent", "A new code has been sent to your email.");
                 } catch { Alert.alert("Error", "Could not resend code. Please try again."); }
               }}
             >

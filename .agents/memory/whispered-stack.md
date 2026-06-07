@@ -18,7 +18,8 @@ config.resolver.blockList = /node_modules[/\\]\.pnpm[/\\].*_tmp_\d+[/\\].*/;
 WS server listens at path `/api/ws` (mounted on the HTTP server). Replit's proxy routes `/api/*` → api-server port. Client connects with `wss://${EXPO_PUBLIC_DOMAIN}/api/ws?token=<clerkToken>`.
 
 ## Auth patterns (Clerk Core v3)
-- Sign-up uses `useSignUp()` — `signUp.create()` then `signUp.prepareEmailAddressVerification()` then `signUp.attemptEmailAddressVerification({ code })`.
+- Sign-up uses `useSignUp()` — always call `signUp.create()`, `signUp.prepareEmailAddressVerification()`, and `signUp.attemptEmailAddressVerification({ code })` on the hook's `signUp` object directly. **Never use `clerk.client?.signUp`** — it can be a stale/empty instance that causes verification to silently fail (returns a result with no status "complete" and no userId, showing "Verification failed").
+- After `attemptEmailAddressVerification`, get the session from `result.createdSessionId ?? clerk.client?.lastActiveSession?.id`.
 - Sign-in uses `useSignIn()` — `signIn.create({ identifier, password })` then check `status === 'complete'`.
 - Auth guard: use `<Redirect href="...">` (declarative), NOT `router.replace()` in effects — avoids mount-time navigation errors.
 
