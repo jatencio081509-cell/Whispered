@@ -55,7 +55,10 @@ export default function SignUpScreen() {
         ...(parts[0] && { firstName: parts[0] }),
         ...(parts[1] && { lastName: parts.slice(1).join(" ") }),
       });
-      await signUp.prepareEmailAddressVerification({ strategy: "email_code" });
+      // After create(), the live SignUp instance moves to clerk.client.signUp.
+      // The hook's signUp reference becomes stale, so we must use clerk.client.signUp
+      // for all subsequent calls (prepare + attempt).
+      await clerk.client!.signUp.prepareEmailAddressVerification({ strategy: "email_code" });
       setStep("verify");
     } catch (err: unknown) {
       const clerkErr = err as { errors?: { message: string; longMessage?: string }[] };
@@ -69,10 +72,8 @@ export default function SignUpScreen() {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     setLoading(true); setError("");
     try {
-      // Always use the hook's signUp — it is the live reactive resource in Clerk v3.
-      // Using clerk.client?.signUp can return a stale/empty instance causing
-      // attemptEmailAddressVerification to silently fail.
-      const result = await signUp.attemptEmailAddressVerification({ code });
+      // clerk.client.signUp is the live instance after create(); hook ref is stale.
+      const result = await clerk.client!.signUp.attemptEmailAddressVerification({ code });
 
       if (result.status === "complete") {
         // createdSessionId is present when Clerk auto-creates the session
@@ -154,7 +155,7 @@ export default function SignUpScreen() {
               style={styles.resendBtn}
               onPress={async () => {
                 try {
-                  await signUp.prepareEmailAddressVerification({ strategy: "email_code" });
+                  await clerk.client!.signUp.prepareEmailAddressVerification({ strategy: "email_code" });
                   Alert.alert("Code sent", "A new code has been sent to your email.");
                 } catch { Alert.alert("Error", "Could not resend code. Please try again."); }
               }}

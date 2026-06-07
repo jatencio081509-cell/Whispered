@@ -17,9 +17,10 @@ config.resolver.blockList = /node_modules[/\\]\.pnpm[/\\].*_tmp_\d+[/\\].*/;
 ## WebSocket path
 WS server listens at path `/api/ws` (mounted on the HTTP server). Replit's proxy routes `/api/*` → api-server port. Client connects with `wss://${EXPO_PUBLIC_DOMAIN}/api/ws?token=<clerkToken>`.
 
-## Auth patterns (Clerk Core v3)
-- Sign-up uses `useSignUp()` — always call `signUp.create()`, `signUp.prepareEmailAddressVerification()`, and `signUp.attemptEmailAddressVerification({ code })` on the hook's `signUp` object directly. **Never use `clerk.client?.signUp`** — it can be a stale/empty instance that causes verification to silently fail (returns a result with no status "complete" and no userId, showing "Verification failed").
-- After `attemptEmailAddressVerification`, get the session from `result.createdSessionId ?? clerk.client?.lastActiveSession?.id`.
+## Auth patterns (Clerk Core v3 / Expo)
+- After `signUp.create()`, the live SignUp instance **moves to `clerk.client.signUp`**. The `useSignUp()` hook's `signUp` ref becomes stale and loses methods like `prepareEmailAddressVerification` / `attemptEmailAddressVerification` (calling them throws "is not a function").
+- **Correct pattern:** `signUp.create(...)` on the hook ref, then `clerk.client!.signUp.prepareEmailAddressVerification(...)` and `clerk.client!.signUp.attemptEmailAddressVerification({ code })` on the live client ref.
+- On successful `attemptEmailAddressVerification`, get session from `result.createdSessionId ?? clerk.client?.lastActiveSession?.id`. If `result.status === "complete"` but `createdSessionId` is null, fall back to lastActiveSession before navigating.
 - Sign-in uses `useSignIn()` — `signIn.create({ identifier, password })` then check `status === 'complete'`.
 - Auth guard: use `<Redirect href="...">` (declarative), NOT `router.replace()` in effects — avoids mount-time navigation errors.
 
