@@ -1,7 +1,6 @@
 import React, { useState } from "react";
 import {
   ActivityIndicator,
-  Alert,
   KeyboardAvoidingView,
   Platform,
   Pressable,
@@ -12,7 +11,7 @@ import {
   View,
 } from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
-import { useSignIn } from "@clerk/expo";
+import { useSignIn, useClerk } from "@clerk/expo";
 import { useRouter } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Feather } from "@expo/vector-icons";
@@ -23,7 +22,8 @@ export default function SignInScreen() {
   const colors = useColors();
   const router = useRouter();
   const insets = useSafeAreaInsets();
-  const { signIn, setActive } = useSignIn();
+  const { signIn, setActive, isLoaded } = useSignIn();
+  const clerk = useClerk();
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -32,52 +32,38 @@ export default function SignInScreen() {
   const [error, setError] = useState("");
 
   const handleSignIn = async () => {
-    if (!signIn) {
-      Alert.alert("Not ready", "Please wait a moment and try again.");
-      return;
-    }
+    if (!isLoaded || !signIn) return;
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     setLoading(true);
     setError("");
     try {
-      console.log("📝 Attempting sign in with:", email);
-      const result = await signIn.create({ identifier: email.trim(), password });
-      
-      console.log("✅ Sign in result:", JSON.stringify(result, null, 2));
-      console.log("📊 Status:", result.status);
-      console.log("🔑 Session ID:", result.createdSessionId);
-      console.log("👤 User ID:", result.userId);
-      
+      const result = await signIn.create({
+        identifier: email.trim(),
+        password,
+      });
+
       if (result.status === "complete") {
-        console.log("🎉 Status is complete, setting active session...");
-        await setActive({ session: result.createdSessionId });
-        router.replace("/(tabs)");
-      } else if (result.createdSessionId) {
-        console.log("⚠️ Status is not complete but session exists, attempting to set active anyway...");
-        try {
-          await setActive({ session: result.createdSessionId });
-          console.log("✅ Session set successfully despite non-complete status");
-          router.replace("/(tabs)");
-        } catch (sessionErr) {
-          console.log("❌ Failed to set active session:", sessionErr);
-          setError(`Could not activate session. Status: ${result.status}`);
+        // createdSessionId should always be present on complete, fall back to
+        // lastActiveSession in case the SDK version omits it.
+        const sessionId =
+          result.createdSessionId ?? clerk.client?.lastActiveSession?.id;
+        if (sessionId) {
+          await setActive({ session: sessionId });
         }
+        router.replace("/(tabs)");
       } else {
-        console.log("❌ No session created. Status:", result.status);
-        setError(`Sign in incomplete. Status: ${result.status}. Please try again.`);
+        // Handles edge cases like MFA (not currently configured)
+        setError("Sign in incomplete. Please try again.");
       }
     } catch (err: unknown) {
-      console.log("🔴 Sign in error:", err);
-      const clerkErr = err as { errors?: { message: string; longMessage?: string; code?: string }[] };
-      const errorCode = clerkErr?.errors?.[0]?.code;
+      const clerkErr = err as {
+        errors?: { message: string; longMessage?: string; code?: string }[];
+      };
       const msg =
         clerkErr?.errors?.[0]?.longMessage ||
         clerkErr?.errors?.[0]?.message ||
         (err instanceof Error ? err.message : "Invalid email or password.");
-      console.log("Error code:", errorCode);
-      console.log("Error message:", msg);
       setError(msg);
-      Alert.alert("Sign in error", msg);
     } finally {
       setLoading(false);
     }
@@ -89,12 +75,14 @@ export default function SignInScreen() {
       behavior={Platform.OS === "ios" ? "padding" : "height"}
     >
       <View style={styles.scanLine} />
+
       <ScrollView
         contentContainerStyle={[
           styles.inner,
           { paddingTop: insets.top + 20, paddingBottom: insets.bottom + 24 },
         ]}
         keyboardShouldPersistTaps="handled"
+        showsVerticalScrollIndicator={false}
       >
         <Pressable style={styles.backBtn} onPress={() => router.back()} hitSlop={12}>
           <Feather name="arrow-left" size={22} color={colors.primary} />
@@ -157,11 +145,9 @@ export default function SignInScreen() {
               end={{ x: 1, y: 0 }}
               style={styles.submitGradient}
             >
-              {loading ? (
-                <ActivityIndicator color="#030712" />
-              ) : (
-                <Text style={styles.submitText}>Sign in</Text>
-              )}
+              {loading
+                ? <ActivityIndicator color="#030712" />
+                : <Text style={styles.submitText}>Sign in</Text>}
             </LinearGradient>
           </Pressable>
 
