@@ -49,9 +49,16 @@ export default function SignUpScreen() {
     setLoading(true); setError("");
     try {
       const parts = name.trim().split(" ");
+      // Generate a unique username: lowercased name + 4-digit random suffix.
+      // Clerk requires username if the dashboard has it enabled as required.
+      const base = (parts[0] || email.split("@")[0])
+        .toLowerCase()
+        .replace(/[^a-z0-9_]/g, "");
+      const username = `${base}${Math.floor(1000 + Math.random() * 9000)}`;
       await signUp.create({
         emailAddress: email.trim(),
         password,
+        username,
         ...(parts[0] && { firstName: parts[0] }),
         ...(parts[1] && { lastName: parts.slice(1).join(" ") }),
       });
