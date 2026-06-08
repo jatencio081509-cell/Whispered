@@ -58,6 +58,15 @@ export default function HomeScreen() {
   const partnerName = user?.unsafeMetadata?.partnerName as string | undefined;
   const isLinked = !!partnerCode;
 
+  // Calculate days together if anniversary date exists
+  const anniversaryDate = user?.unsafeMetadata?.anniversaryDate as string | undefined;
+  let daysTogether = null;
+  if (anniversaryDate) {
+    const start = new Date(anniversaryDate);
+    const today = new Date();
+    daysTogether = Math.floor((today.getTime() - start.getTime()) / (1000 * 3600 * 24));
+  }
+
   return (
     <ScrollView style={[styles.container, { paddingTop: insets.top }]}>
       <View style={styles.content}>
@@ -101,7 +110,7 @@ export default function HomeScreen() {
           )}
         </View>
 
-        {/* Partner Section */}
+        {/* Partner Section - Shows name + mood placeholder */}
         <View style={styles.section}>
           <Text style={[styles.sectionTitle, { color: colors.foreground }]}>Partner</Text>
           
@@ -113,11 +122,19 @@ export default function HomeScreen() {
                   {partnerName ? `Linked with ${partnerName}` : `Linked with ${partnerCode}`}
                 </Text>
               </View>
+              
               <Text style={[styles.partnerSubtext, { color: colors.mutedForeground }]}>
                 {partnerName 
-                  ? `${partnerName}'s mood will appear here` 
-                  : "Partner's mood will appear here"}
+                  ? `${partnerName}'s current mood will appear here` 
+                  : "Partner's current mood will appear here"}
               </Text>
+
+              {/* Placeholder for future live mood */}
+              <View style={styles.moodPlaceholder}>
+                <Text style={{ color: colors.mutedForeground, fontSize: 14 }}>
+                  (Mood sync coming soon)
+                </Text>
+              </View>
             </View>
           ) : (
             <Pressable 
@@ -133,6 +150,21 @@ export default function HomeScreen() {
             </Pressable>
           )}
         </View>
+
+        {/* Anniversary Date Section */}
+        {anniversaryDate && daysTogether !== null && (
+          <View style={styles.section}>
+            <Text style={[styles.sectionTitle, { color: colors.foreground }]}>Together</Text>
+            <View style={styles.anniversaryCard}>
+              <Text style={[styles.anniversaryText, { color: colors.foreground }]}>
+                {daysTogether} days together
+              </Text>
+              <Text style={[styles.anniversarySubtext, { color: colors.mutedForeground }]}>
+                Since {new Date(anniversaryDate).toLocaleDateString()}
+              </Text>
+            </View>
+          </View>
+        )}
 
       </View>
     </ScrollView>
@@ -215,6 +247,29 @@ const styles = StyleSheet.create({
   },
   partnerSubtext: {
     fontSize: 14,
+  },
+  moodPlaceholder: {
+    marginTop: 12,
+    padding: 12,
+    backgroundColor: '#111',
+    borderRadius: 8,
+    alignItems: 'center',
+  },
+  anniversaryCard: {
+    backgroundColor: '#1A1A1A',
+    borderRadius: 16,
+    padding: 20,
+    borderWidth: 1,
+    borderColor: '#333',
+    alignItems: 'center',
+  },
+  anniversaryText: {
+    fontSize: 24,
+    fontWeight: '700',
+  },
+  anniversarySubtext: {
+    fontSize: 14,
+    marginTop: 4,
   },
   linkText: {
     fontSize: 15,
