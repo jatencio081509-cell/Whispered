@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState } from "react";
 import {
   ActivityIndicator,
   KeyboardAvoidingView,
@@ -9,189 +9,282 @@ import {
   Text,
   TextInput,
   View,
-} from 'react-native';
-import { useRouter } from 'expo-router';
-import { useSignIn } from '@clerk/clerk-expo';
-import { useColors } from '@/hooks/useColors';
+} from "react-native";
+import { LinearGradient } from "expo-linear-gradient";
+import { useSignIn, useClerk } from "@clerk/expo";
+import { useRouter } from "expo-router";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { Feather } from "@expo/vector-icons";
+import { useColors } from "@/hooks/useColors";
+import * as Haptics from "expo-haptics";
+
+type Step = "email" | "reset";
 
 export default function ForgotPasswordScreen() {
-  const { isLoaded, signIn } = useSignIn();
-  const router = useRouter();
   const colors = useColors();
+  const router = useRouter();
+  const insets = useSafeAreaInsets();
+  const { isLoaded, signIn } = useSignIn();
+  const { setActive } = useClerk();
 
-  const [emailAddress, setEmailAddress] = useState('');
-  const [code, setCode] = useState('');
-  const [newPassword, setNewPassword] = useState('');
-  const [step, setStep] = useState<'request' | 'reset'>('request');
+  const [step, setStep] = useState<Step>("email");
+  const [email, setEmail] = useState("");
+  const [code, setCode] = useState("");
+  const [password, setPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState('');
+  const [error, setError] = useState("");
+  const [success, setSuccess] = useState(false);
 
-  const onRequestReset = async () => {
-    if (!isLoaded || !emailAddress) return;
-
-    setLoading(true);
-    setError('');
-
+  const handleSendCode = async () => {
+    if (!isLoaded || !signIn) return;
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    setLoading(true); setError("");
     try {
       await signIn.create({
-        strategy: 'reset_password_email_code',
-        identifier: emailAddress,
+        strategy: "reset_password_email_code",
+        identifier: email.trim(),
       });
-      setStep('reset');
-    } catch (err: any) {
-      setError(err.errors?.[0]?.message || 'Failed to send reset code.');
-    } finally {
-      setLoading(false);
-    }
+      setStep("reset");
+    } catch (err: unknown) {
+      const msg =
+        (err as { errors?: { message: string }[] })?.errors?.[0]?.message ||
+        "Couldn't find that email. Please try again.";
+      setError(msg);
+    } finally { setLoading(false); }
   };
 
-  const onResetPassword = async () => {
-    if (!isLoaded) return;
-
-    setLoading(true);
-    setError('');
-
+  const handleReset = async () => {
+    if (!isLoaded || !signIn) return;
+    if (password !== confirmPassword) { setError("Passwords don't match."); return; }
+    if (password.length < 8) { setError("Password must be at least 8 characters."); return; }
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    setLoading(true); setError("");
     try {
-      const result = await signIn.attemptFirstFactor({
-        strategy: 'reset_password_email_code',
+      const attempt = await signIn.attemptFirstFactor({
+        strategy: "reset_password_email_code",
         code,
-        password: newPassword,
       });
 
-      if (result.status === 'complete') {
-        Alert.alert('Success', 'Password has been reset. Please sign in.');
-        router.replace('/(auth)/sign-in');
+      if (attempt.status === "needs_new_password") {
+        const resetResult = await signIn.resetPassword({
+          password,
+          signOutOfOtherSessions: true,
+        });
+        if (resetResult.status === "complete") {
+          setSuccess(true);
+          await setActive({ session: resetResult.createdSessionId });
+          setTimeout(() => router.replace("/(tabs)"), 1200);
+        } else {
+          setError("Reset failed. Please try again.");
+        }
+      } else if (attempt.status === "complete") {
+        await setActive({ session: attempt.createdSessionId });
+        router.replace("/(tabs)");
       } else {
-        setError('Password reset incomplete.');
+        setError("Something went wrong. Please try again.");
       }
-    } catch (err: any) {
-      setError(err.errors?.[0]?.message || 'Failed to reset password.');
-    } finally {
-      setLoading(false);
-    }
+    } catch (err: unknown) {
+      const msg =
+        (err as { errors?: { message: string }[] })?.errors?.[0]?.message ||
+        "Invalid code. Please try again.";
+      setError(msg);
+    } finally { setLoading(false); }
   };
+
+  const sharedContainer = [styles.container, { backgroundColor: colors.background }] as const;
+
+  if (step === "reset") {
+    return (
+      <KeyboardAvoidingView style={sharedContainer} behavior={Platform.OS === "ios" ? "padding" : "height"}>
+        <View style={styles.scanLine} />
+        <ScrollView
+          contentContainerStyle={[styles.inner, { paddingTop: insets.top + 20, paddingBottom: insets.bottom + 24 }]}
+          keyboardShouldPersistTaps="handled"
+          showsVerticalScrollIndicator={false}
+        >
+          <Pressable style={styles.backBtn} onPress={() => setStep("email")} hitSlop={12}>
+            <Feather name="arrow-left" size={22} color={colors.primary} />
+          </Pressable>
+
+          <View style={styles.header}>
+            <View style={[styles.iconCircle, { backgroundColor: "rgba(0,229,255,0.08)", borderColor: colors.border, borderWidth: 1 }]}>
+              {success
+                ? <Feather name="check" size={28} color={colors.primary} />
+                : <Feather name="lock" size={28} color={colors.primary} />}
+            </View>
+            <Text style={[styles.title, { color: colors.text }]}>
+              {success ? "Password reset!" : "Set new password"}
+            </Text>
+            <Text style={[styles.subtitle, { color: colors.mutedForeground }]}>
+              {success
+                ? "You're all set. Signing you in…"
+                : `Enter the code we sent to ${email} and choose a new password`}
+            </Text>
+          </View>
+
+          {!success && (
+            <View style={styles.form}>
+              <View>
+                <Text style={[styles.label, { color: colors.mutedForeground }]}>Code</Text>
+                <TextInput
+                  style={[styles.input, styles.codeInput, { backgroundColor: colors.input, borderColor: colors.border, color: colors.primary }]}
+                  value={code}
+                  onChangeText={setCode}
+                  placeholder="000000"
+                  placeholderTextColor={colors.mutedForeground}
+                  keyboardType="numeric"
+                  maxLength={6}
+                  textAlign="center"
+                  autoFocus
+                />
+              </View>
+
+              <View>
+                <Text style={[styles.label, { color: colors.mutedForeground }]}>New password</Text>
+                <View>
+                  <TextInput
+                    style={[styles.input, styles.inputWithIcon, { backgroundColor: colors.input, borderColor: colors.border, color: colors.text }]}
+                    value={password}
+                    onChangeText={setPassword}
+                    placeholder="At least 8 characters"
+                    placeholderTextColor={colors.mutedForeground}
+                    secureTextEntry={!showPassword}
+                  />
+                  <Pressable style={styles.eyeBtn} onPress={() => setShowPassword(!showPassword)} hitSlop={8}>
+                    <Feather name={showPassword ? "eye-off" : "eye"} size={18} color={colors.mutedForeground} />
+                  </Pressable>
+                </View>
+              </View>
+
+              <View>
+                <Text style={[styles.label, { color: colors.mutedForeground }]}>Confirm password</Text>
+                <TextInput
+                  style={[styles.input, { backgroundColor: colors.input, borderColor: colors.border, color: colors.text }]}
+                  value={confirmPassword}
+                  onChangeText={setConfirmPassword}
+                  placeholder="Repeat your new password"
+                  placeholderTextColor={colors.mutedForeground}
+                  secureTextEntry={!showPassword}
+                />
+              </View>
+
+              {error ? (
+                <View style={[styles.errorBox, { backgroundColor: `${colors.destructive}15`, borderColor: `${colors.destructive}30` }]}>
+                  <Feather name="alert-circle" size={14} color={colors.destructive} />
+                  <Text style={[styles.errorText, { color: colors.destructive }]}>{error}</Text>
+                </View>
+              ) : null}
+
+              <Pressable
+                style={({ pressed }) => [styles.submitBtn, { opacity: !code || !password || !confirmPassword || loading || pressed ? 0.6 : 1 }]}
+                onPress={handleReset}
+                disabled={!code || !password || !confirmPassword || loading}
+              >
+                <LinearGradient colors={["#00E5FF", "#0072FF"]} start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }} style={styles.submitGradient}>
+                  {loading
+                    ? <ActivityIndicator color="#030712" />
+                    : <Text style={styles.submitText}>Reset password</Text>}
+                </LinearGradient>
+              </Pressable>
+            </View>
+          )}
+        </ScrollView>
+      </KeyboardAvoidingView>
+    );
+  }
 
   return (
-    <KeyboardAvoidingView
-      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-      style={styles.container}
-    >
-      <ScrollView contentContainerStyle={styles.content}>
-        <Text style={[styles.title, { color: colors.foreground }]}>
-          {step === 'request' ? 'Reset Password' : 'Enter New Password'}
-        </Text>
-
-        {step === 'request' ? (
-          <>
-            <TextInput
-              autoCapitalize="none"
-              value={emailAddress}
-              placeholder="Email address"
-              placeholderTextColor={colors.mutedForeground}
-              onChangeText={setEmailAddress}
-              style={[styles.input, { borderColor: colors.border, color: colors.foreground }]}
-              keyboardType="email-address"
-            />
-
-            {error ? <Text style={styles.error}>{error}</Text> : null}
-
-            <Pressable
-              onPress={onRequestReset}
-              disabled={loading || !emailAddress}
-              style={[styles.button, { backgroundColor: colors.primary }]}
-            >
-              {loading ? (
-                <ActivityIndicator color={colors.primaryForeground} />
-              ) : (
-                <Text style={[styles.buttonText, { color: colors.primaryForeground }]}>Send Reset Code</Text>
-              )}
-            </Pressable>
-          </>
-        ) : (
-          <>
-            <TextInput
-              value={code}
-              placeholder="Reset code"
-              placeholderTextColor={colors.mutedForeground}
-              onChangeText={setCode}
-              style={[styles.input, { borderColor: colors.border, color: colors.foreground }]}
-              keyboardType="number-pad"
-            />
-
-            <TextInput
-              value={newPassword}
-              placeholder="New password"
-              placeholderTextColor={colors.mutedForeground}
-              secureTextEntry
-              onChangeText={setNewPassword}
-              style={[styles.input, { borderColor: colors.border, color: colors.foreground }]}
-            />
-
-            {error ? <Text style={styles.error}>{error}</Text> : null}
-
-            <Pressable
-              onPress={onResetPassword}
-              disabled={loading || !code || !newPassword}
-              style={[styles.button, { backgroundColor: colors.primary }]}
-            >
-              {loading ? (
-                <ActivityIndicator color={colors.primaryForeground} />
-              ) : (
-                <Text style={[styles.buttonText, { color: colors.primaryForeground }]}>Reset Password</Text>
-              )}
-            </Pressable>
-          </>
-        )}
-
-        <Pressable onPress={() => router.back()}>
-          <Text style={[styles.link, { color: colors.primary }]}>Back to Sign In</Text>
+    <KeyboardAvoidingView style={sharedContainer} behavior={Platform.OS === "ios" ? "padding" : "height"}>
+      <View style={styles.scanLine} />
+      <ScrollView
+        contentContainerStyle={[styles.inner, { paddingTop: insets.top + 20, paddingBottom: insets.bottom + 24 }]}
+        keyboardShouldPersistTaps="handled"
+        showsVerticalScrollIndicator={false}
+      >
+        <Pressable style={styles.backBtn} onPress={() => router.back()} hitSlop={12}>
+          <Feather name="arrow-left" size={22} color={colors.primary} />
         </Pressable>
+
+        <View style={styles.header}>
+          <View style={[styles.iconCircle, { backgroundColor: "rgba(0,229,255,0.08)", borderColor: colors.border, borderWidth: 1 }]}>
+            <Feather name="key" size={28} color={colors.primary} />
+          </View>
+          <Text style={[styles.title, { color: colors.text }]}>Forgot password?</Text>
+          <Text style={[styles.subtitle, { color: colors.mutedForeground }]}>
+            Enter your email and we'll send you a reset code
+          </Text>
+        </View>
+
+        <View style={styles.form}>
+          <View>
+            <Text style={[styles.label, { color: colors.mutedForeground }]}>Email</Text>
+            <TextInput
+              style={[styles.input, { backgroundColor: colors.input, borderColor: colors.border, color: colors.text }]}
+              value={email}
+              onChangeText={setEmail}
+              placeholder="your@email.com"
+              placeholderTextColor={colors.mutedForeground}
+              keyboardType="email-address"
+              autoCapitalize="none"
+              autoCorrect={false}
+              autoFocus
+            />
+          </View>
+
+          {error ? (
+            <View style={[styles.errorBox, { backgroundColor: `${colors.destructive}15`, borderColor: `${colors.destructive}30` }]}>
+              <Feather name="alert-circle" size={14} color={colors.destructive} />
+              <Text style={[styles.errorText, { color: colors.destructive }]}>{error}</Text>
+            </View>
+          ) : null}
+
+          <Pressable
+            style={({ pressed }) => [styles.submitBtn, { opacity: !email || loading || pressed ? 0.6 : 1 }]}
+            onPress={handleSendCode}
+            disabled={!email || loading}
+          >
+            <LinearGradient colors={["#00E5FF", "#0072FF"]} start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }} style={styles.submitGradient}>
+              {loading
+                ? <ActivityIndicator color="#030712" />
+                : <Text style={styles.submitText}>Send reset code</Text>}
+            </LinearGradient>
+          </Pressable>
+        </View>
+
+        <View style={styles.footer}>
+          <Text style={[styles.footerText, { color: colors.mutedForeground }]}>Remember your password? </Text>
+          <Pressable onPress={() => router.back()}>
+            <Text style={[styles.footerLink, { color: colors.primary }]}>Sign in</Text>
+          </Pressable>
+        </View>
       </ScrollView>
     </KeyboardAvoidingView>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#0A0A0A',
-  },
-  content: {
-    flexGrow: 1,
-    justifyContent: 'center',
-    padding: 24,
-  },
-  title: {
-    fontSize: 28,
-    fontWeight: '700',
-    marginBottom: 32,
-    textAlign: 'center',
-  },
-  input: {
-    borderWidth: 1,
-    borderRadius: 12,
-    padding: 16,
-    fontSize: 16,
-    marginBottom: 16,
-  },
-  button: {
-    padding: 18,
-    borderRadius: 999,
-    alignItems: 'center',
-    marginTop: 8,
-    marginBottom: 24,
-  },
-  buttonText: {
-    fontSize: 17,
-    fontWeight: '600',
-  },
-  error: {
-    color: '#FF3B30',
-    marginBottom: 16,
-    textAlign: 'center',
-  },
-  link: {
-    textAlign: 'center',
-    fontSize: 15,
-  },
+  container: { flex: 1 },
+  scanLine: { position: "absolute", top: 0, left: 0, right: 0, height: 1, backgroundColor: "rgba(0,229,255,0.3)", zIndex: 10 },
+  inner: { paddingHorizontal: 24, gap: 28 },
+  backBtn: { width: 40 },
+  header: { alignItems: "center", gap: 10 },
+  iconCircle: { width: 72, height: 72, borderRadius: 36, alignItems: "center", justifyContent: "center", marginBottom: 4 },
+  title: { fontSize: 26, fontFamily: "Inter_700Bold", letterSpacing: -0.5, textAlign: "center" },
+  subtitle: { fontSize: 14, fontFamily: "Inter_400Regular", textAlign: "center", lineHeight: 21 },
+  form: { gap: 20 },
+  label: { fontSize: 11, fontFamily: "Inter_500Medium", marginBottom: 8, letterSpacing: 1.5, textTransform: "uppercase" },
+  input: { height: 52, borderRadius: 12, borderWidth: 1, paddingHorizontal: 16, fontSize: 15, fontFamily: "Inter_400Regular" },
+  codeInput: { height: 68, fontSize: 30, fontFamily: "Inter_700Bold", letterSpacing: 10 },
+  inputWithIcon: { paddingRight: 48 },
+  eyeBtn: { position: "absolute", right: 14, top: 16 },
+  errorBox: { flexDirection: "row", alignItems: "center", gap: 8, padding: 12, borderRadius: 10, borderWidth: 1 },
+  errorText: { fontSize: 13, fontFamily: "Inter_400Regular", flex: 1 },
+  submitBtn: { borderRadius: 14, overflow: "hidden", marginTop: 4 },
+  submitGradient: { height: 54, alignItems: "center", justifyContent: "center" },
+  submitText: { fontSize: 16, fontFamily: "Inter_600SemiBold", color: "#030712", letterSpacing: 0.3 },
+  footer: { flexDirection: "row", justifyContent: "center", flexWrap: "wrap" },
+  footerText: { fontSize: 14, fontFamily: "Inter_400Regular" },
+  footerLink: { fontSize: 14, fontFamily: "Inter_600SemiBold" },
 });
