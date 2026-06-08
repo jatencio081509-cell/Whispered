@@ -81,7 +81,7 @@ export default function HomeScreen() {
             <Text style={[styles.name, { color: colors.text }]}>{firstName}</Text>
           </View>
           <Pressable
-            onPress={() => router.push("/settings/index")}
+            onPress={() => router.push("/settings")}
             hitSlop={12}
             style={[styles.settingsBtn, { backgroundColor: "rgba(0,229,255,0.06)", borderColor: colors.border, borderWidth: 1 }]}
           >
@@ -211,10 +211,10 @@ export default function HomeScreen() {
         <Text style={[styles.sectionTitle, { color: colors.mutedForeground }]}>Quick access</Text>
         <View style={styles.actionsGrid}>
           {[
-            { label: "Daily Prompt", icon: "message-square", route: "/prompts/index", color: "#7B2FFF" },
-            { label: "Whisper",      icon: "send",           route: "/whispers/index", color: "#00E5FF" },
-            { label: "Journal",      icon: "book-open",      route: "/journal/index",  color: "#22D3A5" },
-            { label: "Timeline",     icon: "clock",          route: "/timeline/index", color: "#FF4FA3" },
+            { label: "Daily Prompt", icon: "message-square", route: "/prompts",  color: "#7B2FFF" },
+            { label: "Whisper",      icon: "send",           route: "/whispers", color: "#00E5FF" },
+            { label: "Journal",      icon: "book-open",      route: "/journal",  color: "#22D3A5" },
+            { label: "Timeline",     icon: "clock",          route: "/timeline", color: "#FF4FA3" },
           ].map((a) => (
             <Pressable
               key={a.label}
