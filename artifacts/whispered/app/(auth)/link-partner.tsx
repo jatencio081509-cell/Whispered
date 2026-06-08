@@ -21,6 +21,7 @@ export default function LinkPartnerScreen() {
   const colors = useColors();
 
   const [partnerCode, setPartnerCode] = useState('');
+  const [partnerName, setPartnerName] = useState('');
   const [myCode, setMyCode] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
@@ -32,6 +33,9 @@ export default function LinkPartnerScreen() {
     }
     if (user?.unsafeMetadata?.myLinkingCode) {
       setMyCode(user.unsafeMetadata.myLinkingCode as string);
+    }
+    if (user?.unsafeMetadata?.partnerName) {
+      setPartnerName(user.unsafeMetadata.partnerName as string);
     }
   }, [user]);
 
@@ -46,7 +50,7 @@ export default function LinkPartnerScreen() {
         unsafeMetadata: {
           ...user.unsafeMetadata,
           myLinkingCode: code,
-          myUserId: user.id, // Save our own ID for future mood sync
+          myUserId: user.id,
         },
       });
       setMyCode(code);
@@ -59,7 +63,10 @@ export default function LinkPartnerScreen() {
   };
 
   const linkPartner = async () => {
-    if (!user || !partnerCode.trim()) return;
+    if (!user || !partnerCode.trim()) {
+      setError('Please enter a code');
+      return;
+    }
 
     setLoading(true);
     setError('');
@@ -69,15 +76,15 @@ export default function LinkPartnerScreen() {
         unsafeMetadata: {
           ...user.unsafeMetadata,
           partnerCode: partnerCode.trim().toUpperCase(),
-          // In a full system we would also store partnerUserId here
+          partnerName: partnerName.trim() || 'Partner', // Save name if provided
         },
       });
 
       setLinkedPartner(partnerCode.trim().toUpperCase());
-      Alert.alert('Success', 'Partner linked! Their mood will appear on your home screen.');
+      Alert.alert('Success', 'Partner linked!');
       router.replace('/(tabs)');
     } catch (err) {
-      setError('Failed to link');
+      setError('Failed to link partner');
     } finally {
       setLoading(false);
     }
@@ -94,14 +101,14 @@ export default function LinkPartnerScreen() {
 
         {linkedPartner && (
           <View style={styles.statusBox}>
-            <Text style={{ color: colors.primary }}>Already linked with code: {linkedPartner}</Text>
+            <Text style={{ color: colors.primary }}>Already linked</Text>
           </View>
         )}
 
         <View style={styles.section}>
-          <Text style={[styles.sectionTitle, { color: colors.foreground }]}>Your Code</Text>
+          <Text style={[styles.sectionTitle, { color: colors.foreground }]}>Your Linking Code</Text>
           <Text style={[styles.sectionDesc, { color: colors.mutedForeground }]}>
-            Generate and share this code
+            Generate and share this with your partner
           </Text>
 
           {myCode ? (
@@ -120,12 +127,22 @@ export default function LinkPartnerScreen() {
           <TextInput
             value={partnerCode}
             onChangeText={setPartnerCode}
-            placeholder="Enter code"
+            placeholder="Enter their code"
             style={styles.input}
             autoCapitalize="characters"
             maxLength={6}
           />
+
+          <Text style={[styles.sectionTitle, { color: colors.foreground, marginTop: 16 }]}>Partner's Name (optional)</Text>
+          <TextInput
+            value={partnerName}
+            onChangeText={setPartnerName}
+            placeholder="Her name (e.g. Sarah)"
+            style={styles.input}
+          />
+
           {error ? <Text style={styles.error}>{error}</Text> : null}
+
           <Pressable onPress={linkPartner} style={[styles.button, { backgroundColor: colors.primary }]}>
             <Text style={[styles.buttonText, { color: colors.primaryForeground }]}>Link Partner</Text>
           </Pressable>
@@ -144,7 +161,7 @@ const styles = StyleSheet.create({
   sectionDesc: { fontSize: 14, marginBottom: 12 },
   codeBox: { backgroundColor: '#1A1A1A', padding: 20, borderRadius: 12, alignItems: 'center' },
   code: { fontSize: 28, fontWeight: '700', letterSpacing: 3 },
-  input: { backgroundColor: '#1A1A1A', color: 'white', padding: 16, borderRadius: 12, fontSize: 18, textAlign: 'center', marginBottom: 16 },
+  input: { backgroundColor: '#1A1A1A', color: 'white', padding: 16, borderRadius: 12, fontSize: 18, textAlign: 'center', marginBottom: 12 },
   button: { padding: 18, borderRadius: 999, alignItems: 'center' },
   buttonText: { fontSize: 16, fontWeight: '600' },
   error: { color: '#FF3B30', marginTop: 8 },
