@@ -25,7 +25,6 @@ export default function HomeScreen() {
   const [selectedMood, setSelectedMood] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
 
-  // Load current mood from metadata
   React.useEffect(() => {
     if (user?.unsafeMetadata?.currentMood) {
       setSelectedMood(user.unsafeMetadata.currentMood as string);
@@ -135,9 +134,10 @@ export default function HomeScreen() {
             </Pressable>
           )}
         </View>
-      </ScrollView>
-    );
-  }
+
+      </View>
+    </ScrollView>
+  );
 }
 
 const styles = StyleSheet.create({
