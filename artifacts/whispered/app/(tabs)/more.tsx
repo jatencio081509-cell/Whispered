@@ -15,12 +15,12 @@ import { useApp } from "@/context/AppContext";
 import * as Haptics from "expo-haptics";
 
 const FEATURES = [
-  { id: "goals",    label: "Goals",         description: "Track shared dreams",   icon: "target",        color: "#00E5FF", route: "/goals/index"    },
-  { id: "journal",  label: "Journal",       description: "Write your story",       icon: "book-open",     color: "#22D3A5", route: "/journal/index"  },
-  { id: "prompts",  label: "Daily Prompts", description: "Answer together",        icon: "message-square",color: "#7B2FFF", route: "/prompts/index"  },
-  { id: "whispers", label: "Whispers",      description: "Hidden messages",        icon: "send",          color: "#FF4FA3", route: "/whispers/index" },
-  { id: "timeline", label: "Timeline",      description: "Your milestones",        icon: "clock",         color: "#00E5FF", route: "/timeline/index" },
-  { id: "settings", label: "Settings",      description: "Themes & couple config", icon: "settings",      color: "#5B7A9A", route: "/settings/index" },
+  { id: "goals",    label: "Goals",         description: "Track shared dreams",   icon: "target",        color: "#00E5FF", route: "/goals"    },
+  { id: "journal",  label: "Journal",       description: "Write your story",       icon: "book-open",     color: "#22D3A5", route: "/journal"  },
+  { id: "prompts",  label: "Daily Prompts", description: "Answer together",        icon: "message-square",color: "#7B2FFF", route: "/prompts"  },
+  { id: "whispers", label: "Whispers",      description: "Hidden messages",        icon: "send",          color: "#FF4FA3", route: "/whispers" },
+  { id: "timeline", label: "Timeline",      description: "Your milestones",        icon: "clock",         color: "#00E5FF", route: "/timeline" },
+  { id: "settings", label: "Settings",      description: "Themes & couple config", icon: "settings",      color: "#5B7A9A", route: "/settings" },
 ];
 
 export default function MoreScreen() {
