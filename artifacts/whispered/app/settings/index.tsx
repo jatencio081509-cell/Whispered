@@ -25,7 +25,6 @@ export default function SettingsScreen() {
     );
   }
 
-  // Check if user is linked to a partner
   const partnerCode = user.unsafeMetadata?.partnerCode as string | undefined;
   const isLinked = !!partnerCode;
 
@@ -96,14 +95,15 @@ export default function SettingsScreen() {
           )}
         </View>
 
-        {/* Other settings can go here */}
+        {/* Other settings */}
         <View style={styles.section}>
           <Text style={[styles.sectionTitle, { color: colors.foreground }]}>Preferences</Text>
           {/* Add more settings here later */}
         </View>
-      </ScrollView>
-    );
-  }
+
+      </View>
+    </ScrollView>
+  );
 }
 
 const styles = StyleSheet.create({
