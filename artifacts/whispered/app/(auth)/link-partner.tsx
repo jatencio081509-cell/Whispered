@@ -28,23 +28,15 @@ export default function LinkPartnerScreen() {
   const [linkedPartner, setLinkedPartner] = useState<string | null>(null);
 
   useEffect(() => {
-    if (user?.unsafeMetadata?.partnerCode) {
-      setLinkedPartner(user.unsafeMetadata.partnerCode as string);
-    }
-    if (user?.unsafeMetadata?.myLinkingCode) {
-      setMyCode(user.unsafeMetadata.myLinkingCode as string);
-    }
-    if (user?.unsafeMetadata?.partnerName) {
-      setPartnerName(user.unsafeMetadata.partnerName as string);
-    }
+    if (user?.unsafeMetadata?.partnerCode) setLinkedPartner(user.unsafeMetadata.partnerCode as string);
+    if (user?.unsafeMetadata?.myLinkingCode) setMyCode(user.unsafeMetadata.myLinkingCode as string);
+    if (user?.unsafeMetadata?.partnerName) setPartnerName(user.unsafeMetadata.partnerName as string);
   }, [user]);
 
   const generateCode = async () => {
     if (!user) return;
-
     const code = Math.random().toString(36).substring(2, 8).toUpperCase();
     setLoading(true);
-
     try {
       await user.update({
         unsafeMetadata: {
@@ -54,7 +46,7 @@ export default function LinkPartnerScreen() {
         },
       });
       setMyCode(code);
-      Alert.alert('Code Generated', `Share this code with your partner: ${code}`);
+      Alert.alert('Code Generated', `Share this code: ${code}`);
     } catch (err) {
       setError('Failed to generate code');
     } finally {
@@ -67,54 +59,40 @@ export default function LinkPartnerScreen() {
       setError('Please enter a code');
       return;
     }
-
     setLoading(true);
     setError('');
-
     try {
       await user.update({
         unsafeMetadata: {
           ...user.unsafeMetadata,
           partnerCode: partnerCode.trim().toUpperCase(),
-          partnerName: partnerName.trim() || 'Partner', // Save name if provided
+          partnerName: partnerName.trim() || 'Partner',
+          // We store partner's user ID here in a full system
         },
       });
-
       setLinkedPartner(partnerCode.trim().toUpperCase());
-      Alert.alert('Success', 'Partner linked!');
+      Alert.alert('Success', 'Partner linked! Mood sync will work better now.');
       router.replace('/(tabs)');
     } catch (err) {
-      setError('Failed to link partner');
+      setError('Failed to link');
     } finally {
       setLoading(false);
     }
   };
 
-  if (!isLoaded) {
-    return <View style={styles.container}><ActivityIndicator /></View>;
-  }
+  if (!isLoaded) return <View style={styles.container}><ActivityIndicator /></View>;
 
   return (
     <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} style={styles.container}>
       <ScrollView contentContainerStyle={styles.content}>
         <Text style={[styles.title, { color: colors.foreground }]}>Link your partner</Text>
 
-        {linkedPartner && (
-          <View style={styles.statusBox}>
-            <Text style={{ color: colors.primary }}>Already linked</Text>
-          </View>
-        )}
+        {linkedPartner && <View style={styles.statusBox}><Text style={{ color: colors.primary }}>Already linked</Text></View>}
 
         <View style={styles.section}>
-          <Text style={[styles.sectionTitle, { color: colors.foreground }]}>Your Linking Code</Text>
-          <Text style={[styles.sectionDesc, { color: colors.mutedForeground }]}>
-            Generate and share this with your partner
-          </Text>
-
+          <Text style={[styles.sectionTitle, { color: colors.foreground }]}>Your Code</Text>
           {myCode ? (
-            <View style={styles.codeBox}>
-              <Text style={styles.code}>{myCode}</Text>
-            </View>
+            <View style={styles.codeBox}><Text style={styles.code}>{myCode}</Text></View>
           ) : (
             <Pressable onPress={generateCode} style={[styles.button, { backgroundColor: colors.primary }]}>
               <Text style={[styles.buttonText, { color: colors.primaryForeground }]}>Generate Code</Text>
@@ -124,25 +102,10 @@ export default function LinkPartnerScreen() {
 
         <View style={styles.section}>
           <Text style={[styles.sectionTitle, { color: colors.foreground }]}>Enter Partner's Code</Text>
-          <TextInput
-            value={partnerCode}
-            onChangeText={setPartnerCode}
-            placeholder="Enter their code"
-            style={styles.input}
-            autoCapitalize="characters"
-            maxLength={6}
-          />
-
+          <TextInput value={partnerCode} onChangeText={setPartnerCode} placeholder="Enter code" style={styles.input} autoCapitalize="characters" maxLength={6} />
           <Text style={[styles.sectionTitle, { color: colors.foreground, marginTop: 16 }]}>Partner's Name (optional)</Text>
-          <TextInput
-            value={partnerName}
-            onChangeText={setPartnerName}
-            placeholder="Her name (e.g. Sarah)"
-            style={styles.input}
-          />
-
+          <TextInput value={partnerName} onChangeText={setPartnerName} placeholder="Her name" style={styles.input} />
           {error ? <Text style={styles.error}>{error}</Text> : null}
-
           <Pressable onPress={linkPartner} style={[styles.button, { backgroundColor: colors.primary }]}>
             <Text style={[styles.buttonText, { color: colors.primaryForeground }]}>Link Partner</Text>
           </Pressable>
@@ -158,7 +121,6 @@ const styles = StyleSheet.create({
   title: { fontSize: 26, fontWeight: '700', marginBottom: 24 },
   section: { marginBottom: 28 },
   sectionTitle: { fontSize: 18, fontWeight: '600', marginBottom: 8 },
-  sectionDesc: { fontSize: 14, marginBottom: 12 },
   codeBox: { backgroundColor: '#1A1A1A', padding: 20, borderRadius: 12, alignItems: 'center' },
   code: { fontSize: 28, fontWeight: '700', letterSpacing: 3 },
   input: { backgroundColor: '#1A1A1A', color: 'white', padding: 16, borderRadius: 12, fontSize: 18, textAlign: 'center', marginBottom: 12 },
