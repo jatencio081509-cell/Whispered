@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Feather } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
-import { useAuth, useUser } from '@clerk/expo';
+import { useUser } from '@clerk/expo';
 import { useColors } from '@/hooks/useColors';
 
 import { View, Text, Pressable, StyleSheet, ScrollView } from 'react-native';
@@ -23,7 +23,6 @@ export default function HomeScreen() {
   const colors = useColors();
 
   const [selectedMood, setSelectedMood] = useState<string | null>(null);
-  const [saving, setSaving] = useState(false);
 
   React.useEffect(() => {
     if (user?.unsafeMetadata?.currentMood) {
@@ -33,7 +32,6 @@ export default function HomeScreen() {
 
   const saveMood = async (moodLabel: string) => {
     if (!user) return;
-    setSaving(true);
 
     try {
       await user.update({
@@ -45,8 +43,6 @@ export default function HomeScreen() {
       setSelectedMood(moodLabel);
     } catch (error) {
       console.error('Failed to save mood', error);
-    } finally {
-      setSaving(false);
     }
   };
 
@@ -59,6 +55,7 @@ export default function HomeScreen() {
   }
 
   const partnerCode = user?.unsafeMetadata?.partnerCode as string | undefined;
+  const partnerName = user?.unsafeMetadata?.partnerName as string | undefined;
   const isLinked = !!partnerCode;
 
   return (
@@ -111,13 +108,15 @@ export default function HomeScreen() {
           {isLinked ? (
             <View style={styles.partnerCard}>
               <View style={styles.partnerHeader}>
-                <Feather name="users" size={20} color={colors.primary} />
+                <Feather name="heart" size={20} color={colors.primary} />
                 <Text style={[styles.partnerTitle, { color: colors.foreground }]}>
-                  Linked with {partnerCode}
+                  {partnerName ? `Linked with ${partnerName}` : `Linked with ${partnerCode}`}
                 </Text>
               </View>
               <Text style={[styles.partnerSubtext, { color: colors.mutedForeground }]}>
-                Partner's mood will appear here
+                {partnerName 
+                  ? `${partnerName}'s mood will appear here` 
+                  : "Partner's mood will appear here"}
               </Text>
             </View>
           ) : (
