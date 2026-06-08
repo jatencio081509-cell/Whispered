@@ -12,7 +12,7 @@ import {
   View,
 } from 'react-native';
 import { useRouter } from 'expo-router';
-import { useUser } from '@clerk/clerk-expo';
+import { useUser } from 'clerk/expo';
 import { useColors } from '@/hooks/useColors';
 
 export default function LinkPartnerScreen() {
