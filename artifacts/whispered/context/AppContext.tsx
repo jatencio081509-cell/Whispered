@@ -6,7 +6,8 @@ import React, {
   useState,
 } from "react";
 import AsyncStorage from "@react-native-async-storage/async-storage";
-import { useAuth } from "@clerk/expo";
+import { useAuth, useUser } from "@clerk/expo";
+import { syncAllData } from "@/lib/syncClerkToSupabase";
 
 export type Theme = "calm" | "warm" | "playful" | "elegant";
 export type Mood = "happy" | "calm" | "okay" | "sad" | "loved" | null;
@@ -53,6 +54,7 @@ export const AppContext = createContext<AppContextValue>({
 
 export function AppProvider({ children }: { children: React.ReactNode }) {
   const { getToken, isSignedIn } = useAuth();
+  const { user } = useUser();
   const [couple, setCoupleState] = useState<Couple | null>(null);
   const [theme, setThemeState] = useState<Theme>("calm");
   const [myMood, setMyMoodState] = useState<Mood>(null);
@@ -123,12 +125,22 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   }, [isSignedIn, getToken, baseUrl]);
 
   useEffect(() => {
-    if (isSignedIn) {
+    if (isSignedIn && user) {
+      // Sync Clerk data to Supabase
+      syncAllData(
+        user.id,
+        user.firstName,
+        user.username,
+        user.imageUrl,
+        user.unsafeMetadata?.coupleId as string | undefined,
+        user.unsafeMetadata?.partnerName as string | undefined,
+        user.unsafeMetadata?.inviteCode as string | undefined
+      );
       refreshCouple();
     } else {
       setCoupleState(null);
     }
-  }, [isSignedIn]);
+  }, [isSignedIn, user]);
 
   return (
     <AppContext.Provider

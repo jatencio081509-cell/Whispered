@@ -10,38 +10,68 @@ import {
   Text,
   TextInput,
   View,
+  Alert,
+  KeyboardAvoidingView,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import * as ImagePicker from "expo-image-picker";
 import { Feather } from "@expo/vector-icons";
 import { useColors } from "@/hooks/useColors";
-import AsyncStorage from "@react-native-async-storage/async-storage";
 import * as Haptics from "expo-haptics";
+import { useUser } from "@clerk/expo";
+import { supabase } from "@/lib/supabase";
+import NavigationDrawer from '@/components/NavigationDrawer';
 
 interface Memory {
   id: string;
-  uri: string;
-  caption: string;
-  date: string;
+  image_url: string;
+  caption: string | null;
+  created_at: string;
+  user_id: string;
 }
 
 export default function MemoriesScreen() {
   const colors = useColors();
   const insets = useSafeAreaInsets();
+  const { user } = useUser();
   const [memories, setMemories] = useState<Memory[]>([]);
   const [showModal, setShowModal] = useState(false);
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
   const [caption, setCaption] = useState("");
   const [isUploading, setIsUploading] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const [showNavigationDrawer, setShowNavigationDrawer] = useState(false);
   const topPad = Platform.OS === "web" ? insets.top + 67 : insets.top;
 
   useEffect(() => {
-    AsyncStorage.getItem("memories").then((data) => { if (data) setMemories(JSON.parse(data)); });
-  }, []);
+    loadMemories();
+  }, [user]);
 
-  const saveMemories = (updated: Memory[]) => {
-    setMemories(updated);
-    AsyncStorage.setItem("memories", JSON.stringify(updated));
+  const loadMemories = async () => {
+    if (!user) return;
+    
+    try {
+      // Get couple_id from user metadata
+      const coupleId = user.unsafeMetadata?.coupleId as string | undefined;
+      if (!coupleId) {
+        setLoading(false);
+        return;
+      }
+
+      const { data, error } = await supabase
+        .from('memories')
+        .select('*')
+        .eq('couple_id', coupleId)
+        .order('created_at', { ascending: false });
+
+      if (error) throw error;
+      setMemories(data || []);
+    } catch (error) {
+      console.error('Error loading memories:', error);
+      Alert.alert('Error', 'Failed to load memories');
+    } finally {
+      setLoading(false);
+    }
   };
 
   const pickImage = async () => {
@@ -52,18 +82,62 @@ export default function MemoriesScreen() {
   };
 
   const addMemory = async () => {
-    if (!selectedImage) return;
+    if (!selectedImage || !user) return;
     setIsUploading(true);
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-    const newMemory: Memory = { id: Date.now().toString(36), uri: selectedImage, caption: caption.trim(), date: new Date().toISOString() };
-    saveMemories([newMemory, ...memories]);
-    setShowModal(false); setSelectedImage(null); setCaption(""); setIsUploading(false);
-    Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+
+    try {
+      const coupleId = user.unsafeMetadata?.coupleId as string | undefined;
+      if (!coupleId) {
+        Alert.alert('Error', 'You need to link with a partner first');
+        setIsUploading(false);
+        return;
+      }
+
+      // For now, we'll use the local URI. In production, you'd upload to Supabase Storage
+      const newMemory = {
+        id: Date.now().toString(36),
+        couple_id: coupleId,
+        user_id: user.id,
+        image_url: selectedImage,
+        caption: caption.trim() || null,
+      };
+
+      const { error } = await supabase
+        .from('memories')
+        .insert(newMemory);
+
+      if (error) throw error;
+
+      await loadMemories();
+      setShowModal(false);
+      setSelectedImage(null);
+      setCaption("");
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+    } catch (error) {
+      console.error('Error adding memory:', error);
+      Alert.alert('Error', 'Failed to add memory');
+    } finally {
+      setIsUploading(false);
+    }
   };
 
-  const deleteMemory = (id: string) => {
+  const deleteMemory = async (id: string) => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-    saveMemories(memories.filter((m) => m.id !== id));
+
+    try {
+      const { error } = await supabase
+        .from('memories')
+        .delete()
+        .eq('id', id);
+
+      if (error) throw error;
+
+      await loadMemories();
+    } catch (error) {
+      console.error('Error deleting memory:', error);
+      Alert.alert('Error', 'Failed to delete memory');
+    }
   };
 
   const formatDate = (iso: string) => new Date(iso).toLocaleDateString(undefined, { month: "long", day: "numeric", year: "numeric" });
@@ -73,15 +147,25 @@ export default function MemoriesScreen() {
       <View style={styles.scanLine} />
       <View style={[styles.header, { paddingTop: topPad + 12, borderBottomColor: colors.border }]}>
         <Text style={[styles.headerTitle, { color: colors.text }]}>Memories</Text>
-        <Pressable
-          style={({ pressed }) => [styles.addBtn, { opacity: pressed ? 0.8 : 1, borderColor: colors.border }]}
-          onPress={pickImage}
-        >
-          <Feather name="plus" size={20} color={colors.primary} />
-        </Pressable>
+        <View style={styles.headerButtons}>
+          <Pressable
+            style={({ pressed }) => [styles.addBtn, { opacity: pressed ? 0.8 : 1, borderColor: colors.border }]}
+            onPress={pickImage}
+          >
+            <Feather name="plus" size={20} color={colors.primary} />
+          </Pressable>
+          <Pressable onPress={() => setShowNavigationDrawer(true)} style={styles.menuBtn}>
+            <Feather name="menu" size={24} color={colors.text} />
+          </Pressable>
+        </View>
       </View>
 
-      {memories.length === 0 ? (
+      {loading ? (
+        <View style={styles.empty}>
+          <ActivityIndicator size="large" color={colors.primary} />
+          <Text style={[styles.emptySubtitle, { color: colors.mutedForeground }]}>Loading memories...</Text>
+        </View>
+      ) : memories.length === 0 ? (
         <View style={styles.empty}>
           <View style={[styles.emptyIcon, { backgroundColor: "rgba(0,229,255,0.08)", borderColor: colors.border, borderWidth: 1 }]}>
             <Feather name="image" size={32} color={colors.primary} />
@@ -105,10 +189,10 @@ export default function MemoriesScreen() {
               style={[styles.memCard, { backgroundColor: colors.card, borderColor: colors.border }]}
               onLongPress={() => deleteMemory(mem.id)}
             >
-              <Image source={{ uri: mem.uri }} style={styles.memImage} resizeMode="cover" />
+              <Image source={{ uri: mem.image_url }} style={styles.memImage} resizeMode="cover" />
               <View style={styles.memInfo}>
                 {mem.caption ? <Text style={[styles.memCaption, { color: colors.text }]} numberOfLines={2}>{mem.caption}</Text> : null}
-                <Text style={[styles.memDate, { color: colors.mutedForeground }]}>{formatDate(mem.date)}</Text>
+                <Text style={[styles.memDate, { color: colors.mutedForeground }]}>{formatDate(mem.created_at)}</Text>
               </View>
             </Pressable>
           )}
@@ -116,7 +200,11 @@ export default function MemoriesScreen() {
       )}
 
       <Modal visible={showModal} transparent animationType="slide" onRequestClose={() => setShowModal(false)}>
-        <View style={styles.modalOverlay}>
+        <KeyboardAvoidingView
+          behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+          keyboardVerticalOffset={Platform.OS === 'ios' ? 50 : 0}
+          style={styles.modalOverlay}
+        >
           <View style={[styles.modalSheet, { backgroundColor: colors.card, borderColor: colors.border }]}>
             <View style={[styles.modalHandle, { backgroundColor: colors.border }]} />
             <Text style={[styles.modalTitle, { color: colors.text }]}>Add memory</Text>
@@ -146,8 +234,14 @@ export default function MemoriesScreen() {
               </Pressable>
             </View>
           </View>
-        </View>
+        </KeyboardAvoidingView>
       </Modal>
+
+      <NavigationDrawer
+        visible={showNavigationDrawer}
+        onClose={() => setShowNavigationDrawer(false)}
+      />
+
     </View>
   );
 }
@@ -157,7 +251,9 @@ const styles = StyleSheet.create({
   scanLine: { position: "absolute", top: 0, left: 0, right: 0, height: 1, backgroundColor: "rgba(0,229,255,0.3)", zIndex: 10 },
   header: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", paddingHorizontal: 20, paddingBottom: 12, borderBottomWidth: 1 },
   headerTitle: { fontSize: 24, fontFamily: "Inter_700Bold", letterSpacing: -0.3 },
+  headerButtons: { flexDirection: "row", alignItems: "center", gap: 12 },
   addBtn: { width: 38, height: 38, borderRadius: 12, borderWidth: 1, alignItems: "center", justifyContent: "center" },
+  menuBtn: { padding: 8 },
   empty: { flex: 1, alignItems: "center", justifyContent: "center", gap: 14, padding: 32 },
   emptyIcon: { width: 72, height: 72, borderRadius: 24, alignItems: "center", justifyContent: "center" },
   emptyTitle: { fontSize: 18, fontFamily: "Inter_600SemiBold" },

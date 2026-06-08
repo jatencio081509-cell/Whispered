@@ -29,6 +29,16 @@ export const wMessages = pgTable("w_messages", {
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 
+export const wMemories = pgTable("w_memories", {
+  id: text("id").primaryKey(),
+  coupleId: text("couple_id").notNull(),
+  userId: text("user_id").notNull(),
+  imageUrl: text("image_url").notNull(),
+  caption: text("caption"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
 export type WUser = typeof wUsers.$inferSelect;
 export type WCouple = typeof wCouples.$inferSelect;
 export type WMessage = typeof wMessages.$inferSelect;
+export type WMemory = typeof wMemories.$inferSelect;

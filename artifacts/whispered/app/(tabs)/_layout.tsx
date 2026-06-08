@@ -13,7 +13,11 @@ function NativeTabLayout() {
     <NativeTabs>
       <NativeTabs.Trigger name="index">
         <Icon sf={{ default: "house", selected: "house.fill" }} />
-        <Label>Home</Label>
+        <Label>Main</Label>
+      </NativeTabs.Trigger>
+      <NativeTabs.Trigger name="wordle">
+        <Icon sf={{ default: "gamecontroller", selected: "gamecontroller.fill" }} />
+        <Label>Wordle</Label>
       </NativeTabs.Trigger>
       <NativeTabs.Trigger name="chat">
         <Icon sf={{ default: "message", selected: "message.fill" }} />
@@ -43,35 +47,14 @@ function ClassicTabLayout() {
         tabBarInactiveTintColor: colors.mutedForeground,
         headerShown: false,
         tabBarStyle: {
-          position: "absolute",
-          backgroundColor: "transparent",
-          borderTopWidth: 1,
-          borderTopColor: "rgba(0,229,255,0.15)",
-          elevation: 0,
-          height: isWeb ? 84 : 60,
+          display: 'none',
         },
-        tabBarLabelStyle: {
-          fontFamily: "Inter_500Medium",
-          fontSize: 10,
-          marginTop: -2,
-        },
-        tabBarBackground: () =>
-          isIOS ? (
-            <BlurView intensity={80} tint="dark" style={StyleSheet.absoluteFill} />
-          ) : (
-            <View
-              style={[
-                StyleSheet.absoluteFill,
-                { backgroundColor: "#04060E", borderTopWidth: 1, borderTopColor: "rgba(0,229,255,0.15)" },
-              ]}
-            />
-          ),
       }}
     >
       <Tabs.Screen
         name="index"
         options={{
-          title: "Home",
+          title: "Main",
           tabBarIcon: ({ color }) =>
             isIOS ? (
               <SymbolView name="house" tintColor={color} size={22} />
@@ -81,39 +64,36 @@ function ClassicTabLayout() {
         }}
       />
       <Tabs.Screen
-        name="chat"
+        name="wordle"
         options={{
-          title: "Chat",
+          title: "Wordle",
           tabBarIcon: ({ color }) =>
             isIOS ? (
-              <SymbolView name="message" tintColor={color} size={22} />
+              <SymbolView name="gamecontroller" tintColor={color} size={22} />
             ) : (
-              <Feather name="message-circle" size={22} color={color} />
+              <Feather name="grid" size={22} color={color} />
             ),
+        }}
+      />
+      <Tabs.Screen
+        name="chat"
+        options={{
+          href: null,
+          tabBarButton: () => null,
         }}
       />
       <Tabs.Screen
         name="memories"
         options={{
-          title: "Memories",
-          tabBarIcon: ({ color }) =>
-            isIOS ? (
-              <SymbolView name="photo" tintColor={color} size={22} />
-            ) : (
-              <Feather name="image" size={22} color={color} />
-            ),
+          href: null,
+          tabBarButton: () => null,
         }}
       />
       <Tabs.Screen
         name="more"
         options={{
-          title: "More",
-          tabBarIcon: ({ color }) =>
-            isIOS ? (
-              <SymbolView name="square.grid.2x2" tintColor={color} size={22} />
-            ) : (
-              <Feather name="grid" size={22} color={color} />
-            ),
+          href: null,
+          tabBarButton: () => null,
         }}
       />
     </Tabs>

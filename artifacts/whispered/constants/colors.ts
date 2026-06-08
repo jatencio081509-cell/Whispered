@@ -26,34 +26,34 @@ interface Palette {
 }
 
 const base: Omit<Palette, "primary" | "primaryForeground" | "secondary" | "secondaryForeground" | "accent" | "accentForeground" | "border" | "tint" | "streak"> = {
-  text: "#EEF2FF",
-  background: "#04060E",
-  foreground: "#EEF2FF",
-  card: "#080D1A",
-  cardForeground: "#EEF2FF",
-  muted: "#0A0F1E",
-  mutedForeground: "#5B7A9A",
+  text: "#FFFFFF",
+  background: "#0A1628",
+  foreground: "#FFFFFF",
+  card: "rgba(20, 40, 70, 0.6)",
+  cardForeground: "#FFFFFF",
+  muted: "rgba(30, 60, 100, 0.4)",
+  mutedForeground: "#94A3B8",
   destructive: "#EF4444",
   destructiveForeground: "#FFFFFF",
-  input: "#080D1A",
-  surface: "#060B16",
+  input: "rgba(30, 60, 100, 0.5)",
+  surface: "rgba(15, 35, 65, 0.5)",
   success: "#22D3A5",
   rose: "#FF4FA3",
 };
 
 export const THEME_PALETTES: Record<Theme, Palette> = {
-  // Cyber — electric cyan + purple (default)
+  // Ocean — deep ocean blues + white (default)
   calm: {
     ...base,
-    tint: "#00E5FF",
-    primary: "#00E5FF",
-    primaryForeground: "#030712",
-    secondary: "#7B2FFF",
+    tint: "#0EA5E9",
+    primary: "#0EA5E9",
+    primaryForeground: "#FFFFFF",
+    secondary: "#06B6D4",
     secondaryForeground: "#FFFFFF",
-    accent: "#7B2FFF",
+    accent: "#38BDF8",
     accentForeground: "#FFFFFF",
-    border: "rgba(0,229,255,0.12)",
-    streak: "#00E5FF",
+    border: "rgba(14, 165, 233, 0.3)",
+    streak: "#0EA5E9",
   },
   // Warm — rose pink + amber
   warm: {

@@ -14,6 +14,7 @@ import {
 import { useRouter } from 'expo-router';
 import { useUser } from '@clerk/expo';
 import { useColors } from '@/hooks/useColors';
+import { supabase } from '@/lib/supabase';
 
 export default function LinkPartnerScreen() {
   const { user, isLoaded } = useUser();
@@ -28,7 +29,7 @@ export default function LinkPartnerScreen() {
   const [linkedPartner, setLinkedPartner] = useState<string | null>(null);
 
   useEffect(() => {
-    if (user?.unsafeMetadata?.partnerCode) setLinkedPartner(user.unsafeMetadata.partnerCode as string);
+    if (user?.unsafeMetadata?.coupleId) setLinkedPartner(user.unsafeMetadata.coupleId as string);
     if (user?.unsafeMetadata?.myLinkingCode) setMyCode(user.unsafeMetadata.myLinkingCode as string);
     if (user?.unsafeMetadata?.partnerName) setPartnerName(user.unsafeMetadata.partnerName as string);
   }, [user]);
@@ -38,16 +39,38 @@ export default function LinkPartnerScreen() {
     const code = Math.random().toString(36).substring(2, 8).toUpperCase();
     setLoading(true);
     try {
+      // Create couple in Supabase
+      const coupleId = Date.now().toString(36);
+      const { error: coupleError } = await supabase
+        .from('couples')
+        .insert({
+          id: coupleId,
+          user1_id: user.id,
+          invite_code: code,
+        });
+
+      if (coupleError) throw coupleError;
+
+      // Create user record in Supabase
+      await supabase
+        .from('users')
+        .upsert({
+          id: user.id,
+          display_name: user.firstName || 'User',
+        });
+
+      // Store coupleId in Clerk metadata
       await user.update({
         unsafeMetadata: {
           ...user.unsafeMetadata,
           myLinkingCode: code,
-          myUserId: user.id,
+          coupleId: coupleId,
         },
       });
       setMyCode(code);
       Alert.alert('Code Generated', `Share this code: ${code}`);
     } catch (err) {
+      console.error('Error generating code:', err);
       setError('Failed to generate code');
     } finally {
       setLoading(false);
@@ -62,18 +85,61 @@ export default function LinkPartnerScreen() {
     setLoading(true);
     setError('');
     try {
+      // Find couple by invite code
+      const { data: couples, error: findError } = await supabase
+        .from('couples')
+        .select('*')
+        .eq('invite_code', partnerCode.trim().toUpperCase())
+        .limit(1);
+
+      if (findError) throw findError;
+      if (!couples || couples.length === 0) {
+        setError('Invalid code');
+        setLoading(false);
+        return;
+      }
+
+      const couple = couples[0];
+      if (couple.user1_id === user.id) {
+        setError('Cannot link with yourself');
+        setLoading(false);
+        return;
+      }
+      if (couple.user2_id) {
+        setError('This couple is already linked');
+        setLoading(false);
+        return;
+      }
+
+      // Join the couple
+      const { error: updateError } = await supabase
+        .from('couples')
+        .update({ user2_id: user.id })
+        .eq('id', couple.id);
+
+      if (updateError) throw updateError;
+
+      // Create user record in Supabase
+      await supabase
+        .from('users')
+        .upsert({
+          id: user.id,
+          display_name: user.firstName || 'User',
+        });
+
+      // Store coupleId in Clerk metadata
       await user.update({
         unsafeMetadata: {
           ...user.unsafeMetadata,
-          partnerCode: partnerCode.trim().toUpperCase(),
+          coupleId: couple.id,
           partnerName: partnerName.trim() || 'Partner',
-          // We store partner's user ID here in a full system
         },
       });
-      setLinkedPartner(partnerCode.trim().toUpperCase());
-      Alert.alert('Success', 'Partner linked! Mood sync will work better now.');
+      setLinkedPartner(couple.id);
+      Alert.alert('Success', 'Partner linked! You can now share memories.');
       router.replace('/(tabs)');
     } catch (err) {
+      console.error('Error linking partner:', err);
       setError('Failed to link');
     } finally {
       setLoading(false);

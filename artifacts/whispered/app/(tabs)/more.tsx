@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useState } from "react";
 import {
   Platform,
   Pressable,
@@ -13,6 +13,7 @@ import { useRouter } from "expo-router";
 import { useColors } from "@/hooks/useColors";
 import { useApp } from "@/context/AppContext";
 import * as Haptics from "expo-haptics";
+import NavigationDrawer from '@/components/NavigationDrawer';
 
 const FEATURES = [
   { id: "goals",    label: "Goals",         description: "Track shared dreams",   icon: "target",        color: "#00E5FF", route: "/goals"    },
@@ -29,6 +30,7 @@ export default function MoreScreen() {
   const router = useRouter();
   const { couple, streak } = useApp();
   const topPad = Platform.OS === "web" ? insets.top + 67 : insets.top;
+  const [showNavigationDrawer, setShowNavigationDrawer] = useState(false);
 
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>
@@ -37,7 +39,12 @@ export default function MoreScreen() {
         contentContainerStyle={[styles.inner, { paddingTop: topPad + 16, paddingBottom: insets.bottom + 100 }]}
         showsVerticalScrollIndicator={false}
       >
-        <Text style={[styles.title, { color: colors.text }]}>More</Text>
+        <View style={styles.headerRow}>
+          <Text style={[styles.title, { color: colors.text }]}>More</Text>
+          <Pressable onPress={() => setShowNavigationDrawer(true)}>
+            <Feather name="menu" size={24} color={colors.text} />
+          </Pressable>
+        </View>
 
         {/* Stats banner */}
         <View style={[styles.statsBanner, { backgroundColor: colors.card, borderColor: colors.border }]}>
@@ -77,6 +84,12 @@ export default function MoreScreen() {
           ))}
         </View>
       </ScrollView>
+
+      <NavigationDrawer
+        visible={showNavigationDrawer}
+        onClose={() => setShowNavigationDrawer(false)}
+      />
+
     </View>
   );
 }
@@ -85,7 +98,8 @@ const styles = StyleSheet.create({
   container: { flex: 1 },
   scanLine: { position: "absolute", top: 0, left: 0, right: 0, height: 1, backgroundColor: "rgba(0,229,255,0.3)", zIndex: 10 },
   inner: { paddingHorizontal: 20, gap: 20 },
-  title: { fontSize: 28, fontFamily: "Inter_700Bold", letterSpacing: -0.5, marginBottom: 4 },
+  headerRow: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 4 },
+  title: { fontSize: 28, fontFamily: "Inter_700Bold", letterSpacing: -0.5 },
   statsBanner: { flexDirection: "row", borderRadius: 18, borderWidth: 1, padding: 16, alignItems: "center" },
   statItem: { flex: 1, alignItems: "center", gap: 4 },
   statNumber: { fontSize: 14, fontFamily: "Inter_600SemiBold" },
