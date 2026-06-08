@@ -36,7 +36,7 @@ interface AppContextValue {
   isLoadingCouple: boolean;
 }
 
-const AppContext = createContext<AppContextValue>({
+export const AppContext = createContext<AppContextValue>({
   couple: null,
   setCouple: () => {},
   theme: "calm",
