@@ -1,6 +1,5 @@
 import { createClient } from '@supabase/supabase-js';
 
-// Safe Supabase admin client initialization
 let supabaseAdmin: ReturnType<typeof createClient> | null = null;
 
 if (process.env.SUPABASE_URL && process.env.SUPABASE_SERVICE_ROLE_KEY) {
@@ -23,11 +22,9 @@ export async function syncUserToSupabase(
   imageUrl?: string | null
 ) {
   if (!supabaseAdmin) {
-    console.warn('Supabase admin client not initialized (missing env vars). Skipping sync.');
+    console.warn('Supabase admin client not initialized');
     return { success: false, error: 'Supabase not configured' };
   }
-
-  console.log('syncUserToSupabase called with:', { userId, firstName, username, imageUrl });
 
   try {
     const { data, error } = await supabaseAdmin
@@ -40,20 +37,27 @@ export async function syncUserToSupabase(
           avatar_url: imageUrl,
           updated_at: new Date().toISOString(),
         },
-        {
-          onConflict: 'id',
-        }
+        { onConflict: 'id' }
       );
 
     if (error) {
-      console.error('Error syncing user to Supabase:', error);
+      console.error('Error syncing user:', error);
       return { success: false, error };
     }
 
-    console.log('User synced to Supabase successfully');
     return { success: true, data };
   } catch (err) {
-    console.error('Unexpected error in syncUserToSupabase:', err);
+    console.error('Unexpected error:', err);
     return { success: false, error: err };
   }
+}
+
+// Wrapper so existing code that imports syncAllData keeps working
+export async function syncAllData(
+  userId: string,
+  firstName?: string | null,
+  username?: string | null,
+  imageUrl?: string | null
+) {
+  return syncUserToSupabase(userId, firstName, username, imageUrl);
 }
