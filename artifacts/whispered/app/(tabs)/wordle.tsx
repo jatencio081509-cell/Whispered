@@ -1,62 +1,53 @@
-import React from 'react';
-import { View, Text, StyleSheet, Pressable } from 'react-native';
-import { LinearGradient } from 'expo-linear-gradient';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { Feather } from '@expo/vector-icons';
+import React, { useState } from 'react';
+import {
+  View,
+  Text,
+  Pressable,
+  StyleSheet,
+} from 'react-native';
 import { useColors } from '@/hooks/useColors';
+import { useRouter } from 'expo-router';
 import NavigationDrawer from '@/components/NavigationDrawer';
 
 export default function WordleScreen() {
   const colors = useColors();
-  const insets = useSafeAreaInsets();
-  const [showNavigationDrawer, setShowNavigationDrawer] = React.useState(false);
+  const router = useRouter();
+  const [showNavigationDrawer, setShowNavigationDrawer] = useState(false);
 
   return (
-    <LinearGradient
-      colors={['#0A1628', '#0D2840', '#0F3A5C', '#0A4A6E', '#0A1628']}
-      start={{ x: 0, y: 0 }}
-      end={{ x: 0, y: 1 }}
-      style={styles.gradientContainer}
-    >
-      <View style={[styles.container, { paddingTop: insets.top }]}>
-        <View style={styles.headerRow}>
-          <Text style={[styles.title, { color: colors.foreground }]}>Wordle</Text>
-          <Pressable onPress={() => setShowNavigationDrawer(true)}>
-            <Feather name="menu" size={24} color={colors.foreground} />
-          </Pressable>
-        </View>
+    <View style={styles.container}>
+      <View style={styles.headerRow}>
+        <Text style={[styles.title, { color: colors.foreground }]}>Home</Text>
+        <Pressable onPress={() => setShowNavigationDrawer(true)}>
+          <Text style={{ color: colors.primary, fontSize: 16 }}>Menu</Text>
+        </Pressable>
+      </View>
 
-        <View style={styles.content}>
-          <View style={[styles.placeholder, { borderColor: colors.border }]}>
-            <Feather name="grid" size={64} color={colors.mutedForeground} />
-            <Text style={[styles.placeholderText, { color: colors.mutedForeground }]}>
-              Wordle coming soon...
-            </Text>
-          </View>
-        </View>
+      <View style={styles.content}>
+        <Text style={[styles.placeholderText, { color: colors.mutedForeground }]}>
+          Home coming soon...
+        </Text>
       </View>
 
       <NavigationDrawer
         visible={showNavigationDrawer}
         onClose={() => setShowNavigationDrawer(false)}
       />
-    </LinearGradient>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
-  gradientContainer: {
-    flex: 1,
-  },
   container: {
     flex: 1,
+    backgroundColor: '#0A0A0A',
     padding: 20,
   },
   headerRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 24,
+    marginBottom: 40,
   },
   title: {
     fontSize: 28,
@@ -67,19 +58,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
   },
-  placeholder: {
-    width: 200,
-    height: 200,
-    borderRadius: 100,
-    backgroundColor: 'rgba(20, 40, 70, 0.6)',
-    borderWidth: 1,
-    borderColor: 'rgba(14, 165, 233, 0.3)',
-    justifyContent: 'center',
-    alignItems: 'center',
-    gap: 16,
-  },
   placeholderText: {
-    fontSize: 16,
-    fontWeight: '500',
+    fontSize: 18,
   },
 });
