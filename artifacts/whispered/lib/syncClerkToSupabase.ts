@@ -1,17 +1,20 @@
 import { createClient } from '@supabase/supabase-js';
 
-// This client uses the SERVICE ROLE KEY - only use on the server side
-// Never expose this key on the client
-const supabaseAdmin = createClient(
-  process.env.SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!,
-  {
-    auth: {
-      autoRefreshToken: false,
-      persistSession: false,
-    },
-  }
-);
+// Safe Supabase admin client initialization
+let supabaseAdmin: ReturnType<typeof createClient> | null = null;
+
+if (process.env.SUPABASE_URL && process.env.SUPABASE_SERVICE_ROLE_KEY) {
+  supabaseAdmin = createClient(
+    process.env.SUPABASE_URL,
+    process.env.SUPABASE_SERVICE_ROLE_KEY,
+    {
+      auth: {
+        autoRefreshToken: false,
+        persistSession: false,
+      },
+    }
+  );
+}
 
 export async function syncUserToSupabase(
   userId: string,
@@ -19,6 +22,11 @@ export async function syncUserToSupabase(
   username?: string | null,
   imageUrl?: string | null
 ) {
+  if (!supabaseAdmin) {
+    console.warn('Supabase admin client not initialized (missing env vars). Skipping sync.');
+    return { success: false, error: 'Supabase not configured' };
+  }
+
   console.log('syncUserToSupabase called with:', { userId, firstName, username, imageUrl });
 
   try {
