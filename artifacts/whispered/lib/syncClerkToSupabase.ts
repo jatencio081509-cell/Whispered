@@ -1,102 +1,51 @@
-import { useUser } from '@clerk/expo';
-import { supabase } from './supabase';
+import { createClient } from '@supabase/supabase-js';
 
-export async function syncUserToSupabase(userId: string, firstName?: string | null, username?: string | null, imageUrl?: string | null) {
+// This client uses the SERVICE ROLE KEY - only use on the server side
+// Never expose this key on the client
+const supabaseAdmin = createClient(
+  process.env.SUPABASE_URL!,
+  process.env.SUPABASE_SERVICE_ROLE_KEY!,
+  {
+    auth: {
+      autoRefreshToken: false,
+      persistSession: false,
+    },
+  }
+);
+
+export async function syncUserToSupabase(
+  userId: string,
+  firstName?: string | null,
+  username?: string | null,
+  imageUrl?: string | null
+) {
   console.log('syncUserToSupabase called with:', { userId, firstName, username, imageUrl });
+
   try {
-    // Check if user already exists in Supabase
-    const { data: existingUser, error: fetchError } = await supabase
+    const { data, error } = await supabaseAdmin
       .from('users')
-      .select('id')
-      .eq('id', userId)
-      .single();
-
-    console.log('Existing user check:', { existingUser, fetchError });
-
-    if (fetchError && fetchError.code !== 'PGRST116') {
-      console.error('Error checking user:', fetchError);
-      return;
-    }
-
-    // If user doesn't exist, create them
-    if (!existingUser) {
-      console.log('Creating new user in Supabase...');
-      const { error: insertError } = await supabase
-        .from('users')
-        .insert({
+      .upsert(
+        {
           id: userId,
-          display_name: firstName || username || 'User',
+          first_name: firstName,
+          username: username,
           avatar_url: imageUrl,
-        });
+          updated_at: new Date().toISOString(),
+        },
+        {
+          onConflict: 'id',
+        }
+      );
 
-      if (insertError) {
-        console.error('Error creating user:', insertError);
-        return;
-      }
-
-      console.log('User synced to Supabase:', userId);
-    } else {
-      console.log('User already exists in Supabase:', userId);
+    if (error) {
+      console.error('Error syncing user to Supabase:', error);
+      return { success: false, error };
     }
-  } catch (error) {
-    console.error('Error syncing user to Supabase:', error);
+
+    console.log('User synced to Supabase successfully');
+    return { success: true, data };
+  } catch (err) {
+    console.error('Unexpected error in syncUserToSupabase:', err);
+    return { success: false, error: err };
   }
-}
-
-export async function syncCoupleToSupabase(userId: string, coupleId?: string, partnerName?: string, inviteCode?: string) {
-  console.log('syncCoupleToSupabase called with:', { userId, coupleId, partnerName, inviteCode });
-  try {
-    if (!coupleId) {
-      console.log('No coupleId found in user metadata');
-      return;
-    }
-
-    // Check if couple already exists in Supabase
-    const { data: existingCouple, error: fetchError } = await supabase
-      .from('couples')
-      .select('*')
-      .eq('id', coupleId)
-      .single();
-
-    console.log('Existing couple check:', { existingCouple, fetchError });
-
-    if (fetchError && fetchError.code !== 'PGRST116') {
-      console.error('Error checking couple:', fetchError);
-      return;
-    }
-
-    // If couple doesn't exist, create it
-    if (!existingCouple) {
-      if (!inviteCode) {
-        console.error('No inviteCode found in user metadata');
-        return;
-      }
-
-      console.log('Creating new couple in Supabase...');
-      const { error: insertError } = await supabase
-        .from('couples')
-        .insert({
-          id: coupleId,
-          user1_id: userId,
-          invite_code: inviteCode,
-        });
-
-      if (insertError) {
-        console.error('Error creating couple:', insertError);
-        return;
-      }
-
-      console.log('Couple synced to Supabase:', coupleId);
-    } else {
-      console.log('Couple already exists in Supabase:', coupleId);
-    }
-  } catch (error) {
-    console.error('Error syncing couple to Supabase:', error);
-  }
-}
-
-export async function syncAllData(userId: string, firstName?: string | null, username?: string | null, imageUrl?: string | null, coupleId?: string, partnerName?: string, inviteCode?: string) {
-  console.log('syncAllData called');
-  await syncUserToSupabase(userId, firstName, username, imageUrl);
-  await syncCoupleToSupabase(userId, coupleId, partnerName, inviteCode);
 }
