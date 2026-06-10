@@ -41,7 +41,7 @@ export default function LinkPartnerScreen() {
     }
   }, [user]);
 
-  const generateCode = async () => {
+  const generateCode = async (isRegenerate = false) => {
     if (!user) return;
 
     const code = Math.random().toString(36).substring(2, 8).toUpperCase();
@@ -62,7 +62,12 @@ export default function LinkPartnerScreen() {
       });
 
       setMyCode(code);
-      Alert.alert('Code Generated', `Share this code with your partner: ${code}`);
+
+      if (isRegenerate) {
+        Alert.alert('Code Regenerated', `Your new code is: ${code}\nOld code is no longer valid.`);
+      } else {
+        Alert.alert('Code Generated', `Share this code with your partner: ${code}`);
+      }
     } catch (err) {
       setError('Failed to generate code');
     } finally {
@@ -155,11 +160,20 @@ export default function LinkPartnerScreen() {
           </Text>
 
           {myCode ? (
-            <View style={styles.codeBox}>
-              <Text style={styles.code}>{myCode}</Text>
+            <View style={styles.codeContainer}>
+              <View style={styles.codeBox}>
+                <Text style={styles.code}>{myCode}</Text>
+              </View>
+              <Pressable 
+                onPress={() => generateCode(true)} 
+                disabled={loading}
+                style={styles.regenerateButton}
+              >
+                <Text style={styles.regenerateText}>Regenerate</Text>
+              </Pressable>
             </View>
           ) : (
-            <Pressable onPress={generateCode} style={[styles.button, { backgroundColor: colors.primary }]}>
+            <Pressable onPress={() => generateCode(false)} style={[styles.button, { backgroundColor: colors.primary }]}>
               <Text style={[styles.buttonText, { color: colors.primaryForeground }]}>Generate Code</Text>
             </Pressable>
           )}
@@ -188,7 +202,7 @@ export default function LinkPartnerScreen() {
 
           <Pressable onPress={linkPartner} style={[styles.button, { backgroundColor: colors.primary }]}>
             <Text style={[styles.buttonText, { color: colors.primaryForeground }]}>Link / Update Partner</Text>
-            </Pressable>
+          </Pressable>
         </View>
       </ScrollView>
     </KeyboardAvoidingView>
@@ -202,8 +216,26 @@ const styles = StyleSheet.create({
   section: { marginBottom: 28 },
   sectionTitle: { fontSize: 18, fontWeight: '600', marginBottom: 8 },
   sectionDesc: { fontSize: 14, marginBottom: 12 },
-  codeBox: { backgroundColor: '#1A1A1A', padding: 20, borderRadius: 12, alignItems: 'center' },
+  codeContainer: { 
+    flexDirection: 'row', 
+    alignItems: 'center', 
+    gap: 12 
+  },
+  codeBox: { 
+    flex: 1,
+    backgroundColor: '#1A1A1A', 
+    padding: 20, 
+    borderRadius: 12, 
+    alignItems: 'center' 
+  },
   code: { fontSize: 28, fontWeight: '700', letterSpacing: 3 },
+  regenerateButton: { 
+    paddingVertical: 12, 
+    paddingHorizontal: 16, 
+    backgroundColor: '#333', 
+    borderRadius: 12 
+  },
+  regenerateText: { color: colors.primary, fontSize: 14, fontWeight: '600' },
   input: { backgroundColor: '#1A1A1A', color: 'white', padding: 16, borderRadius: 12, fontSize: 18, textAlign: 'center', marginBottom: 12 },
   button: { padding: 18, borderRadius: 999, alignItems: 'center' },
   buttonText: { fontSize: 16, fontWeight: '600' },
