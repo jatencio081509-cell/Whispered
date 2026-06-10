@@ -235,7 +235,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#333', 
     borderRadius: 12 
   },
-  regenerateText: { color: colors.primary, fontSize: 14, fontWeight: '600' },
+  regenerateText: { color: '#00E5FF', fontSize: 14, fontWeight: '600' },
   input: { backgroundColor: '#1A1A1A', color: 'white', padding: 16, borderRadius: 12, fontSize: 18, textAlign: 'center', marginBottom: 12 },
   button: { padding: 18, borderRadius: 999, alignItems: 'center' },
   buttonText: { fontSize: 16, fontWeight: '600' },
