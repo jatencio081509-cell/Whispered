@@ -16,12 +16,14 @@ import { useRouter } from 'expo-router';
 import { Feather } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { supabase } from '@/lib/supabase';
 
 type Message = {
   id: string;
   text: string;
   fromMe: boolean;
   time: string;
+  created_at?: string;
 };
 
 export default function ChatScreen() {
@@ -33,68 +35,125 @@ export default function ChatScreen() {
 
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState('');
+  const [loading, setLoading] = useState(true);
 
   const partnerCode = user?.unsafeMetadata?.partnerCode as string | undefined;
   const partnerName = user?.unsafeMetadata?.partnerName as string | undefined;
+  const partnerUserId = user?.unsafeMetadata?.partner_user_id as string | undefined;
   const isLinked = !!partnerCode;
-  const chatKey = `chat_${partnerCode || 'solo'}`;
 
-  // Load persisted messages
-  useEffect(() => {
-    const loadMessages = async () => {
+  const myUserId = user?.id;
+
+  // Fetch messages from Supabase
+  const fetchMessages = async () => {
+    if (!myUserId || !partnerUserId) {
+      // Fallback: show local messages if we don't have partner user ID yet
       try {
-        const stored = await AsyncStorage.getItem(chatKey);
-        if (stored) {
-          setMessages(JSON.parse(stored));
+        const stored = await AsyncStorage.getItem(`chat_${partnerCode}`);
+        if (stored) setMessages(JSON.parse(stored));
+      } catch {}
+      setLoading(false);
+      return;
+    }
+
+    try {
+      const { data, error } = await supabase
+        .from('messages')
+        .select('*')
+        .or(`from_user_id.eq.${myUserId},to_user_id.eq.${myUserId}`)
+        .order('created_at', { ascending: true });
+
+      if (error) {
+        console.error('Error fetching messages:', error);
+        return;
+      }
+
+      // Filter messages that are between me and my partner
+      const filtered = (data || []).filter(
+        (msg: any) =>
+          (msg.from_user_id === myUserId && msg.to_user_id === partnerUserId) ||
+          (msg.from_user_id === partnerUserId && msg.to_user_id === myUserId)
+      );
+
+      const formatted = filtered.map((msg: any) => ({
+        id: msg.id,
+        text: msg.text,
+        fromMe: msg.from_user_id === myUserId,
+        time: new Date(msg.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+      }));
+
+      setMessages(formatted);
+    } catch (err) {
+      console.error('Failed to fetch messages:', err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Real-time subscription
+  useEffect(() => {
+    if (!isLinked || !myUserId || !partnerUserId) return;
+
+    const channel = supabase
+      .channel('messages')
+      .on(
+        'postgres_changes',
+        {
+          event: 'INSERT',
+          schema: 'public',
+          table: 'messages',
+        },
+        (payload) => {
+          const newMsg = payload.new as any;
+          // Only add if it's part of our conversation
+          if (
+            (newMsg.from_user_id === myUserId && newMsg.to_user_id === partnerUserId) ||
+            (newMsg.from_user_id === partnerUserId && newMsg.to_user_id === myUserId)
+          ) {
+            const formattedMsg: Message = {
+              id: newMsg.id,
+              text: newMsg.text,
+              fromMe: newMsg.from_user_id === myUserId,
+              time: new Date(newMsg.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+            };
+            setMessages((prev) => [...prev, formattedMsg]);
+          }
         }
-      } catch (e) {
-        console.error('Failed to load chat messages', e);
-      }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
     };
+  }, [isLinked, myUserId, partnerUserId]);
+
+  // Initial load
+  useEffect(() => {
     if (isLinked) {
-      loadMessages();
+      fetchMessages();
     }
-  }, [chatKey, isLinked]);
+  }, [isLinked, partnerUserId]);
 
-  // Save messages
-  useEffect(() => {
-    const saveMessages = async () => {
-      try {
-        await AsyncStorage.setItem(chatKey, JSON.stringify(messages));
-      } catch (e) {
-        console.error('Failed to save chat messages', e);
-      }
-    };
-    if (isLinked && messages.length > 0) {
-      saveMessages();
-    }
-  }, [messages, chatKey, isLinked]);
+  const sendMessage = async () => {
+    if (!input.trim() || !myUserId || !partnerUserId) return;
 
-  // Auto-scroll to bottom when new messages arrive
-  useEffect(() => {
-    if (messages.length > 0 && flatListRef.current) {
-      setTimeout(() => {
-        flatListRef.current?.scrollToEnd({ animated: true });
-      }, 100);
-    }
-  }, [messages]);
-
-  if (!isLoaded || !user) {
-    return <View style={styles.container}><Text style={{ color: colors.foreground }}>Loading...</Text></View>;
-  }
-
-  const sendMessage = () => {
-    if (!input.trim()) return;
-
-    const newMessage: Message = {
-      id: Date.now().toString(),
-      text: input.trim(),
-      fromMe: true,
-      time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-    };
-
-    setMessages(prev => [...prev, newMessage]);
+    const messageText = input.trim();
     setInput('');
+
+    try {
+      const { error } = await supabase.from('messages').insert({
+        from_user_id: myUserId,
+        to_user_id: partnerUserId,
+        text: messageText,
+      });
+
+      if (error) {
+        console.error('Error sending message:', error);
+        // Optionally show error to user
+      }
+    } catch (err) {
+      console.error('Failed to send message:', err);
+    }
   };
 
   const renderMessage: ListRenderItem<Message> = ({ item }) => (
@@ -109,6 +168,10 @@ export default function ChatScreen() {
       </View>
     </View>
   );
+
+  if (!isLoaded || !user) {
+    return <View style={styles.container}><Text style={{ color: colors.foreground }}>Loading...</Text></View>;
+  }
 
   if (!isLinked) {
     return (
@@ -128,19 +191,17 @@ export default function ChatScreen() {
   }
 
   return (
-    <KeyboardAvoidingView 
-      behavior={Platform.OS === 'ios' ? 'padding' : 'height'} 
+    <KeyboardAvoidingView
+      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
       style={styles.container}
-      keyboardVerticalOffset={0}
+      keyboardVerticalOffset={100}
     >
-      {/* Header */}
       <View style={[styles.header, { paddingTop: insets.top + 8 }]}>
         <Text style={styles.headerTitle}>
           {partnerName ? partnerName : 'Partner'}
         </Text>
       </View>
 
-      {/* Messages */}
       <FlatList
         ref={flatListRef}
         data={messages}
@@ -150,8 +211,7 @@ export default function ChatScreen() {
         showsVerticalScrollIndicator={false}
       />
 
-      {/* Input bar */}
-      <View style={[styles.inputBar, { paddingBottom: insets.bottom + 50 }]}>
+      <View style={[styles.inputBar, { paddingBottom: insets.bottom + 18 }]}>
         <View style={styles.inputContainer}>
           <TextInput
             value={input}
@@ -163,8 +223,8 @@ export default function ChatScreen() {
             returnKeyType="send"
             multiline={false}
           />
-          <Pressable 
-            onPress={sendMessage} 
+          <Pressable
+            onPress={sendMessage}
             style={[styles.sendButton, !input.trim() && styles.sendButtonDisabled]}
             disabled={!input.trim()}
           >
@@ -177,101 +237,24 @@ export default function ChatScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: { 
-    flex: 1, 
-    backgroundColor: '#0A0A0A' 
-  },
-  centered: { 
-    flex: 1, 
-    justifyContent: 'center', 
-    alignItems: 'center', 
-    padding: 24 
-  },
-  header: { 
-    paddingHorizontal: 20, 
-    paddingBottom: 10, 
-    borderBottomWidth: 1, 
-    borderBottomColor: '#222', 
-    backgroundColor: '#111' 
-  },
-  headerTitle: { 
-    fontSize: 20, 
-    fontWeight: '600', 
-    color: '#FFFFFF' 
-  },
-  messagesContainer: { 
-    paddingHorizontal: 16, 
-    paddingVertical: 12,
-    flexGrow: 1 
-  },
-  messageRow: { 
-    flexDirection: 'row', 
-    marginVertical: 4 
-  },
+  container: { flex: 1, backgroundColor: '#0A0A0A' },
+  centered: { flex: 1, justifyContent: 'center', alignItems: 'center', padding: 24 },
+  header: { paddingHorizontal: 20, paddingBottom: 10, borderBottomWidth: 1, borderBottomColor: '#222', backgroundColor: '#111' },
+  headerTitle: { fontSize: 20, fontWeight: '600', color: '#FFFFFF' },
+  messagesContainer: { paddingHorizontal: 16, paddingVertical: 12, flexGrow: 1 },
+  messageRow: { flexDirection: 'row', marginVertical: 4 },
   rowLeft: { justifyContent: 'flex-start' },
   rowRight: { justifyContent: 'flex-end' },
-  messageBubble: { 
-    maxWidth: '78%', 
-    paddingHorizontal: 14, 
-    paddingVertical: 10, 
-    borderRadius: 20,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.1,
-    shadowRadius: 2,
-  },
-  myMessage: { 
-    backgroundColor: '#00E5FF', 
-    borderBottomRightRadius: 6 
-  },
-  theirMessage: { 
-    backgroundColor: '#2C2C2E', 
-    borderBottomLeftRadius: 6 
-  },
-  messageText: { 
-    fontSize: 16,
-    lineHeight: 22 
-  },
-  messageTime: { 
-    fontSize: 11, 
-    marginTop: 4, 
-    alignSelf: 'flex-end' 
-  },
-  inputBar: { 
-    paddingHorizontal: 12, 
-    paddingTop: 10, 
-    backgroundColor: '#111', 
-    borderTopWidth: 1, 
-    borderTopColor: '#222' 
-  },
-  inputContainer: { 
-    flexDirection: 'row', 
-    alignItems: 'center', 
-    backgroundColor: '#1C1C1E', 
-    borderRadius: 22, 
-    paddingHorizontal: 4, 
-    paddingVertical: 4 
-  },
-  input: { 
-    flex: 1, 
-    color: '#FFFFFF', 
-    fontSize: 16, 
-    paddingHorizontal: 16, 
-    paddingVertical: 10, 
-    maxHeight: 100 
-  },
-  sendButton: { 
-    width: 36, 
-    height: 36, 
-    borderRadius: 18, 
-    backgroundColor: '#00E5FF', 
-    justifyContent: 'center', 
-    alignItems: 'center', 
-    marginLeft: 6 
-  },
-  sendButtonDisabled: { 
-    backgroundColor: '#333' 
-  },
+  messageBubble: { maxWidth: '78%', paddingHorizontal: 14, paddingVertical: 10, borderRadius: 20 },
+  myMessage: { backgroundColor: '#00E5FF', borderBottomRightRadius: 6 },
+  theirMessage: { backgroundColor: '#2C2C2E', borderBottomLeftRadius: 6 },
+  messageText: { fontSize: 16, lineHeight: 22 },
+  messageTime: { fontSize: 11, marginTop: 4, alignSelf: 'flex-end' },
+  inputBar: { paddingHorizontal: 12, paddingTop: 10, backgroundColor: '#111', borderTopWidth: 1, borderTopColor: '#222' },
+  inputContainer: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#1C1C1E', borderRadius: 22, paddingHorizontal: 4, paddingVertical: 4 },
+  input: { flex: 1, color: '#FFFFFF', fontSize: 16, paddingHorizontal: 16, paddingVertical: 10, maxHeight: 100 },
+  sendButton: { width: 36, height: 36, borderRadius: 18, backgroundColor: '#00E5FF', justifyContent: 'center', alignItems: 'center', marginLeft: 6 },
+  sendButtonDisabled: { backgroundColor: '#333' },
   title: { fontSize: 24, fontWeight: '700' },
   subtitle: { fontSize: 16 },
   button: { paddingVertical: 14, paddingHorizontal: 32, borderRadius: 999 },
