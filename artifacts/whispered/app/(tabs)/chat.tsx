@@ -131,9 +131,9 @@ export default function ChatScreen() {
     <KeyboardAvoidingView 
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'} 
       style={styles.container}
-      keyboardVerticalOffset={140}
+      keyboardVerticalOffset={150}
     >
-      {/* Header - name below the top red line */}
+      {/* Header */}
       <View style={[styles.header, { paddingTop: insets.top + 8 }]}>
         <Text style={styles.headerTitle}>
           {partnerName ? partnerName : 'Partner'}
@@ -150,8 +150,8 @@ export default function ChatScreen() {
         showsVerticalScrollIndicator={false}
       />
 
-      {/* Input bar - above the bottom red line (glass tab) */}
-      <View style={[styles.inputBar, { paddingBottom: insets.bottom + 20 }]}>
+      {/* Input bar - raised higher above glass tab */}
+      <View style={[styles.inputBar, { paddingBottom: insets.bottom + 50 }]}>
         <View style={styles.inputContainer}>
           <TextInput
             value={input}
