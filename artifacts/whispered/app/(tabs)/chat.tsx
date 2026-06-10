@@ -78,7 +78,7 @@ export default function ChatScreen() {
   }, [messages]);
 
   if (!isLoaded || !user) {
-    return <View style={styles.container}><Text style={{ color: colors.foreground }}>Loading...</Text></View>;
+    return <View style={styles.container}><Text style={{ color: colors.foreground }}>Loading...</Text></View>
   }
 
   const sendMessage = () => {
@@ -133,7 +133,7 @@ export default function ChatScreen() {
     >
       {/* Header */}
       <View style={styles.header}>
-        <Text style={[styles.headerTitle, { color: colors.foreground }]}>
+        <Text style={styles.headerTitle}>
           {partnerName ? partnerName : 'Partner'}
         </Text>
         <Text style={styles.headerSubtitle}>online</Text>
@@ -197,11 +197,11 @@ const styles = StyleSheet.create({
   headerTitle: { 
     fontSize: 20, 
     fontWeight: '600', 
-    color: colors.foreground 
+    color: '#FFFFFF' 
   },
   headerSubtitle: { 
-    fontSize: 13, 
-    color: '#34C759', // green for "online"
+    fontSize: 13,
+    color: '#34C759',
     marginTop: 2 
   },
   messagesContainer: { 
@@ -259,7 +259,7 @@ const styles = StyleSheet.create({
   },
   input: { 
     flex: 1, 
-    color: colors.foreground, 
+    color: '#FFFFFF', 
     fontSize: 16, 
     paddingHorizontal: 16, 
     paddingVertical: 10, 
