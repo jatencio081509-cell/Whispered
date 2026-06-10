@@ -130,7 +130,6 @@ export default function LinkPartnerScreen() {
     } catch (err) {
       console.error(err);
       setError('Failed to link partner. Please try again.');
-    } finally {
       setLoading(false);
     }
   };
@@ -200,8 +199,16 @@ export default function LinkPartnerScreen() {
 
           {error ? <Text style={styles.error}>{error}</Text> : null}
 
-          <Pressable onPress={linkPartner} style={[styles.button, { backgroundColor: colors.primary }]}>
-            <Text style={[styles.buttonText, { color: colors.primaryForeground }]}>Link / Update Partner</Text>
+          <Pressable 
+            onPress={linkPartner} 
+            disabled={loading}
+            style={[styles.button, { backgroundColor: colors.primary }]}
+          >
+            {loading ? (
+              <ActivityIndicator color={colors.primaryForeground} />
+            ) : (
+              <Text style={[styles.buttonText, { color: colors.primaryForeground }]}>Link / Update Partner</Text>
+            )}
           </Pressable>
         </View>
       </ScrollView>
