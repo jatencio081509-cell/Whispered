@@ -16,6 +16,8 @@ import { useRouter } from 'expo-router';
 import { Feather } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+
 type Message = {
   id: string;
   text: string;
@@ -27,6 +29,7 @@ export default function ChatScreen() {
   const { user, isLoaded } = useUser();
   const colors = useColors();
   const router = useRouter();
+  const insets = useSafeAreaInsets();
   const flatListRef = useRef<FlatList>(null);
 
   const [messages, setMessages] = useState<Message[]>([]);
@@ -78,7 +81,7 @@ export default function ChatScreen() {
   }, [messages]);
 
   if (!isLoaded || !user) {
-    return <View style={styles.container}><Text style={{ color: colors.foreground }}>Loading...</Text></View>
+    return <View style={styles.container}><Text style={{ color: colors.foreground }}>Loading...</Text></View>;
   }
 
   const sendMessage = () => {
@@ -129,14 +132,13 @@ export default function ChatScreen() {
     <KeyboardAvoidingView 
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'} 
       style={styles.container}
-      keyboardVerticalOffset={90}
+      keyboardVerticalOffset={120}
     >
       {/* Header */}
       <View style={styles.header}>
         <Text style={styles.headerTitle}>
           {partnerName ? partnerName : 'Partner'}
         </Text>
-        <Text style={styles.headerSubtitle}>online</Text>
       </View>
 
       {/* Messages */}
@@ -150,7 +152,7 @@ export default function ChatScreen() {
       />
 
       {/* iMessage-style Input */}
-      <View style={styles.inputBar}>
+      <View style={[styles.inputBar, { paddingBottom: insets.bottom + 8 }]}>
         <View style={styles.inputContainer}>
           <TextInput
             value={input}
@@ -188,8 +190,8 @@ const styles = StyleSheet.create({
   },
   header: { 
     paddingHorizontal: 20, 
-    paddingTop: 16, 
-    paddingBottom: 12, 
+    paddingTop: 12, 
+    paddingBottom: 10, 
     borderBottomWidth: 1, 
     borderBottomColor: '#222', 
     backgroundColor: '#111' 
@@ -198,11 +200,6 @@ const styles = StyleSheet.create({
     fontSize: 20, 
     fontWeight: '600', 
     color: '#FFFFFF' 
-  },
-  headerSubtitle: { 
-    fontSize: 13,
-    color: '#34C759',
-    marginTop: 2 
   },
   messagesContainer: { 
     paddingHorizontal: 16, 
@@ -244,7 +241,7 @@ const styles = StyleSheet.create({
   },
   inputBar: { 
     paddingHorizontal: 12, 
-    paddingVertical: 10, 
+    paddingTop: 10, 
     backgroundColor: '#111', 
     borderTopWidth: 1, 
     borderTopColor: '#222' 
