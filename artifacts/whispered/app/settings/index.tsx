@@ -185,7 +185,7 @@ const styles = StyleSheet.create({
     gap: 12, 
     marginBottom: 12 
   },
-  manageLinkText: { color: colors.primary, fontSize: 16, fontWeight: '600' },
+  manageLinkText: { color: '#00E5FF', fontSize: 16, fontWeight: '600' },
   signOutButton: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#1A1A1A', padding: 16, borderRadius: 12, gap: 12 },
   signOutText: { color: '#FF3B30', fontSize: 16, fontWeight: '600' },
 });
