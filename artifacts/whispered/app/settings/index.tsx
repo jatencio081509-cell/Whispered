@@ -127,9 +127,18 @@ export default function SettingsScreen() {
           </View>
         </View>
 
-        {/* Sign Out */}
+        {/* Account Actions */}
         <View style={styles.section}>
           <Text style={[styles.sectionTitle, { color: colors.foreground }]}>Account</Text>
+
+          <Pressable 
+            onPress={() => router.push('/(auth)/link-partner')} 
+            style={styles.manageLinkButton}
+          >
+            <Feather name="users" size={20} color={colors.primary} />
+            <Text style={styles.manageLinkText}>Manage Partner Link</Text>
+          </Pressable>
+
           <Pressable onPress={handleSignOut} style={styles.signOutButton}>
             <Feather name="log-out" size={20} color="#FF3B30" />
             <Text style={styles.signOutText}>Sign Out</Text>
@@ -167,6 +176,16 @@ const styles = StyleSheet.create({
   dateInput: { backgroundColor: '#1A1A1A', color: 'white', padding: 16, borderRadius: 12, fontSize: 16, marginBottom: 12 },
   saveButton: { padding: 16, borderRadius: 12, alignItems: 'center' },
   saveButtonText: { fontSize: 16, fontWeight: '600' },
+  manageLinkButton: { 
+    flexDirection: 'row', 
+    alignItems: 'center', 
+    backgroundColor: '#1A1A1A', 
+    padding: 16, 
+    borderRadius: 12, 
+    gap: 12, 
+    marginBottom: 12 
+  },
+  manageLinkText: { color: colors.primary, fontSize: 16, fontWeight: '600' },
   signOutButton: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#1A1A1A', padding: 16, borderRadius: 12, gap: 12 },
   signOutText: { color: '#FF3B30', fontSize: 16, fontWeight: '600' },
 });
