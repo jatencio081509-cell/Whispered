@@ -14,6 +14,7 @@ import {
 import { useRouter } from 'expo-router';
 import { useUser } from '@clerk/expo';
 import { useColors } from '@/hooks/useColors';
+import { supabase } from '@/lib/supabase';
 import { syncAllData } from '@/lib/syncClerkToSupabase';
 
 export default function LinkPartnerScreen() {
@@ -47,6 +48,7 @@ export default function LinkPartnerScreen() {
     setLoading(true);
 
     try {
+      // Update Clerk metadata
       await user.update({
         unsafeMetadata: {
           ...user.unsafeMetadata,
@@ -54,6 +56,13 @@ export default function LinkPartnerScreen() {
           myUserId: user.id,
         },
       });
+
+      // Also store in Supabase so others can look up who owns this code
+      await supabase.from('users').upsert({
+        id: user.id,
+        linking_code: code,
+      });
+
       setMyCode(code);
       Alert.alert('Code Generated', `Share this code with your partner: ${code}`);
     } catch (err) {
@@ -73,16 +82,32 @@ export default function LinkPartnerScreen() {
     setError('');
 
     try {
-      // Update Clerk metadata
+      // Look up who owns this code in Supabase
+      const { data: ownerData, error: lookupError } = await supabase
+        .from('users')
+        .select('id')
+        .eq('linking_code', partnerCode.trim().toUpperCase())
+        .single();
+
+      if (lookupError || !ownerData) {
+        setError('Code not found. Make sure your partner generated it.');
+        setLoading(false);
+        return;
+      }
+
+      const partnerUserIdFromDb = ownerData.id;
+
+      // Update Clerk metadata with full info
       await user.update({
         unsafeMetadata: {
           ...user.unsafeMetadata,
           partnerCode: partnerCode.trim().toUpperCase(),
           partnerName: partnerName.trim() || 'Partner',
+          partner_user_id: partnerUserIdFromDb,
         },
       });
 
-      // Also sync linking info to Supabase
+      // Sync everything to Supabase (including the partner user ID)
       await syncAllData(
         user.id,
         user.firstName,
@@ -92,11 +117,20 @@ export default function LinkPartnerScreen() {
         partnerName.trim() || 'Partner'
       );
 
+      // Also store the linking info on our side in Supabase
+      await supabase.from('users').upsert({
+        id: user.id,
+        partner_code: partnerCode.trim().toUpperCase(),
+        partner_name: partnerName.trim() || 'Partner',
+        partner_user_id: partnerUserIdFromDb,
+      });
+
       setLinkedPartner(partnerCode.trim().toUpperCase());
-      Alert.alert('Success', 'Partner linked in both Clerk and Supabase!');
+      Alert.alert('Success', 'Partner linked! Both of you now have each other\'s user ID.');
       router.replace('/(tabs)');
     } catch (err) {
-      setError('Failed to link partner');
+      console.error(err);
+      setError('Failed to link partner. Please try again.');
     } finally {
       setLoading(false);
     }
