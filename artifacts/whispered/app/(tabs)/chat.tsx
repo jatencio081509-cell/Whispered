@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
   View,
   Text,
@@ -8,6 +8,7 @@ import {
   StyleSheet,
   KeyboardAvoidingView,
   Platform,
+  ListRenderItem,
 } from 'react-native';
 import { useUser } from '@clerk/expo';
 import { useColors } from '@/hooks/useColors';
@@ -15,12 +16,20 @@ import { useRouter } from 'expo-router';
 import { Feather } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
+type Message = {
+  id: string;
+  text: string;
+  fromMe: boolean;
+  time: string;
+};
+
 export default function ChatScreen() {
   const { user, isLoaded } = useUser();
   const colors = useColors();
   const router = useRouter();
+  const flatListRef = useRef<FlatList>(null);
 
-  const [messages, setMessages] = useState<any[]>([]);
+  const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState('');
 
   const partnerCode = user?.unsafeMetadata?.partnerCode as string | undefined;
@@ -45,7 +54,7 @@ export default function ChatScreen() {
     }
   }, [chatKey, isLinked]);
 
-  // Save messages whenever they change
+  // Save messages
   useEffect(() => {
     const saveMessages = async () => {
       try {
@@ -59,6 +68,15 @@ export default function ChatScreen() {
     }
   }, [messages, chatKey, isLinked]);
 
+  // Auto-scroll to bottom when new messages arrive
+  useEffect(() => {
+    if (messages.length > 0 && flatListRef.current) {
+      setTimeout(() => {
+        flatListRef.current?.scrollToEnd({ animated: true });
+      }, 100);
+    }
+  }, [messages]);
+
   if (!isLoaded || !user) {
     return <View style={styles.container}><Text style={{ color: colors.foreground }}>Loading...</Text></View>;
   }
@@ -66,7 +84,7 @@ export default function ChatScreen() {
   const sendMessage = () => {
     if (!input.trim()) return;
 
-    const newMessage = {
+    const newMessage: Message = {
       id: Date.now().toString(),
       text: input.trim(),
       fromMe: true,
@@ -76,6 +94,19 @@ export default function ChatScreen() {
     setMessages(prev => [...prev, newMessage]);
     setInput('');
   };
+
+  const renderMessage: ListRenderItem<Message> = ({ item }) => (
+    <View style={[styles.messageRow, item.fromMe ? styles.rowRight : styles.rowLeft]}>
+      <View style={[styles.messageBubble, item.fromMe ? styles.myMessage : styles.theirMessage]}>
+        <Text style={[styles.messageText, { color: item.fromMe ? '#fff' : colors.foreground }]}>
+          {item.text}
+        </Text>
+        <Text style={[styles.messageTime, { color: item.fromMe ? 'rgba(255,255,255,0.7)' : colors.mutedForeground }]}>
+          {item.time}
+        </Text>
+      </View>
+    </View>
+  );
 
   if (!isLinked) {
     return (
@@ -98,62 +129,154 @@ export default function ChatScreen() {
     <KeyboardAvoidingView 
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'} 
       style={styles.container}
+      keyboardVerticalOffset={90}
     >
       {/* Header */}
       <View style={styles.header}>
         <Text style={[styles.headerTitle, { color: colors.foreground }]}>
-          {partnerName ? `Chat with ${partnerName}` : 'Chat with Partner'}
+          {partnerName ? partnerName : 'Partner'}
         </Text>
+        <Text style={styles.headerSubtitle}>online</Text>
       </View>
 
       {/* Messages */}
       <FlatList
+        ref={flatListRef}
         data={messages}
         keyExtractor={(item) => item.id}
-        renderItem={({ item }) => (
-          <View style={[styles.messageBubble, item.fromMe ? styles.myMessage : styles.theirMessage]}>
-            <Text style={[styles.messageText, { color: item.fromMe ? 'white' : colors.foreground }]}>
-              {item.text}
-            </Text>
-            <Text style={styles.messageTime}>{item.time}</Text>
-          </View>
-        )}
-        contentContainerStyle={{ padding: 16, flexGrow: 1 }}
-        inverted={false}
+        renderItem={renderMessage}
+        contentContainerStyle={styles.messagesContainer}
+        showsVerticalScrollIndicator={false}
       />
 
-      {/* Input */}
-      <View style={styles.inputContainer}>
-        <TextInput
-          value={input}
-          onChangeText={setInput}
-          placeholder="Type a message..."
-          placeholderTextColor={colors.mutedForeground}
-          style={styles.input}
-          onSubmitEditing={sendMessage}
-          returnKeyType="send"
-        />
-        <Pressable onPress={sendMessage} style={styles.sendButton}>
-          <Feather name="send" size={20} color={colors.primary} />
-        </Pressable>
+      {/* iMessage-style Input */}
+      <View style={styles.inputBar}>
+        <View style={styles.inputContainer}>
+          <TextInput
+            value={input}
+            onChangeText={setInput}
+            placeholder="iMessage"
+            placeholderTextColor={colors.mutedForeground}
+            style={styles.input}
+            onSubmitEditing={sendMessage}
+            returnKeyType="send"
+            multiline={false}
+          />
+          <Pressable 
+            onPress={sendMessage} 
+            style={[styles.sendButton, !input.trim() && styles.sendButtonDisabled]}
+            disabled={!input.trim()}
+          >
+            <Feather name="send" size={18} color={input.trim() ? colors.primary : colors.mutedForeground} />
+          </Pressable>
+        </View>
       </View>
     </KeyboardAvoidingView>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#0A0A0A' },
-  centered: { flex: 1, justifyContent: 'center', alignItems: 'center', padding: 24 },
-  header: { padding: 20, borderBottomWidth: 1, borderBottomColor: '#333' },
-  headerTitle: { fontSize: 20, fontWeight: '600' },
-  messageBubble: { maxWidth: '80%', padding: 12, borderRadius: 16, marginBottom: 8 },
-  myMessage: { backgroundColor: '#00E5FF', alignSelf: 'flex-end', borderBottomRightRadius: 4 },
-  theirMessage: { backgroundColor: '#1A1A1A', alignSelf: 'flex-start', borderBottomLeftRadius: 4 },
-  messageText: { fontSize: 16 },
-  messageTime: { fontSize: 11, color: '#888', marginTop: 4, alignSelf: 'flex-end' },
-  inputContainer: { flexDirection: 'row', padding: 12, borderTopWidth: 1, borderTopColor: '#333', backgroundColor: '#111' },
-  input: { flex: 1, backgroundColor: '#1A1A1A', color: 'white', borderRadius: 20, paddingHorizontal: 16, paddingVertical: 10, marginRight: 8, fontSize: 16 },
-  sendButton: { justifyContent: 'center', alignItems: 'center', padding: 10 },
+  container: { 
+    flex: 1, 
+    backgroundColor: '#0A0A0A' 
+  },
+  centered: { 
+    flex: 1, 
+    justifyContent: 'center', 
+    alignItems: 'center', 
+    padding: 24 
+  },
+  header: { 
+    paddingHorizontal: 20, 
+    paddingTop: 16, 
+    paddingBottom: 12, 
+    borderBottomWidth: 1, 
+    borderBottomColor: '#222', 
+    backgroundColor: '#111' 
+  },
+  headerTitle: { 
+    fontSize: 20, 
+    fontWeight: '600', 
+    color: colors.foreground 
+  },
+  headerSubtitle: { 
+    fontSize: 13, 
+    color: '#34C759', // green for "online"
+    marginTop: 2 
+  },
+  messagesContainer: { 
+    paddingHorizontal: 16, 
+    paddingVertical: 12,
+    flexGrow: 1 
+  },
+  messageRow: { 
+    flexDirection: 'row', 
+    marginVertical: 4 
+  },
+  rowLeft: { justifyContent: 'flex-start' },
+  rowRight: { justifyContent: 'flex-end' },
+  messageBubble: { 
+    maxWidth: '78%', 
+    paddingHorizontal: 14, 
+    paddingVertical: 10, 
+    borderRadius: 20,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.1,
+    shadowRadius: 2,
+  },
+  myMessage: { 
+    backgroundColor: '#00E5FF', 
+    borderBottomRightRadius: 6 
+  },
+  theirMessage: { 
+    backgroundColor: '#2C2C2E', 
+    borderBottomLeftRadius: 6 
+  },
+  messageText: { 
+    fontSize: 16,
+    lineHeight: 22 
+  },
+  messageTime: { 
+    fontSize: 11, 
+    marginTop: 4, 
+    alignSelf: 'flex-end' 
+  },
+  inputBar: { 
+    paddingHorizontal: 12, 
+    paddingVertical: 10, 
+    backgroundColor: '#111', 
+    borderTopWidth: 1, 
+    borderTopColor: '#222' 
+  },
+  inputContainer: { 
+    flexDirection: 'row', 
+    alignItems: 'center', 
+    backgroundColor: '#1C1C1E', 
+    borderRadius: 22, 
+    paddingHorizontal: 4, 
+    paddingVertical: 4 
+  },
+  input: { 
+    flex: 1, 
+    color: colors.foreground, 
+    fontSize: 16, 
+    paddingHorizontal: 16, 
+    paddingVertical: 10, 
+    maxHeight: 100 
+  },
+  sendButton: { 
+    width: 36, 
+    height: 36, 
+    borderRadius: 18, 
+    backgroundColor: '#00E5FF', 
+    justifyContent: 'center', 
+    alignItems: 'center', 
+    marginLeft: 6 
+  },
+  sendButtonDisabled: { 
+    backgroundColor: '#333' 
+  },
   title: { fontSize: 24, fontWeight: '700' },
   subtitle: { fontSize: 16 },
   button: { paddingVertical: 14, paddingHorizontal: 32, borderRadius: 999 },
