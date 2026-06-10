@@ -9,6 +9,7 @@ import {
   KeyboardAvoidingView,
   Platform,
   ListRenderItem,
+  Alert,
 } from 'react-native';
 import { useUser } from '@clerk/expo';
 import { useColors } from '@/hooks/useColors';
@@ -23,7 +24,6 @@ type Message = {
   text: string;
   fromMe: boolean;
   time: string;
-  created_at?: string;
 };
 
 export default function ChatScreen() {
@@ -41,13 +41,10 @@ export default function ChatScreen() {
   const partnerName = user?.unsafeMetadata?.partnerName as string | undefined;
   const partnerUserId = user?.unsafeMetadata?.partner_user_id as string | undefined;
   const isLinked = !!partnerCode;
-
   const myUserId = user?.id;
 
-  // Fetch messages from Supabase
   const fetchMessages = async () => {
     if (!myUserId || !partnerUserId) {
-      // Fallback: show local messages if we don't have partner user ID yet
       try {
         const stored = await AsyncStorage.getItem(`chat_${partnerCode}`);
         if (stored) setMessages(JSON.parse(stored));
@@ -68,7 +65,6 @@ export default function ChatScreen() {
         return;
       }
 
-      // Filter messages that are between me and my partner
       const filtered = (data || []).filter(
         (msg: any) =>
           (msg.from_user_id === myUserId && msg.to_user_id === partnerUserId) ||
@@ -90,7 +86,6 @@ export default function ChatScreen() {
     }
   };
 
-  // Real-time subscription
   useEffect(() => {
     if (!isLinked || !myUserId || !partnerUserId) return;
 
@@ -98,19 +93,14 @@ export default function ChatScreen() {
       .channel('messages')
       .on(
         'postgres_changes',
-        {
-          event: 'INSERT',
-          schema: 'public',
-          table: 'messages',
-        },
+        { event: 'INSERT', schema: 'public', table: 'messages' },
         (payload) => {
           const newMsg = payload.new as any;
-          // Only add if it's part of our conversation
           if (
             (newMsg.from_user_id === myUserId && newMsg.to_user_id === partnerUserId) ||
             (newMsg.from_user_id === partnerUserId && newMsg.to_user_id === myUserId)
           ) {
-            const formattedMsg: Message = {
+            const formattedMsg = {
               id: newMsg.id,
               text: newMsg.text,
               fromMe: newMsg.from_user_id === myUserId,
@@ -127,7 +117,6 @@ export default function ChatScreen() {
     };
   }, [isLinked, myUserId, partnerUserId]);
 
-  // Initial load
   useEffect(() => {
     if (isLinked) {
       fetchMessages();
@@ -135,7 +124,18 @@ export default function ChatScreen() {
   }, [isLinked, partnerUserId]);
 
   const sendMessage = async () => {
-    if (!input.trim() || !myUserId || !partnerUserId) return;
+    if (!input.trim() || !myUserId) {
+      return;
+    }
+
+    if (!partnerUserId) {
+      Alert.alert(
+        'Linking Incomplete',
+        'Please re-link with your partner so we can store user IDs for chat sync.',
+        [{ text: 'OK' }]
+      );
+      return;
+    }
 
     const messageText = input.trim();
     setInput('');
@@ -148,11 +148,12 @@ export default function ChatScreen() {
       });
 
       if (error) {
-        console.error('Error sending message:', error);
-        // Optionally show error to user
+        console.error('Error sending message to Supabase:', error);
+        Alert.alert('Failed to send', error.message || 'Unknown error');
       }
-    } catch (err) {
+    } catch (err: any) {
       console.error('Failed to send message:', err);
+      Alert.alert('Failed to send', err.message || 'Unknown error');
     }
   };
 
@@ -194,7 +195,7 @@ export default function ChatScreen() {
     <KeyboardAvoidingView
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
       style={styles.container}
-      keyboardVerticalOffset={0}
+      keyboardVerticalOffset={100}
     >
       <View style={[styles.header, { paddingTop: insets.top + 8 }]}>
         <Text style={styles.headerTitle}>
@@ -211,7 +212,7 @@ export default function ChatScreen() {
         showsVerticalScrollIndicator={false}
       />
 
-      <View style={[styles.inputBar, { paddingBottom: insets.bottom + 50 }]}>
+      <View style={[styles.inputBar, { paddingBottom: insets.bottom + 18 }]}>
         <View style={styles.inputContainer}>
           <TextInput
             value={input}
