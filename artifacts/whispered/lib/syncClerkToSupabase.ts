@@ -19,7 +19,9 @@ export async function syncUserToSupabase(
   userId: string,
   firstName?: string | null,
   username?: string | null,
-  imageUrl?: string | null
+  imageUrl?: string | null,
+  partnerCode?: string | null,
+  partnerName?: string | null
 ) {
   if (!supabaseAdmin) {
     console.warn('Supabase admin client not initialized');
@@ -35,29 +37,33 @@ export async function syncUserToSupabase(
           first_name: firstName,
           username: username,
           avatar_url: imageUrl,
+          partner_code: partnerCode,
+          partner_name: partnerName,
           updated_at: new Date().toISOString(),
         },
         { onConflict: 'id' }
       );
 
     if (error) {
-      console.error('Error syncing user:', error);
+      console.error('Error syncing user to Supabase:', error);
       return { success: false, error };
     }
 
     return { success: true, data };
   } catch (err) {
-    console.error('Unexpected error:', err);
+    console.error('Unexpected error in syncUserToSupabase:', err);
     return { success: false, error: err };
   }
 }
 
-// Wrapper so existing code that imports syncAllData keeps working
+// Wrapper for existing calls
 export async function syncAllData(
   userId: string,
   firstName?: string | null,
   username?: string | null,
-  imageUrl?: string | null
+  imageUrl?: string | null,
+  partnerCode?: string | null,
+  partnerName?: string | null
 ) {
-  return syncUserToSupabase(userId, firstName, username, imageUrl);
+  return syncUserToSupabase(userId, firstName, username, imageUrl, partnerCode, partnerName);
 }
