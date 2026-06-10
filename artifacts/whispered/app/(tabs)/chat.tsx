@@ -131,7 +131,7 @@ export default function ChatScreen() {
     <KeyboardAvoidingView 
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'} 
       style={styles.container}
-      keyboardVerticalOffset={100}
+      keyboardVerticalOffset={0}
     >
       {/* Header */}
       <View style={[styles.header, { paddingTop: insets.top + 8 }]}>
@@ -151,7 +151,7 @@ export default function ChatScreen() {
       />
 
       {/* Input bar */}
-      <View style={[styles.inputBar, { paddingBottom: insets.bottom + 18 }]}>
+      <View style={[styles.inputBar, { paddingBottom: insets.bottom + 50 }]}>
         <View style={styles.inputContainer}>
           <TextInput
             value={input}
