@@ -125,6 +125,9 @@ export default function LinkPartnerScreen() {
         partner_code: partnerCode.trim().toUpperCase(),
         partner_name: partnerName.trim() || 'Partner',
         partner_user_id: partnerUserIdFromDb,
+        first_name: user.firstName,
+        username: user.username,
+        avatar_url: user.imageUrl,
       });
 
       setLinkedPartner(partnerCode.trim().toUpperCase());
