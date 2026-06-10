@@ -48,7 +48,6 @@ export default function LinkPartnerScreen() {
     setLoading(true);
 
     try {
-      // Update Clerk metadata
       await user.update({
         unsafeMetadata: {
           ...user.unsafeMetadata,
@@ -57,7 +56,6 @@ export default function LinkPartnerScreen() {
         },
       });
 
-      // Also store in Supabase so others can look up who owns this code
       await supabase.from('users').upsert({
         id: user.id,
         linking_code: code,
@@ -82,7 +80,6 @@ export default function LinkPartnerScreen() {
     setError('');
 
     try {
-      // Look up who owns this code in Supabase
       const { data: ownerData, error: lookupError } = await supabase
         .from('users')
         .select('id')
@@ -97,7 +94,6 @@ export default function LinkPartnerScreen() {
 
       const partnerUserIdFromDb = ownerData.id;
 
-      // Update Clerk metadata with full info
       await user.update({
         unsafeMetadata: {
           ...user.unsafeMetadata,
@@ -107,7 +103,6 @@ export default function LinkPartnerScreen() {
         },
       });
 
-      // Sync everything to Supabase (including the partner user ID)
       await syncAllData(
         user.id,
         user.firstName,
@@ -117,7 +112,6 @@ export default function LinkPartnerScreen() {
         partnerName.trim() || 'Partner'
       );
 
-      // Also store the linking info on our side in Supabase
       await supabase.from('users').upsert({
         id: user.id,
         partner_code: partnerCode.trim().toUpperCase(),
@@ -126,7 +120,7 @@ export default function LinkPartnerScreen() {
       });
 
       setLinkedPartner(partnerCode.trim().toUpperCase());
-      Alert.alert('Success', 'Partner linked! Both of you now have each other\'s user ID.');
+      Alert.alert('Success', 'Partner linked successfully!');
       router.replace('/(tabs)');
     } catch (err) {
       console.error(err);
@@ -147,7 +141,10 @@ export default function LinkPartnerScreen() {
 
         {linkedPartner && (
           <View style={styles.statusBox}>
-            <Text style={{ color: colors.primary }}>Already linked</Text>
+            <Text style={{ color: colors.primary }}>Currently linked with code: {linkedPartner}</Text>
+            <Text style={{ color: colors.mutedForeground, marginTop: 4, fontSize: 14 }}>
+              You can re-enter a new code below to update your link
+            </Text>
           </View>
         )}
 
@@ -190,8 +187,8 @@ export default function LinkPartnerScreen() {
           {error ? <Text style={styles.error}>{error}</Text> : null}
 
           <Pressable onPress={linkPartner} style={[styles.button, { backgroundColor: colors.primary }]}>
-            <Text style={[styles.buttonText, { color: colors.primaryForeground }]}>Link Partner</Text>
-          </Pressable>
+            <Text style={[styles.buttonText, { color: colors.primaryForeground }]}>Link / Update Partner</Text>
+            </Pressable>
         </View>
       </ScrollView>
     </KeyboardAvoidingView>
