@@ -212,7 +212,7 @@ export default function ChatScreen() {
         showsVerticalScrollIndicator={false}
       />
 
-      <View style={[styles.inputBar, { paddingBottom: insets.bottom + 18 }]}>
+      <View style={[styles.inputBar, { paddingBottom: insets.bottom + 50 }]}>
         <View style={styles.inputContainer}>
           <TextInput
             value={input}
