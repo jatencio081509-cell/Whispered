@@ -15,7 +15,6 @@ import { useColors } from '@/hooks/useColors';
 import { useRouter } from 'expo-router';
 import { Feather } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 type Message = {
@@ -132,10 +131,10 @@ export default function ChatScreen() {
     <KeyboardAvoidingView 
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'} 
       style={styles.container}
-      keyboardVerticalOffset={120}
+      keyboardVerticalOffset={140}
     >
-      {/* Header */}
-      <View style={styles.header}>
+      {/* Header - name below the top red line */}
+      <View style={[styles.header, { paddingTop: insets.top + 8 }]}>
         <Text style={styles.headerTitle}>
           {partnerName ? partnerName : 'Partner'}
         </Text>
@@ -151,8 +150,8 @@ export default function ChatScreen() {
         showsVerticalScrollIndicator={false}
       />
 
-      {/* iMessage-style Input */}
-      <View style={[styles.inputBar, { paddingBottom: insets.bottom + 8 }]}>
+      {/* Input bar - above the bottom red line (glass tab) */}
+      <View style={[styles.inputBar, { paddingBottom: insets.bottom + 20 }]}>
         <View style={styles.inputContainer}>
           <TextInput
             value={input}
@@ -190,7 +189,6 @@ const styles = StyleSheet.create({
   },
   header: { 
     paddingHorizontal: 20, 
-    paddingTop: 12, 
     paddingBottom: 10, 
     borderBottomWidth: 1, 
     borderBottomColor: '#222', 
