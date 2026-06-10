@@ -132,9 +132,8 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         user.firstName,
         user.username,
         user.imageUrl,
-        user.unsafeMetadata?.coupleId as string | undefined,
-        user.unsafeMetadata?.partnerName as string | undefined,
-        user.unsafeMetadata?.inviteCode as string | undefined
+        user.unsafeMetadata?.partnerCode as string | undefined,
+        user.unsafeMetadata?.partnerName as string | undefined
       );
       refreshCouple();
     } else {

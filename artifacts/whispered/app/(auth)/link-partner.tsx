@@ -59,6 +59,9 @@ export default function LinkPartnerScreen() {
       await supabase.from('users').upsert({
         id: user.id,
         linking_code: code,
+        first_name: user.firstName,
+        username: user.username,
+        avatar_url: user.imageUrl,
       });
 
       setMyCode(code);

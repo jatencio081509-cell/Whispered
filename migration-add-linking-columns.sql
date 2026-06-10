@@ -11,22 +11,5 @@ ADD COLUMN IF NOT EXISTS updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW();
 -- Create index for linking_code lookups
 CREATE INDEX IF NOT EXISTS idx_users_linking_code ON users(linking_code);
 
--- Update RLS policies to allow looking up users by linking_code
-DROP POLICY IF EXISTS "Users can view their own profile" ON users;
-
-CREATE POLICY "Users can view their own profile"
-  ON users FOR SELECT
-  USING (id::text = auth.uid()::text);
-
--- Allow users to look up other users by linking_code (for linking functionality)
-CREATE POLICY "Users can lookup by linking_code"
-  ON users FOR SELECT
-  USING (linking_code IS NOT NULL);
-
--- Update insert policy to include new columns
-DROP POLICY IF EXISTS "Users can update their own profile" ON users;
-
-CREATE POLICY "Users can upsert their own profile"
-  ON users FOR ALL
-  USING (id::text = auth.uid()::text)
-  WITH CHECK (id::text = auth.uid()::text);
+-- Disable RLS for users table since Clerk handles authentication
+ALTER TABLE users DISABLE ROW LEVEL SECURITY;

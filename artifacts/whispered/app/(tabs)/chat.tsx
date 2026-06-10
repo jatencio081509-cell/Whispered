@@ -212,7 +212,7 @@ export default function ChatScreen() {
         showsVerticalScrollIndicator={false}
       />
 
-      <View style={[styles.inputBar, { paddingBottom: insets.bottom + 50 }]}>
+      <View style={[styles.inputBar, { paddingBottom: insets.bottom + 80 }]}>
         <View style={styles.inputContainer}>
           <TextInput
             value={input}
@@ -242,7 +242,7 @@ const styles = StyleSheet.create({
   centered: { flex: 1, justifyContent: 'center', alignItems: 'center', padding: 24 },
   header: { paddingHorizontal: 20, paddingBottom: 10, borderBottomWidth: 1, borderBottomColor: '#222', backgroundColor: '#111' },
   headerTitle: { fontSize: 20, fontWeight: '600', color: '#FFFFFF' },
-  messagesContainer: { paddingHorizontal: 16, paddingVertical: 12, flexGrow: 1 },
+  messagesContainer: { paddingHorizontal: 16, paddingVertical: 12, flexGrow: 1, paddingBottom: 16 },
   messageRow: { flexDirection: 'row', marginVertical: 4 },
   rowLeft: { justifyContent: 'flex-start' },
   rowRight: { justifyContent: 'flex-end' },
