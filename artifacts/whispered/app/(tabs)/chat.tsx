@@ -17,6 +17,7 @@ import { useRouter } from 'expo-router';
 import { Feather } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { LinearGradient } from 'expo-linear-gradient';
 import { supabase } from '@/lib/supabase';
 
 type Message = {
@@ -185,6 +186,10 @@ export default function ChatScreen() {
       style={styles.container}
       keyboardVerticalOffset={100}
     >
+      <LinearGradient
+        colors={['#0a2540', '#0A0A0A']}
+        style={StyleSheet.absoluteFillObject}
+      />
       <View style={[styles.header, { paddingTop: insets.top + 8 }]}>
         <Text style={styles.headerTitle}>
           {partnerName ? partnerName : 'Partner'}
@@ -226,9 +231,9 @@ export default function ChatScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#0A0A0A' },
+  container: { flex: 1 },
   centered: { flex: 1, justifyContent: 'center', alignItems: 'center', padding: 24 },
-  header: { paddingHorizontal: 20, paddingBottom: 10, borderBottomWidth: 1, borderBottomColor: '#222', backgroundColor: '#111' },
+  header: { paddingHorizontal: 20, paddingBottom: 10, borderBottomWidth: 1, borderBottomColor: '#222', backgroundColor: 'rgba(17,17,17,0.8)' },
   headerTitle: { fontSize: 20, fontWeight: '600', color: '#FFFFFF' },
   messagesContainer: { paddingHorizontal: 16, paddingVertical: 12, flexGrow: 1 },
   messageRow: { flexDirection: 'row', marginVertical: 4 },
@@ -239,7 +244,7 @@ const styles = StyleSheet.create({
   theirMessage: { backgroundColor: '#2C2C2E', borderBottomLeftRadius: 6 },
   messageText: { fontSize: 16, lineHeight: 22 },
   messageTime: { fontSize: 11, marginTop: 4, alignSelf: 'flex-end' },
-  inputBar: { paddingHorizontal: 12, paddingTop: 10, backgroundColor: '#111', borderTopWidth: 1, borderTopColor: '#222' },
+  inputBar: { paddingHorizontal: 12, paddingTop: 10, backgroundColor: 'rgba(17,17,17,0.9)', borderTopWidth: 1, borderTopColor: '#222' },
   inputContainer: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#1C1C1E', borderRadius: 22, paddingHorizontal: 4, paddingVertical: 4 },
   input: { flex: 1, color: '#FFFFFF', fontSize: 16, paddingHorizontal: 16, paddingVertical: 10, maxHeight: 100 },
   sendButton: { width: 36, height: 36, borderRadius: 18, backgroundColor: '#00E5FF', justifyContent: 'center', alignItems: 'center', marginLeft: 6 },
