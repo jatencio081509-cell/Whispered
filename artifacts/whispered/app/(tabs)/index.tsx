@@ -301,7 +301,7 @@ export default function HomeScreen() {
                 key={mood.label}
                 style={[styles.moodOption, { borderBottomColor: colors.border }]}
                 onPress={() => {
-                  setMyMood(mood.label);
+                  setMyMood(mood.label.toLowerCase() as any);
                   setShowMyMoodDropdown(false);
                 }}
               >
