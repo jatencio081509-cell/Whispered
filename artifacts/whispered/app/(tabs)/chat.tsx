@@ -197,8 +197,9 @@ export default function ChatScreen() {
       style={styles.container}
       keyboardVerticalOffset={100}
     >
-      <View style={[styles.header, { paddingTop: insets.top + 8 }]}>
-        <Text style={styles.headerTitle}>
+      <View style={styles.scanLine} />
+      <View style={[styles.header, { paddingTop: insets.top + 12, borderBottomColor: colors.border }]}>
+        <Text style={[styles.headerTitle, { color: colors.text }]}>
           {partnerName ? partnerName : 'Partner'}
         </Text>
       </View>
