@@ -35,7 +35,6 @@ export default function ChatScreen() {
 
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState('');
-  const [loading, setLoading] = useState(true);
 
   const partnerCode = user?.unsafeMetadata?.partnerCode as string | undefined;
   const partnerName = user?.unsafeMetadata?.partnerName as string | undefined;
@@ -43,12 +42,8 @@ export default function ChatScreen() {
   const isLinked = !!partnerCode;
   const myUserId = user?.id;
 
-  // Fetch messages from Supabase
   const fetchMessages = async () => {
-    if (!myUserId || !partnerUserId) {
-      setLoading(false);
-      return;
-    }
+    if (!myUserId || !partnerUserId) return;
 
     try {
       const { data, error } = await supabase
@@ -59,7 +54,6 @@ export default function ChatScreen() {
 
       if (error) {
         console.error('Error fetching messages:', error);
-        setLoading(false);
         return;
       }
 
@@ -79,12 +73,9 @@ export default function ChatScreen() {
       setMessages(formatted);
     } catch (err) {
       console.error('Failed to fetch messages:', err);
-    } finally {
-      setLoading(false);
     }
   };
 
-  // Real-time subscription (CORRECT ORDER)
   useEffect(() => {
     if (!isLinked || !myUserId || !partnerUserId) return;
 
@@ -99,7 +90,6 @@ export default function ChatScreen() {
         },
         (payload) => {
           const newMsg = payload.new as any;
-
           if (
             (newMsg.from_user_id === myUserId && newMsg.to_user_id === partnerUserId) ||
             (newMsg.from_user_id === partnerUserId && newMsg.to_user_id === myUserId)
@@ -114,18 +104,13 @@ export default function ChatScreen() {
           }
         }
       )
-      .subscribe((status) => {
-        if (status === 'SUBSCRIBED') {
-          console.log('✅ Subscribed to messages realtime');
-        }
-      });
+      .subscribe();
 
     return () => {
       supabase.removeChannel(channel);
     };
   }, [isLinked, myUserId, partnerUserId]);
 
-  // Initial load
   useEffect(() => {
     if (isLinked) {
       fetchMessages();
