@@ -186,7 +186,7 @@ export default function ChatScreen() {
     <KeyboardAvoidingView
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
       style={styles.container}
-      keyboardVerticalOffset={100}
+      keyboardVerticalOffset={0}
     >
       <LinearGradient
         colors={['#0A1628', '#0D2840', '#0F3A5C', '#0A4A6E', '#0A1628']}
@@ -212,7 +212,7 @@ export default function ChatScreen() {
         showsVerticalScrollIndicator={false}
       />
 
-      <View style={[styles.inputBar, { paddingBottom: insets.bottom + 18 }]}>
+      <View style={[styles.inputBar, { paddingBottom: insets.bottom + 50 }]}>
         <View style={styles.inputContainer}>
           <TextInput
             value={input}
