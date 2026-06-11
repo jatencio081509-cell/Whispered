@@ -10,6 +10,8 @@ import {
   TextInput,
   KeyboardAvoidingView,
   Platform,
+  Image,
+  Alert,
 } from 'react-native';
 import { useUser } from '@clerk/expo';
 import { useColors } from '@/hooks/useColors';
@@ -17,6 +19,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Feather } from '@expo/vector-icons';
 import NavigationDrawer from '@/components/NavigationDrawer';
+import * as ImagePicker from 'expo-image-picker';
 import { supabase } from '@/lib/supabase';
 
 export default function MemoriesScreen() {
@@ -29,6 +32,7 @@ export default function MemoriesScreen() {
   const [showNavigationDrawer, setShowNavigationDrawer] = useState(false);
   const [showAddModal, setShowAddModal] = useState(false);
   const [newMemoryText, setNewMemoryText] = useState('');
+  const [selectedImage, setSelectedImage] = useState<string | null>(null);
   const [adding, setAdding] = useState(false);
 
   const fetchMemories = async () => {
@@ -83,24 +87,83 @@ export default function MemoriesScreen() {
     }
   }, [user?.id]);
 
+  const pickImage = async () => {
+    const result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ImagePicker.MediaTypeOptions.Images,
+      allowsEditing: true,
+      aspect: [4, 3],
+      quality: 0.8,
+    });
+
+    if (!result.canceled && result.assets[0]) {
+      setSelectedImage(result.assets[0].uri);
+    }
+  };
+
+  const uploadImage = async (uri: string): Promise<string | null> => {
+    try {
+      const response = await fetch(uri);
+      const blob = await response.blob();
+
+      const fileExt = uri.split('.').pop();
+      const fileName = `${user!.id}-${Date.now()}.${fileExt}`;
+
+      const { data, error } = await supabase.storage
+        .from('memories')
+        .upload(fileName, blob, {
+          contentType: 'image/jpeg',
+        });
+
+      if (error) {
+        console.error('Upload error:', error);
+        return null;
+      }
+
+      const { data: publicUrlData } = supabase.storage
+        .from('memories')
+        .getPublicUrl(fileName);
+
+      return publicUrlData.publicUrl;
+    } catch (err) {
+      console.error('Failed to upload image:', err);
+      return null;
+    }
+  };
+
   const addMemory = async () => {
-    if (!newMemoryText.trim() || !user) return;
+    if ((!newMemoryText.trim() && !selectedImage) || !user) {
+      Alert.alert('Error', 'Please add a caption or a photo.');
+      return;
+    }
 
     setAdding(true);
 
     try {
+      let imageUrl = null;
+
+      if (selectedImage) {
+        imageUrl = await uploadImage(selectedImage);
+        if (!imageUrl) {
+          Alert.alert('Error', 'Failed to upload photo. Please try again.');
+          setAdding(false);
+          return;
+        }
+      }
+
       const { error } = await supabase.from('memories').insert({
-        text: newMemoryText.trim(),
+        text: newMemoryText.trim() || '',
+        image_url: imageUrl,
         created_by: user.id,
       });
 
       if (error) {
         console.error('Error adding memory:', error);
-        Alert.alert('Error', 'Failed to add memory. Please try again.');
+        Alert.alert('Error', 'Failed to save memory.');
       } else {
         setNewMemoryText('');
+        setSelectedImage(null);
         setShowAddModal(false);
-        // Realtime will refresh the list automatically
+        // Realtime will refresh the list
       }
     } catch (err) {
       console.error('Failed to add memory:', err);
@@ -108,6 +171,12 @@ export default function MemoriesScreen() {
     } finally {
       setAdding(false);
     }
+  };
+
+  const openAddModal = () => {
+    setNewMemoryText('');
+    setSelectedImage(null);
+    setShowAddModal(true);
   };
 
   if (!isLoaded) {
@@ -130,7 +199,7 @@ export default function MemoriesScreen() {
         <View style={styles.headerRow}>
           <Text style={[styles.title, { color: colors.foreground }]}>Memories</Text>
           <View style={{ flexDirection: 'row', alignItems: 'center', gap: 16 }}>
-            <Pressable onPress={() => setShowAddModal(true)}>
+            <Pressable onPress={openAddModal}>
               <Feather name="plus" size={26} color={colors.primary} />
             </Pressable>
             <Pressable onPress={() => setShowNavigationDrawer(true)}>
@@ -148,11 +217,8 @@ export default function MemoriesScreen() {
           <Text style={[styles.emptyText, { color: colors.mutedForeground }]}>
             No memories yet.
           </Text>
-          <Pressable
-            onPress={() => setShowAddModal(true)}
-            style={styles.addFirstButton}
-          >
-            <Text style={{ color: colors.primaryForeground, fontWeight: '600' }}>
+          <Pressable onPress={openAddModal} style={styles.addFirstButton}>
+            <Text style={{ color: '#fff', fontWeight: '600' }}>
               Add your first memory
             </Text>
           </Pressable>
@@ -163,9 +229,18 @@ export default function MemoriesScreen() {
           keyExtractor={(item) => item.id}
           renderItem={({ item }) => (
             <View style={styles.memoryCard}>
-              <Text style={[styles.memoryText, { color: colors.foreground }]}>
-                {item.text}
-              </Text>
+              {item.image_url && (
+                <Image
+                  source={{ uri: item.image_url }}
+                  style={styles.memoryImage}
+                  resizeMode="cover"
+                />
+              )}
+              {item.text ? (
+                <Text style={[styles.memoryText, { color: colors.foreground }]}>
+                  {item.text}
+                </Text>
+              ) : null}
               <Text style={styles.memoryDate}>
                 {new Date(item.created_at).toLocaleDateString()}
               </Text>
@@ -191,14 +266,30 @@ export default function MemoriesScreen() {
               Add a Memory
             </Text>
 
+            <Pressable onPress={pickImage} style={styles.imagePickerButton}>
+              {selectedImage ? (
+                <Image
+                  source={{ uri: selectedImage }}
+                  style={styles.imagePreview}
+                  resizeMode="cover"
+                />
+              ) : (
+                <View style={styles.imagePlaceholder}>
+                  <Feather name="camera" size={32} color={colors.mutedForeground} />
+                  <Text style={{ color: colors.mutedForeground, marginTop: 8 }}>
+                    Add Photo
+                  </Text>
+                </View>
+              )}
+            </Pressable>
+
             <TextInput
               value={newMemoryText}
               onChangeText={setNewMemoryText}
-              placeholder="What memory do you want to save?"
+              placeholder="Write a caption..."
               placeholderTextColor={colors.mutedForeground}
               style={styles.memoryInput}
               multiline
-              autoFocus
             />
 
             <View style={styles.modalButtons}>
@@ -206,6 +297,7 @@ export default function MemoriesScreen() {
                 onPress={() => {
                   setShowAddModal(false);
                   setNewMemoryText('');
+                  setSelectedImage(null);
                 }}
                 style={styles.cancelButton}
               >
@@ -214,13 +306,13 @@ export default function MemoriesScreen() {
 
               <Pressable
                 onPress={addMemory}
-                disabled={!newMemoryText.trim() || adding}
-                style={[styles.saveButton, (!newMemoryText.trim() || adding) && styles.saveButtonDisabled]}
+                disabled={(!newMemoryText.trim() && !selectedImage) || adding}
+                style={[styles.saveButton, ((!newMemoryText.trim() && !selectedImage) || adding) && styles.saveButtonDisabled]}
               >
                 {adding ? (
                   <ActivityIndicator color="#fff" size="small" />
                 ) : (
-                  <Text style={{ color: '#fff', fontWeight: '600' }}>Add Memory</Text>
+                  <Text style={{ color: '#fff', fontWeight: '600' }}>Save Memory</Text>
                 )}
               </Pressable>
             </View>
@@ -261,8 +353,15 @@ const styles = StyleSheet.create({
   memoryCard: {
     backgroundColor: 'rgba(26,26,30,0.85)',
     borderRadius: 16,
-    padding: 18,
+    padding: 16,
     marginBottom: 14,
+    overflow: 'hidden',
+  },
+  memoryImage: {
+    width: '100%',
+    height: 200,
+    borderRadius: 12,
+    marginBottom: 12,
   },
   memoryText: { fontSize: 16, lineHeight: 24 },
   memoryDate: {
@@ -285,8 +384,24 @@ const styles = StyleSheet.create({
   modalTitle: {
     fontSize: 22,
     fontWeight: '700',
-    marginBottom: 20,
+    marginBottom: 16,
     textAlign: 'center',
+  },
+  imagePickerButton: {
+    height: 180,
+    backgroundColor: '#111',
+    borderRadius: 16,
+    marginBottom: 16,
+    justifyContent: 'center',
+    alignItems: 'center',
+    overflow: 'hidden',
+  },
+  imagePlaceholder: {
+    alignItems: 'center',
+  },
+  imagePreview: {
+    width: '100%',
+    height: '100%',
   },
   memoryInput: {
     backgroundColor: '#111',
@@ -294,7 +409,7 @@ const styles = StyleSheet.create({
     borderRadius: 16,
     padding: 16,
     fontSize: 16,
-    minHeight: 120,
+    minHeight: 80,
     textAlignVertical: 'top',
     marginBottom: 24,
   },
