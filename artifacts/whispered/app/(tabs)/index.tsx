@@ -27,9 +27,8 @@ export default function HomeScreen() {
   const router = useRouter();
   const { user, isLoaded } = useUser();
   const colors = useColors();
+  const { myMood, setMyMood, partnerMood } = useApp();
 
-  const [myMood, setMyMood] = useState<string | null>(null);
-  const [partnerMood, setPartnerMood] = useState<string | null>(null);
   const [showMyMoodDropdown, setShowMyMoodDropdown] = useState(false);
   const [showEditPartnerName, setShowEditPartnerName] = useState(false);
   const [editingPartnerName, setEditingPartnerName] = useState('');

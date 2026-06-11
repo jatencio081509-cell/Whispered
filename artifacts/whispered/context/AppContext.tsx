@@ -11,7 +11,7 @@ import { syncAllData } from "@/lib/syncClerkToSupabase";
 import { supabase } from "@/lib/supabase";
 
 export type Theme = "calm" | "warm" | "playful" | "elegant";
-export type Mood = "happy" | "calm" | "okay" | "sad" | "loved" | null;
+export type Mood = "happy" | "calm" | "okay" | "sad" | "loved" | "motivated" | null;
 
 export interface Couple {
   id: string;
