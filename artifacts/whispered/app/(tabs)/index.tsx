@@ -177,27 +177,28 @@ export default function HomeScreen() {
       end={{ x: 0, y: 1 }}
       style={styles.gradientContainer}
     >
-      <ScrollView style={[styles.container, { paddingTop: insets.top }]} key={refreshKey}>
+      <View style={styles.scanLine} />
+      <ScrollView style={[styles.scrollView, { paddingTop: insets.top + 12 }]} key={refreshKey}>
         <View style={styles.content}>
           {/* Header */}
           <View style={styles.header}>
             <View>
-              <Text style={[styles.greeting, { color: colors.foreground }]}>
+              <Text style={[styles.greeting, { color: colors.mutedForeground }]}>
                 Good {new Date().getHours() < 12 ? 'morning' : new Date().getHours() < 18 ? 'afternoon' : 'evening'}
               </Text>
-              <Text style={[styles.name, { color: colors.foreground }]}>
+              <Text style={[styles.name, { color: colors.text }]}>
                 {user?.firstName || 'there'}
               </Text>
             </View>
             <Pressable onPress={() => setShowNavigationDrawer(true)}>
-              <Feather name="menu" size={24} color={colors.foreground} />
+              <Feather name="menu" size={24} color={colors.text} />
             </Pressable>
           </View>
 
         {/* Anniversary Date Section - Moved to middle */}
         {anniversaryDate && daysTogether !== null && (
           <View style={styles.section}>
-            <Text style={[styles.sectionTitle, { color: colors.foreground }]}>Anniversary</Text>
+            <Text style={[styles.sectionTitle, { color: colors.text }]}>Anniversary</Text>
             
             {/* Holographic 365-day countdown circle */}
             <View style={styles.circleContainer}>
@@ -226,7 +227,7 @@ export default function HomeScreen() {
                 />
               </Svg>
               <View style={styles.circleContent}>
-                <Text style={[styles.circleDays, { color: colors.foreground }]}>
+                <Text style={[styles.circleDays, { color: colors.text }]}>
                   {daysUntilAnniversary}
                 </Text>
                 <Text style={[styles.circleLabel, { color: colors.mutedForeground }]}>
@@ -236,7 +237,7 @@ export default function HomeScreen() {
             </View>
 
             <View style={styles.anniversaryCard}>
-              <Text style={[styles.anniversaryText, { color: colors.foreground }]}>
+              <Text style={[styles.anniversaryText, { color: colors.text }]}>
                 {daysTogether} days together
               </Text>
               {daysUntilAnniversary !== null && (
@@ -250,16 +251,16 @@ export default function HomeScreen() {
 
         {/* Moods Section */}
         <View style={styles.section}>
-          <Text style={[styles.sectionTitle, { color: colors.foreground }]}>Moods</Text>
+          <Text style={[styles.sectionTitle, { color: colors.text }]}>Moods</Text>
           <View style={styles.moodsRow}>
             {/* My Mood */}
             <View style={styles.moodBox}>
-              <Text style={[styles.moodBoxTitle, { color: colors.foreground }]}>My mood</Text>
+              <Text style={[styles.moodBoxTitle, { color: colors.text }]}>My mood</Text>
               <Pressable
                 style={[styles.moodDropdown, { borderColor: colors.border }]}
                 onPress={() => setShowMyMoodDropdown(true)}
               >
-                <Text style={[styles.moodDropdownText, { color: myMood ? colors.foreground : colors.mutedForeground }]}>
+                <Text style={[styles.moodDropdownText, { color: myMood ? colors.text : colors.mutedForeground }]}>
                   {myMood || 'Select mood'}
                 </Text>
                 <Feather name="chevron-down" size={16} color={colors.mutedForeground} />
@@ -268,11 +269,11 @@ export default function HomeScreen() {
 
             {/* Partner's Mood - Display only */}
             <View style={styles.moodBox}>
-              <Text style={[styles.moodBoxTitle, { color: colors.foreground }]}>
+              <Text style={[styles.moodBoxTitle, { color: colors.text }]}>
                 {partnerName ? `${partnerName}'s mood` : "Partner's mood"}
               </Text>
               <View style={[styles.moodDropdown, { borderColor: colors.border }]}>
-                <Text style={[styles.moodDropdownText, { color: partnerMood ? colors.foreground : colors.mutedForeground }]}>
+                <Text style={[styles.moodDropdownText, { color: partnerMood ? colors.text : colors.mutedForeground }]}>
                   {partnerMood || 'Not set'}
                 </Text>
               </View>
@@ -282,13 +283,13 @@ export default function HomeScreen() {
 
         {/* Partner Section - Moved below anniversary */}
         <View style={styles.section}>
-          <Text style={[styles.sectionTitle, { color: colors.foreground }]}>Partner</Text>
+          <Text style={[styles.sectionTitle, { color: colors.text }]}>Partner</Text>
           
           {isLinked ? (
             <View style={styles.partnerCard}>
               <View style={styles.partnerHeader}>
                 <Feather name="heart" size={20} color={colors.primary} />
-                <Text style={[styles.partnerTitle, { color: colors.foreground }]}>
+                <Text style={[styles.partnerTitle, { color: colors.text }]}>
                   {partnerName ? `Linked with ${partnerName}` : 'Linked with partner'}
                 </Text>
                 <Pressable onPress={() => { setEditingPartnerName(partnerName || ''); setShowEditPartnerName(true); }}>
@@ -322,7 +323,7 @@ export default function HomeScreen() {
       >
         <Pressable style={styles.modalOverlay} onPress={() => setShowMyMoodDropdown(false)}>
           <View style={[styles.modalContent, { backgroundColor: colors.card, borderColor: colors.border }]}>
-            <Text style={[styles.modalTitle, { color: colors.foreground }]}>Select your mood</Text>
+            <Text style={[styles.modalTitle, { color: colors.text }]}>Select your mood</Text>
             {MOODS.map((mood) => (
               <Pressable
                 key={mood.label}
@@ -333,7 +334,7 @@ export default function HomeScreen() {
                 }}
               >
                 <Text style={styles.moodOptionEmoji}>{mood.emoji}</Text>
-                <Text style={[styles.moodOptionLabel, { color: colors.foreground }]}>{mood.label}</Text>
+                <Text style={[styles.moodOptionLabel, { color: colors.text }]}>{mood.label}</Text>
               </Pressable>
             ))}
           </View>
@@ -349,9 +350,9 @@ export default function HomeScreen() {
       >
         <Pressable style={styles.modalOverlay} onPress={() => setShowEditPartnerName(false)}>
           <View style={[styles.modalContent, { backgroundColor: colors.card, borderColor: colors.border }]}>
-            <Text style={[styles.modalTitle, { color: colors.foreground }]}>Edit partner name</Text>
+            <Text style={[styles.modalTitle, { color: colors.text }]}>Edit partner name</Text>
             <TextInput
-              style={[styles.editInput, { backgroundColor: colors.input, borderColor: colors.border, color: colors.foreground }]}
+              style={[styles.editInput, { backgroundColor: colors.input, borderColor: colors.border, color: colors.text }]}
               value={editingPartnerName}
               onChangeText={setEditingPartnerName}
               placeholder="Enter partner's name"
@@ -362,7 +363,7 @@ export default function HomeScreen() {
                 style={[styles.modalButton, styles.cancelButton, { borderColor: colors.border }]}
                 onPress={() => setShowEditPartnerName(false)}
               >
-                <Text style={[styles.modalButtonText, { color: colors.foreground }]}>Cancel</Text>
+                <Text style={[styles.modalButtonText, { color: colors.text }]}>Cancel</Text>
               </Pressable>
               <Pressable
                 style={[styles.modalButton, styles.saveButton, { backgroundColor: colors.primary }]}
@@ -381,17 +382,17 @@ export default function HomeScreen() {
       />
 
       </ScrollView>
-    </LinearGradient>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
-  gradientContainer: {
-    flex: 1,
-  },
   container: {
     flex: 1,
-    backgroundColor: 'transparent',
+  },
+  scanLine: { position: "absolute", top: 0, left: 0, right: 0, height: 1, backgroundColor: "rgba(0,229,255,0.3)", zIndex: 10 },
+  scrollView: {
+    flex: 1,
   },
   content: {
     padding: 20,
@@ -404,18 +405,19 @@ const styles = StyleSheet.create({
   },
   greeting: {
     fontSize: 16,
-    color: '#888',
+    fontFamily: "Inter_400Regular",
   },
   name: {
     fontSize: 32,
-    fontWeight: '700',
+    fontFamily: "Inter_700Bold",
+    letterSpacing: -0.5,
   },
   section: {
     marginBottom: 32,
   },
   sectionTitle: {
-    fontSize: 20,
-    fontWeight: '600',
+    fontSize: 18,
+    fontFamily: "Inter_600SemiBold",
     marginBottom: 16,
   },
   moodContainer: {

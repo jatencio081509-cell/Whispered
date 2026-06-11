@@ -159,11 +159,11 @@ export default function ChatScreen() {
 
   const renderMessage: ListRenderItem<Message> = ({ item }) => (
     <View style={[styles.messageRow, item.fromMe ? styles.rowRight : styles.rowLeft]}>
-      <View style={[styles.messageBubble, item.fromMe ? styles.myMessage : styles.theirMessage]}>
-        <Text style={[styles.messageText, { color: item.fromMe ? '#fff' : colors.foreground }]}>
+      <View style={[styles.messageBubble, item.fromMe ? styles.myMessage : styles.theirMessage, { backgroundColor: item.fromMe ? colors.primary : colors.card }]}>
+        <Text style={[styles.messageText, { color: item.fromMe ? colors.primaryForeground : colors.text }]}>
           {item.text}
         </Text>
-        <Text style={[styles.messageTime, { color: item.fromMe ? 'rgba(255,255,255,0.7)' : colors.mutedForeground }]}>
+        <Text style={[styles.messageTime, { color: item.fromMe ? colors.primaryForeground : colors.mutedForeground }]}>
           {item.time}
         </Text>
       </View>
@@ -194,7 +194,7 @@ export default function ChatScreen() {
   return (
     <KeyboardAvoidingView
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-      style={styles.container}
+      style={[styles.container, { backgroundColor: colors.background }]}
       keyboardVerticalOffset={100}
     >
       <View style={styles.scanLine} />
@@ -213,24 +213,24 @@ export default function ChatScreen() {
         showsVerticalScrollIndicator={false}
       />
 
-      <View style={[styles.inputBar, { paddingBottom: insets.bottom + 80 }]}>
-        <View style={styles.inputContainer}>
+      <View style={[styles.inputBar, { backgroundColor: colors.card, borderTopColor: colors.border, paddingBottom: insets.bottom + 80 }]}>
+        <View style={[styles.inputContainer, { backgroundColor: colors.input }]}>
           <TextInput
             value={input}
             onChangeText={setInput}
             placeholder="iMessage"
             placeholderTextColor={colors.mutedForeground}
-            style={styles.input}
+            style={[styles.input, { color: colors.text }]}
             onSubmitEditing={sendMessage}
             returnKeyType="send"
             multiline={false}
           />
           <Pressable
             onPress={sendMessage}
-            style={[styles.sendButton, !input.trim() && styles.sendButtonDisabled]}
+            style={[styles.sendButton, { backgroundColor: input.trim() ? colors.primary : colors.mutedForeground }, !input.trim() && styles.sendButtonDisabled]}
             disabled={!input.trim()}
           >
-            <Feather name="send" size={18} color={input.trim() ? colors.primary : colors.mutedForeground} />
+            <Feather name="send" size={18} color={input.trim() ? colors.primaryForeground : colors.mutedForeground} />
           </Pressable>
         </View>
       </View>
