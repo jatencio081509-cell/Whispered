@@ -18,6 +18,7 @@ import { Feather } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { supabase } from '@/lib/supabase';
+import { LinearGradient } from 'expo-linear-gradient';
 
 type Message = {
   id: string;
@@ -192,54 +193,62 @@ export default function ChatScreen() {
   }
 
   return (
-    <KeyboardAvoidingView
-      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-      style={[styles.container, { backgroundColor: colors.background }]}
-      keyboardVerticalOffset={100}
+    <LinearGradient
+      colors={['#0A1628', '#0D2840', '#0F3A5C', '#0A4A6E', '#0A1628']}
+      start={{ x: 0, y: 0 }}
+      end={{ x: 0, y: 1 }}
+      style={styles.gradientContainer}
     >
-      <View style={styles.scanLine} />
-      <View style={[styles.header, { paddingTop: insets.top + 12, borderBottomColor: colors.border }]}>
-        <Text style={[styles.headerTitle, { color: colors.text }]}>
-          {partnerName ? partnerName : 'Partner'}
-        </Text>
-      </View>
-
-      <FlatList
-        ref={flatListRef}
-        data={messages}
-        keyExtractor={(item) => item.id}
-        renderItem={renderMessage}
-        contentContainerStyle={styles.messagesContainer}
-        showsVerticalScrollIndicator={false}
-      />
-
-      <View style={[styles.inputBar, { backgroundColor: colors.card, borderTopColor: colors.border, paddingBottom: insets.bottom + 80 }]}>
-        <View style={[styles.inputContainer, { backgroundColor: colors.input }]}>
-          <TextInput
-            value={input}
-            onChangeText={setInput}
-            placeholder="iMessage"
-            placeholderTextColor={colors.mutedForeground}
-            style={[styles.input, { color: colors.text }]}
-            onSubmitEditing={sendMessage}
-            returnKeyType="send"
-            multiline={false}
-          />
-          <Pressable
-            onPress={sendMessage}
-            style={[styles.sendButton, { backgroundColor: input.trim() ? colors.primary : colors.mutedForeground }, !input.trim() && styles.sendButtonDisabled]}
-            disabled={!input.trim()}
-          >
-            <Feather name="send" size={18} color={input.trim() ? colors.primaryForeground : colors.mutedForeground} />
-          </Pressable>
+      <KeyboardAvoidingView
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        style={styles.container}
+        keyboardVerticalOffset={100}
+      >
+        <View style={styles.scanLine} />
+        <View style={[styles.header, { paddingTop: insets.top + 12, borderBottomColor: colors.border }]}>
+          <Text style={[styles.headerTitle, { color: colors.text }]}>
+            {partnerName ? partnerName : 'Partner'}
+          </Text>
         </View>
-      </View>
-    </KeyboardAvoidingView>
+
+        <FlatList
+          ref={flatListRef}
+          data={messages}
+          keyExtractor={(item) => item.id}
+          renderItem={renderMessage}
+          contentContainerStyle={styles.messagesContainer}
+          showsVerticalScrollIndicator={false}
+        />
+
+        <View style={[styles.inputBar, { backgroundColor: colors.card, borderTopColor: colors.border, paddingBottom: insets.bottom + 80 }]}>
+          <View style={[styles.inputContainer, { backgroundColor: colors.input }]}>
+            <TextInput
+              value={input}
+              onChangeText={setInput}
+              placeholder="iMessage"
+              placeholderTextColor={colors.mutedForeground}
+              style={[styles.input, { color: colors.text }]}
+              onSubmitEditing={sendMessage}
+              returnKeyType="send"
+              multiline={false}
+            />
+            <Pressable
+              onPress={sendMessage}
+              style={[styles.sendButton, { backgroundColor: input.trim() ? colors.primary : colors.mutedForeground }, !input.trim() && styles.sendButtonDisabled]}
+              disabled={!input.trim()}
+            >
+              <Feather name="send" size={18} color={input.trim() ? colors.primaryForeground : colors.mutedForeground} />
+            </Pressable>
+          </View>
+        </View>
+      </KeyboardAvoidingView>
+    </LinearGradient>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#0A0A0A' },
+  gradientContainer: { flex: 1 },
+  container: { flex: 1 },
   scanLine: { position: "absolute", top: 0, left: 0, right: 0, height: 1, backgroundColor: "rgba(0,229,255,0.3)", zIndex: 10 },
   centered: { flex: 1, justifyContent: 'center', alignItems: 'center', padding: 24 },
   header: { paddingHorizontal: 20, paddingBottom: 12, borderBottomWidth: 1 },
@@ -249,15 +258,15 @@ const styles = StyleSheet.create({
   rowLeft: { justifyContent: 'flex-start' },
   rowRight: { justifyContent: 'flex-end' },
   messageBubble: { maxWidth: '78%', paddingHorizontal: 14, paddingVertical: 10, borderRadius: 20 },
-  myMessage: { backgroundColor: '#00E5FF', borderBottomRightRadius: 6 },
-  theirMessage: { backgroundColor: '#2C2C2E', borderBottomLeftRadius: 6 },
+  myMessage: { borderBottomRightRadius: 6 },
+  theirMessage: { borderBottomLeftRadius: 6 },
   messageText: { fontSize: 16, lineHeight: 22 },
   messageTime: { fontSize: 11, marginTop: 4, alignSelf: 'flex-end' },
-  inputBar: { paddingHorizontal: 12, paddingTop: 10, backgroundColor: '#111', borderTopWidth: 1, borderTopColor: '#222' },
-  inputContainer: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#1C1C1E', borderRadius: 22, paddingHorizontal: 4, paddingVertical: 4 },
-  input: { flex: 1, color: '#FFFFFF', fontSize: 16, paddingHorizontal: 16, paddingVertical: 10, maxHeight: 100 },
-  sendButton: { width: 36, height: 36, borderRadius: 18, backgroundColor: '#00E5FF', justifyContent: 'center', alignItems: 'center', marginLeft: 6 },
-  sendButtonDisabled: { backgroundColor: '#333' },
+  inputBar: { paddingHorizontal: 12, paddingTop: 10, borderTopWidth: 1 },
+  inputContainer: { flexDirection: 'row', alignItems: 'center', borderRadius: 22, paddingHorizontal: 4, paddingVertical: 4 },
+  input: { flex: 1, fontSize: 16, paddingHorizontal: 16, paddingVertical: 10, maxHeight: 100 },
+  sendButton: { width: 36, height: 36, borderRadius: 18, justifyContent: 'center', alignItems: 'center', marginLeft: 6 },
+  sendButtonDisabled: { opacity: 0.5 },
   title: { fontSize: 24, fontWeight: '700' },
   subtitle: { fontSize: 16 },
   button: { paddingVertical: 14, paddingHorizontal: 32, borderRadius: 999 },

@@ -14,6 +14,7 @@ import { useColors } from "@/hooks/useColors";
 import { useApp } from "@/context/AppContext";
 import * as Haptics from "expo-haptics";
 import NavigationDrawer from '@/components/NavigationDrawer';
+import { LinearGradient } from 'expo-linear-gradient';
 
 const FEATURES = [
   { id: "goals",    label: "Goals",         description: "Track shared dreams",   icon: "target",        color: "#00E5FF", route: "/goals"    },
@@ -33,7 +34,12 @@ export default function MoreScreen() {
   const [showNavigationDrawer, setShowNavigationDrawer] = useState(false);
 
   return (
-    <View style={[styles.container, { backgroundColor: colors.background }]}>
+    <LinearGradient
+      colors={['#0A1628', '#0D2840', '#0F3A5C', '#0A4A6E', '#0A1628']}
+      start={{ x: 0, y: 0 }}
+      end={{ x: 0, y: 1 }}
+      style={styles.gradientContainer}
+    >
       <View style={styles.scanLine} />
       <ScrollView
         contentContainerStyle={[styles.inner, { paddingTop: topPad + 16, paddingBottom: insets.bottom + 100 }]}
@@ -90,11 +96,12 @@ export default function MoreScreen() {
         onClose={() => setShowNavigationDrawer(false)}
       />
 
-    </View>
+    </LinearGradient>
   );
 }
 
 const styles = StyleSheet.create({
+  gradientContainer: { flex: 1 },
   container: { flex: 1 },
   scanLine: { position: "absolute", top: 0, left: 0, right: 0, height: 1, backgroundColor: "rgba(0,229,255,0.3)", zIndex: 10 },
   inner: { paddingHorizontal: 20, gap: 20 },
