@@ -8,6 +8,7 @@ import React, {
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useAuth, useUser } from "@clerk/expo";
 import { syncAllData } from "@/lib/syncClerkToSupabase";
+import { supabase } from "@/lib/supabase";
 
 export type Theme = "calm" | "warm" | "playful" | "elegant";
 export type Mood = "happy" | "calm" | "okay" | "sad" | "loved" | null;
@@ -74,9 +75,28 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       if (m[1]) setMyMoodState(m[1] as Mood);
       if (s[1]) setStreakState(Number(s[1]));
       if (c[1]) setCoupleState(JSON.parse(c[1]));
+
+      // Load mood from Supabase if user is signed in
+      if (user) {
+        try {
+          const { data, error } = await supabase
+            .from('users')
+            .select('mood')
+            .eq('id', user.id)
+            .single();
+          
+          if (data && !error && data.mood) {
+            setMyMoodState(data.mood as Mood);
+            // Update AsyncStorage with the latest mood from Supabase
+            AsyncStorage.setItem("myMood", data.mood);
+          }
+        } catch (err) {
+          console.error('Failed to load mood from Supabase:', err);
+        }
+      }
     };
     load();
-  }, []);
+  }, [user]);
 
   const setCouple = (c: Couple | null) => {
     setCoupleState(c);
@@ -92,9 +112,30 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     AsyncStorage.setItem("theme", t);
   };
 
-  const setMyMood = (m: Mood) => {
+  const setMyMood = async (m: Mood) => {
+    console.log('Setting mood:', m);
     setMyMoodState(m);
     if (m) AsyncStorage.setItem("myMood", m);
+    
+    // Sync mood to Supabase
+    if (user) {
+      try {
+        console.log('Syncing mood to Supabase for user:', user.id);
+        const { error } = await supabase.from('users').upsert({
+          id: user.id,
+          mood: m,
+          mood_updated_at: new Date().toISOString(),
+        });
+        
+        if (error) {
+          console.error('Supabase mood sync error:', error);
+        } else {
+          console.log('Successfully synced mood to Supabase');
+        }
+      } catch (err) {
+        console.error('Failed to sync mood to Supabase:', err);
+      }
+    }
   };
 
   const setStreak = (n: number) => {
@@ -141,6 +182,55 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       setCoupleState(null);
     }
   }, [isSignedIn, user]);
+
+  // Real-time mood sync with partner
+  useEffect(() => {
+    const partnerUserId = user?.unsafeMetadata?.partner_user_id as string | undefined;
+    if (!partnerUserId) return;
+
+    // Fetch initial partner mood
+    const fetchPartnerMood = async () => {
+      try {
+        const { data, error } = await supabase
+          .from('users')
+          .select('mood')
+          .eq('id', partnerUserId)
+          .single();
+        
+        if (data && !error) {
+          setPartnerMood(data.mood as Mood);
+        }
+      } catch (err) {
+        console.error('Failed to fetch partner mood:', err);
+      }
+    };
+
+    fetchPartnerMood();
+
+    // Subscribe to partner mood changes
+    const channel = supabase
+      .channel('partner-mood')
+      .on(
+        'postgres_changes',
+        {
+          event: 'UPDATE',
+          schema: 'public',
+          table: 'users',
+          filter: `id=eq.${partnerUserId}`,
+        },
+        (payload) => {
+          const newMood = payload.new as any;
+          if (newMood.mood !== undefined) {
+            setPartnerMood(newMood.mood as Mood);
+          }
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [user?.unsafeMetadata?.partner_user_id]);
 
   return (
     <AppContext.Provider

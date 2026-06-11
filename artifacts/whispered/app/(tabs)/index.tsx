@@ -7,6 +7,7 @@ import { useColors } from '@/hooks/useColors';
 import { useFocusEffect } from 'expo-router';
 import { LinearGradient } from 'expo-linear-gradient';
 import { supabase } from '@/lib/supabase';
+import { useApp } from '@/context/AppContext';
 
 import { View, Text, Pressable, StyleSheet, ScrollView, Modal, TextInput } from 'react-native';
 import Svg, { Circle } from 'react-native-svg';
