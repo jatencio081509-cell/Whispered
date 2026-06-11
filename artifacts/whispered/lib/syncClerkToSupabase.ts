@@ -21,7 +21,8 @@ export async function syncUserToSupabase(
   username?: string | null,
   imageUrl?: string | null,
   partnerCode?: string | null,
-  partnerName?: string | null
+  partnerName?: string | null,
+  partnerUserId?: string | null
 ) {
   if (!supabaseAdmin) {
     console.warn('Supabase admin client not initialized');
@@ -39,8 +40,9 @@ export async function syncUserToSupabase(
           avatar_url: imageUrl,
           partner_code: partnerCode,
           partner_name: partnerName,
+          partner_user_id: partnerUserId,
           updated_at: new Date().toISOString(),
-        },
+        } as any,
         { onConflict: 'id' }
       );
 
@@ -63,7 +65,8 @@ export async function syncAllData(
   username?: string | null,
   imageUrl?: string | null,
   partnerCode?: string | null,
-  partnerName?: string | null
+  partnerName?: string | null,
+  partnerUserId?: string | null
 ) {
-  return syncUserToSupabase(userId, firstName, username, imageUrl, partnerCode, partnerName);
+  return syncUserToSupabase(userId, firstName, username, imageUrl, partnerCode, partnerName, partnerUserId);
 }

@@ -48,6 +48,9 @@ export default function LinkPartnerScreen() {
     setLoading(true);
 
     try {
+      console.log('Generating code:', code);
+      console.log('User data:', { id: user.id, firstName: user.firstName, username: user.username });
+
       await user.update({
         unsafeMetadata: {
           ...user.unsafeMetadata,
@@ -56,13 +59,27 @@ export default function LinkPartnerScreen() {
         },
       });
 
-      await supabase.from('users').upsert({
+      console.log('Updated Clerk metadata');
+
+      const { error: supabaseError } = await supabase.from('users').upsert({
         id: user.id,
         linking_code: code,
         first_name: user.firstName,
         username: user.username,
         avatar_url: user.imageUrl,
+        partner_code: user.unsafeMetadata?.partnerCode as string | undefined,
+        partner_name: user.unsafeMetadata?.partnerName as string | undefined,
+        partner_user_id: user.unsafeMetadata?.partner_user_id as string | undefined,
       });
+
+      if (supabaseError) {
+        console.error('Supabase upsert error:', supabaseError);
+        setError('Failed to save code to database: ' + supabaseError.message);
+        setLoading(false);
+        return;
+      }
+
+      console.log('Successfully saved to Supabase');
 
       setMyCode(code);
 
@@ -72,7 +89,8 @@ export default function LinkPartnerScreen() {
         Alert.alert('Code Generated', `Share this code with your partner: ${code}`);
       }
     } catch (err) {
-      setError('Failed to generate code');
+      console.error('Generate code error:', err);
+      setError('Failed to generate code: ' + (err as Error).message);
     } finally {
       setLoading(false);
     }
@@ -117,7 +135,8 @@ export default function LinkPartnerScreen() {
         user.username,
         user.imageUrl,
         partnerCode.trim().toUpperCase(),
-        partnerName.trim() || 'Partner'
+        partnerName.trim() || 'Partner',
+        partnerUserIdFromDb
       );
 
       await supabase.from('users').upsert({
