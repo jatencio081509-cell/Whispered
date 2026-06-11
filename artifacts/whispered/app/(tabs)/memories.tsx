@@ -10,6 +10,7 @@ import { useUser } from '@clerk/expo';
 import { useColors } from '@/hooks/useColors';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
+import NavigationDrawer from '@/components/NavigationDrawer';
 import { supabase } from '@/lib/supabase';
 
 export default function MemoriesScreen() {
@@ -19,6 +20,7 @@ export default function MemoriesScreen() {
 
   const [memories, setMemories] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const [showNavigationDrawer, setShowNavigationDrawer] = useState(false);
 
   const fetchMemories = async () => {
     if (!user) return;
@@ -82,47 +84,63 @@ export default function MemoriesScreen() {
   return (
     <View style={styles.container}>
       <LinearGradient
-        colors={['#0a2540', '#0A0A0A']}
+        colors={['#0A1628', '#0D2840', '#0F3A5C', '#0A4A6E', '#0A1628']}
         style={StyleSheet.absoluteFillObject}
       />
-      <View style={{ paddingTop: insets.top }}>
-        <Text style={[styles.title, { color: colors.foreground }]}>Memories</Text>
-
-        {loading ? (
-          <ActivityIndicator size="large" color={colors.primary} style={{ marginTop: 40 }} />
-        ) : memories.length === 0 ? (
-          <View style={styles.emptyState}>
-            <Text style={[styles.emptyText, { color: colors.mutedForeground }]}>
-              No memories yet. Start creating some with your partner!
-            </Text>
-          </View>
-        ) : (
-          <FlatList
-            data={memories}
-            keyExtractor={(item) => item.id}
-            renderItem={({ item }) => (
-              <View style={styles.memoryCard}>
-                <Text style={[styles.memoryText, { color: colors.foreground }]}>
-                  {item.text || 'Memory'}
-                </Text>
-                {item.image_url && (
-                  <Text style={{ color: colors.mutedForeground, marginTop: 4 }}>
-                    [Image attached]
-                  </Text>
-                )}
-              </View>
-            )}
-            contentContainerStyle={{ padding: 16, paddingBottom: 100 }}
-          />
-        )}
+      <View style={{ paddingTop: insets.top, paddingHorizontal: 20 }}>
+        <View style={styles.headerRow}>
+          <Text style={[styles.title, { color: colors.foreground }]}>Memories</Text>
+          <Pressable onPress={() => setShowNavigationDrawer(true)}>
+            <Text style={{ color: colors.primary, fontSize: 16 }}>Menu</Text>
+          </Pressable>
+        </View>
       </View>
+
+      {loading ? (
+        <ActivityIndicator size="large" color={colors.primary} style={{ marginTop: 40 }} />
+      ) : memories.length === 0 ? (
+        <View style={styles.emptyState}>
+          <Text style={[styles.emptyText, { color: colors.mutedForeground }]}>
+            No memories yet. Start creating some with your partner!
+          </Text>
+        </View>
+      ) : (
+        <FlatList
+          data={memories}
+          keyExtractor={(item) => item.id}
+          renderItem={({ item }) => (
+            <View style={styles.memoryCard}>
+              <Text style={[styles.memoryText, { color: colors.foreground }]}>
+                {item.text || 'Memory'}
+              </Text>
+              {item.image_url && (
+                <Text style={{ color: colors.mutedForeground, marginTop: 4 }}>
+                  [Image attached]
+                </Text>
+              )}
+            </View>
+          )}
+          contentContainerStyle={{ padding: 16, paddingBottom: 100 }}
+        />
+      )}
+
+      <NavigationDrawer
+        visible={showNavigationDrawer}
+        onClose={() => setShowNavigationDrawer(false)}
+      />
     </View>
   );
 }
 
 const styles = StyleSheet.create({
   container: { flex: 1 },
-  title: { fontSize: 28, fontWeight: '700', padding: 20 },
+  title: { fontSize: 28, fontWeight: '700' },
+  headerRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 20,
+  },
   emptyState: { flex: 1, justifyContent: 'center', alignItems: 'center', padding: 40 },
   emptyText: { fontSize: 16, textAlign: 'center' },
   memoryCard: {
