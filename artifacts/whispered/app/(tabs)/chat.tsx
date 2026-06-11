@@ -18,7 +18,6 @@ import { Feather } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { supabase } from '@/lib/supabase';
-import { LinearGradient } from 'expo-linear-gradient';
 
 type Message = {
   id: string;
@@ -44,12 +43,9 @@ export default function ChatScreen() {
   const isLinked = !!partnerCode;
   const myUserId = user?.id;
 
+  // Fetch messages from Supabase
   const fetchMessages = async () => {
     if (!myUserId || !partnerUserId) {
-      try {
-        const stored = await AsyncStorage.getItem(`chat_${partnerCode}`);
-        if (stored) setMessages(JSON.parse(stored));
-      } catch {}
       setLoading(false);
       return;
     }
@@ -63,6 +59,7 @@ export default function ChatScreen() {
 
       if (error) {
         console.error('Error fetching messages:', error);
+        setLoading(false);
         return;
       }
 
@@ -87,6 +84,7 @@ export default function ChatScreen() {
     }
   };
 
+  // Real-time subscription (CORRECT ORDER)
   useEffect(() => {
     if (!isLinked || !myUserId || !partnerUserId) return;
 
@@ -94,14 +92,19 @@ export default function ChatScreen() {
       .channel('messages')
       .on(
         'postgres_changes',
-        { event: 'INSERT', schema: 'public', table: 'messages' },
+        {
+          event: 'INSERT',
+          schema: 'public',
+          table: 'messages',
+        },
         (payload) => {
           const newMsg = payload.new as any;
+
           if (
             (newMsg.from_user_id === myUserId && newMsg.to_user_id === partnerUserId) ||
             (newMsg.from_user_id === partnerUserId && newMsg.to_user_id === myUserId)
           ) {
-            const formattedMsg = {
+            const formattedMsg: Message = {
               id: newMsg.id,
               text: newMsg.text,
               fromMe: newMsg.from_user_id === myUserId,
@@ -111,13 +114,18 @@ export default function ChatScreen() {
           }
         }
       )
-      .subscribe();
+      .subscribe((status) => {
+        if (status === 'SUBSCRIBED') {
+          console.log('✅ Subscribed to messages realtime');
+        }
+      });
 
     return () => {
       supabase.removeChannel(channel);
     };
   }, [isLinked, myUserId, partnerUserId]);
 
+  // Initial load
   useEffect(() => {
     if (isLinked) {
       fetchMessages();
@@ -125,16 +133,10 @@ export default function ChatScreen() {
   }, [isLinked, partnerUserId]);
 
   const sendMessage = async () => {
-    if (!input.trim() || !myUserId) {
-      return;
-    }
-
-    if (!partnerUserId) {
-      Alert.alert(
-        'Linking Incomplete',
-        'Please re-link with your partner so we can store user IDs for chat sync.',
-        [{ text: 'OK' }]
-      );
+    if (!input.trim() || !myUserId || !partnerUserId) {
+      if (!partnerUserId) {
+        Alert.alert('Linking Incomplete', 'Please re-link so both of you have each other\'s user ID.');
+      }
       return;
     }
 
@@ -149,8 +151,8 @@ export default function ChatScreen() {
       });
 
       if (error) {
-        console.error('Error sending message to Supabase:', error);
-        Alert.alert('Failed to send', error.message || 'Unknown error');
+        console.error('Error sending message:', error);
+        Alert.alert('Failed to send', error.message);
       }
     } catch (err: any) {
       console.error('Failed to send message:', err);
@@ -160,11 +162,11 @@ export default function ChatScreen() {
 
   const renderMessage: ListRenderItem<Message> = ({ item }) => (
     <View style={[styles.messageRow, item.fromMe ? styles.rowRight : styles.rowLeft]}>
-      <View style={[styles.messageBubble, item.fromMe ? styles.myMessage : styles.theirMessage, { backgroundColor: item.fromMe ? colors.primary : colors.card }]}>
-        <Text style={[styles.messageText, { color: item.fromMe ? colors.primaryForeground : colors.text }]}>
+      <View style={[styles.messageBubble, item.fromMe ? styles.myMessage : styles.theirMessage]}>
+        <Text style={[styles.messageText, { color: item.fromMe ? '#fff' : colors.foreground }]}>
           {item.text}
         </Text>
-        <Text style={[styles.messageTime, { color: item.fromMe ? colors.primaryForeground : colors.mutedForeground }]}>
+        <Text style={[styles.messageTime, { color: item.fromMe ? 'rgba(255,255,255,0.7)' : colors.mutedForeground }]}>
           {item.time}
         </Text>
       </View>
@@ -193,80 +195,70 @@ export default function ChatScreen() {
   }
 
   return (
-    <LinearGradient
-      colors={['#0A1628', '#0D2840', '#0F3A5C', '#0A4A6E', '#0A1628']}
-      start={{ x: 0, y: 0 }}
-      end={{ x: 0, y: 1 }}
-      style={styles.gradientContainer}
+    <KeyboardAvoidingView
+      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+      style={styles.container}
+      keyboardVerticalOffset={100}
     >
-      <KeyboardAvoidingView
-        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-        style={styles.container}
-        keyboardVerticalOffset={100}
-      >
-        <View style={styles.scanLine} />
-        <View style={[styles.header, { paddingTop: insets.top + 12, borderBottomColor: colors.border }]}>
-          <Text style={[styles.headerTitle, { color: colors.text }]}>
-            {partnerName ? partnerName : 'Partner'}
-          </Text>
-        </View>
+      <View style={[styles.header, { paddingTop: insets.top + 8 }]}>
+        <Text style={styles.headerTitle}>
+          {partnerName ? partnerName : 'Partner'}
+        </Text>
+      </View>
 
-        <FlatList
-          ref={flatListRef}
-          data={messages}
-          keyExtractor={(item) => item.id}
-          renderItem={renderMessage}
-          contentContainerStyle={styles.messagesContainer}
-          showsVerticalScrollIndicator={false}
-        />
+      <FlatList
+        ref={flatListRef}
+        data={messages}
+        keyExtractor={(item) => item.id}
+        renderItem={renderMessage}
+        contentContainerStyle={styles.messagesContainer}
+        showsVerticalScrollIndicator={false}
+      />
 
-        <View style={[styles.inputBar, { backgroundColor: colors.card, borderTopColor: colors.border, paddingBottom: insets.bottom + 80 }]}>
-          <View style={[styles.inputContainer, { backgroundColor: colors.input }]}>
-            <TextInput
-              value={input}
-              onChangeText={setInput}
-              placeholder="iMessage"
-              placeholderTextColor={colors.mutedForeground}
-              style={[styles.input, { color: colors.text }]}
-              onSubmitEditing={sendMessage}
-              returnKeyType="send"
-              multiline={false}
-            />
-            <Pressable
-              onPress={sendMessage}
-              style={[styles.sendButton, { backgroundColor: input.trim() ? colors.primary : colors.mutedForeground }, !input.trim() && styles.sendButtonDisabled]}
-              disabled={!input.trim()}
-            >
-              <Feather name="send" size={18} color={input.trim() ? colors.primaryForeground : colors.mutedForeground} />
-            </Pressable>
-          </View>
+      <View style={[styles.inputBar, { paddingBottom: insets.bottom + 18 }]}>
+        <View style={styles.inputContainer}>
+          <TextInput
+            value={input}
+            onChangeText={setInput}
+            placeholder="iMessage"
+            placeholderTextColor={colors.mutedForeground}
+            style={styles.input}
+            onSubmitEditing={sendMessage}
+            returnKeyType="send"
+            multiline={false}
+          />
+          <Pressable
+            onPress={sendMessage}
+            style={[styles.sendButton, !input.trim() && styles.sendButtonDisabled]}
+            disabled={!input.trim()}
+          >
+            <Feather name="send" size={18} color={input.trim() ? colors.primary : colors.mutedForeground} />
+          </Pressable>
         </View>
-      </KeyboardAvoidingView>
-    </LinearGradient>
+      </View>
+    </KeyboardAvoidingView>
   );
 }
 
 const styles = StyleSheet.create({
-  gradientContainer: { flex: 1 },
-  container: { flex: 1 },
-  scanLine: { position: "absolute", top: 0, left: 0, right: 0, height: 1, backgroundColor: "rgba(0,229,255,0.3)", zIndex: 10 },
+  container: { flex: 1, backgroundColor: '#0A0A0A' },
   centered: { flex: 1, justifyContent: 'center', alignItems: 'center', padding: 24 },
-  header: { paddingHorizontal: 20, paddingBottom: 12, borderBottomWidth: 1 },
-  headerTitle: { fontSize: 24, fontFamily: "Inter_700Bold", letterSpacing: -0.3 },
-  messagesContainer: { paddingHorizontal: 16, paddingVertical: 12, flexGrow: 1, paddingBottom: 16 },
+  header: { paddingHorizontal: 20, paddingBottom: 10, borderBottomWidth: 1, borderBottomColor: '#222', backgroundColor: '#111' },
+  headerTitle: { fontSize: 20, fontWeight: '600', color: '#FFFFFF' },
+  messagesContainer: { paddingHorizontal: 16, paddingVertical: 12, flexGrow: 1 },
   messageRow: { flexDirection: 'row', marginVertical: 4 },
   rowLeft: { justifyContent: 'flex-start' },
   rowRight: { justifyContent: 'flex-end' },
   messageBubble: { maxWidth: '78%', paddingHorizontal: 14, paddingVertical: 10, borderRadius: 20 },
-  myMessage: { borderBottomRightRadius: 6 },
-  theirMessage: { borderBottomLeftRadius: 6 },
+  myMessage: { backgroundColor: '#00E5FF', borderBottomRightRadius: 6 },
+  theirMessage: { backgroundColor: '#2C2C2E', borderBottomLeftRadius: 6 },
   messageText: { fontSize: 16, lineHeight: 22 },
   messageTime: { fontSize: 11, marginTop: 4, alignSelf: 'flex-end' },
-  inputBar: { paddingHorizontal: 12, paddingTop: 10, borderTopWidth: 1 },
-  inputContainer: { flexDirection: 'row', alignItems: 'center', borderRadius: 22, paddingHorizontal: 4, paddingVertical: 4 },
-  input: { flex: 1, fontSize: 16, paddingHorizontal: 16, paddingVertical: 10, maxHeight: 100 },
-  sendButton: { width: 36, height: 36, borderRadius: 18, justifyContent: 'center', alignItems: 'center', marginLeft: 6 },
-  sendButtonDisabled: { opacity: 0.5 },
+  inputBar: { paddingHorizontal: 12, paddingTop: 10, backgroundColor: '#111', borderTopWidth: 1, borderTopColor: '#222' },
+  inputContainer: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#1C1C1E', borderRadius: 22, paddingHorizontal: 4, paddingVertical: 4 },
+  input: { flex: 1, color: '#FFFFFF', fontSize: 16, paddingHorizontal: 16, paddingVertical: 10, maxHeight: 100 },
+  sendButton: { width: 36, height: 36, borderRadius: 18, backgroundColor: '#00E5FF', justifyContent: 'center', alignItems: 'center', marginLeft: 6 },
+  sendButtonDisabled: { backgroundColor: '#333' },
   title: { fontSize: 24, fontWeight: '700' },
   subtitle: { fontSize: 16 },
   button: { paddingVertical: 14, paddingHorizontal: 32, borderRadius: 999 },
