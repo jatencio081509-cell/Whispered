@@ -18,6 +18,7 @@ import { Feather } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
+import NavigationDrawer from '@/components/NavigationDrawer';
 import { supabase } from '@/lib/supabase';
 
 type Message = {
@@ -36,6 +37,7 @@ export default function ChatScreen() {
 
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState('');
+  const [showNavigationDrawer, setShowNavigationDrawer] = useState(false);
 
   const partnerCode = user?.unsafeMetadata?.partnerCode as string | undefined;
   const partnerName = user?.unsafeMetadata?.partnerName as string | undefined;
@@ -190,10 +192,15 @@ export default function ChatScreen() {
         colors={['#0A1628', '#0D2840', '#0F3A5C', '#0A4A6E', '#0A1628']}
         style={StyleSheet.absoluteFillObject}
       />
-      <View style={[styles.header, { paddingTop: insets.top + 8 }]}>
-        <Text style={styles.headerTitle}>
-          {partnerName ? partnerName : 'Partner'}
-        </Text>
+      <View style={{ paddingTop: insets.top, paddingHorizontal: 20 }}>
+        <View style={styles.headerRow}>
+          <Text style={[styles.headerTitle, { color: colors.foreground }]}>
+            {partnerName ? partnerName : 'Partner'}
+          </Text>
+          <Pressable onPress={() => setShowNavigationDrawer(true)}>
+            <Feather name="menu" size={24} color={colors.primary} />
+          </Pressable>
+        </View>
       </View>
 
       <FlatList
@@ -226,6 +233,11 @@ export default function ChatScreen() {
           </Pressable>
         </View>
       </View>
+
+      <NavigationDrawer
+        visible={showNavigationDrawer}
+        onClose={() => setShowNavigationDrawer(false)}
+      />
     </KeyboardAvoidingView>
   );
 }
@@ -233,7 +245,12 @@ export default function ChatScreen() {
 const styles = StyleSheet.create({
   container: { flex: 1 },
   centered: { flex: 1, justifyContent: 'center', alignItems: 'center', padding: 24 },
-  header: { paddingHorizontal: 20, paddingBottom: 10, borderBottomWidth: 1, borderBottomColor: '#222', backgroundColor: 'rgba(17,17,17,0.8)' },
+  headerRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 10,
+  },
   headerTitle: { fontSize: 20, fontWeight: '600', color: '#FFFFFF' },
   messagesContainer: { paddingHorizontal: 16, paddingVertical: 12, flexGrow: 1 },
   messageRow: { flexDirection: 'row', marginVertical: 4 },
