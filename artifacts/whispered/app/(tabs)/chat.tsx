@@ -187,7 +187,7 @@ export default function ChatScreen() {
       keyboardVerticalOffset={100}
     >
       <LinearGradient
-        colors={['#0a2540', '#0A0A0A']}
+        colors={['#0A1628', '#0D2840', '#0F3A5C', '#0A4A6E', '#0A1628']}
         style={StyleSheet.absoluteFillObject}
       />
       <View style={[styles.header, { paddingTop: insets.top + 8 }]}>
