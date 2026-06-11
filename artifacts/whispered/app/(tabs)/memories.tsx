@@ -11,6 +11,7 @@ import { useUser } from '@clerk/expo';
 import { useColors } from '@/hooks/useColors';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
+import { Feather } from '@expo/vector-icons';
 import NavigationDrawer from '@/components/NavigationDrawer';
 import { supabase } from '@/lib/supabase';
 
@@ -92,7 +93,7 @@ export default function MemoriesScreen() {
         <View style={styles.headerRow}>
           <Text style={[styles.title, { color: colors.foreground }]}>Memories</Text>
           <Pressable onPress={() => setShowNavigationDrawer(true)}>
-            <Text style={{ color: colors.primary, fontSize: 16 }}>Menu</Text>
+            <Feather name="menu" size={24} color={colors.primary} />
           </Pressable>
         </View>
       </View>
