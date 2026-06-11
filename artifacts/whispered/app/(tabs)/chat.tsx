@@ -240,9 +240,10 @@ export default function ChatScreen() {
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#0A0A0A' },
+  scanLine: { position: "absolute", top: 0, left: 0, right: 0, height: 1, backgroundColor: "rgba(0,229,255,0.3)", zIndex: 10 },
   centered: { flex: 1, justifyContent: 'center', alignItems: 'center', padding: 24 },
-  header: { paddingHorizontal: 20, paddingBottom: 10, borderBottomWidth: 1, borderBottomColor: '#222', backgroundColor: '#111' },
-  headerTitle: { fontSize: 20, fontWeight: '600', color: '#FFFFFF' },
+  header: { paddingHorizontal: 20, paddingBottom: 12, borderBottomWidth: 1 },
+  headerTitle: { fontSize: 24, fontFamily: "Inter_700Bold", letterSpacing: -0.3 },
   messagesContainer: { paddingHorizontal: 16, paddingVertical: 12, flexGrow: 1, paddingBottom: 16 },
   messageRow: { flexDirection: 'row', marginVertical: 4 },
   rowLeft: { justifyContent: 'flex-start' },

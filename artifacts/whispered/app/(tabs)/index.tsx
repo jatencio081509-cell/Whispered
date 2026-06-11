@@ -88,6 +88,33 @@ export default function HomeScreen() {
     };
 
     loadDates();
+
+    // Real-time sync for couples table
+    if (coupleId) {
+      const channel = supabase
+        .channel('couples-dates')
+        .on(
+          'postgres_changes',
+          {
+            event: 'UPDATE',
+            schema: 'public',
+            table: 'couples',
+            filter: `id=eq.${coupleId}`,
+          },
+          (payload) => {
+            console.log('Couples date change:', payload);
+            const updated = payload.new as any;
+            setWeddingDate(updated.wedding_date || undefined);
+            setEngagementDate(updated.engagement_date || undefined);
+            setOfficialDate(updated.official_date || undefined);
+          }
+        )
+        .subscribe();
+
+      return () => {
+        supabase.removeChannel(channel);
+      };
+    }
   }, [coupleId, user, refreshKey]);
 
   // Update editing partner name when partnerName changes
