@@ -22,17 +22,6 @@ import NavigationDrawer from '@/components/NavigationDrawer';
 import { supabase } from '@/lib/supabase';
 import { supabaseAdmin } from '@/lib/syncClerkToSupabase';
 
-import * as Notifications from 'expo-notifications';
-
-// Configure notifications
-tNotifications.setNotificationHandler({
-  handleNotification: async () => ({
-    shouldShowAlert: true,
-    shouldPlaySound: true,
-    shouldSetBadge: true,
-  }),
-});
-
 type Message = {
   id: string;
   text: string;
@@ -117,17 +106,6 @@ export default function ChatScreen() {
               time: new Date(newMsg.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
             };
             setMessages((prev) => [...prev, formattedMsg]);
-
-            // Show local notification for new message from partner
-            if (!formattedMsg.fromMe) {
-              Notifications.scheduleNotificationAsync({
-                content: {
-                  title: partnerName || 'Partner',
-                  body: formattedMsg.text,
-                },
-                trigger: null,
-              });
-            }
           }
         }
       )
@@ -140,7 +118,7 @@ export default function ChatScreen() {
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [isLinked, myUserId, partnerUserId, partnerName]);
+  }, [isLinked, myUserId, partnerUserId]);
 
   // Polling every second as backup for real-time
   useEffect(() => {
