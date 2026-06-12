@@ -46,6 +46,12 @@ export default function ChatScreen() {
   const isLinked = !!partnerCode;
   const myUserId = user?.id;
 
+  const scrollToBottom = (animated = true) => {
+    setTimeout(() => {
+      flatListRef.current?.scrollToEnd({ animated });
+    }, 50);
+  };
+
   const fetchMessages = async () => {
     if (!myUserId || !partnerUserId) return;
 
@@ -75,6 +81,7 @@ export default function ChatScreen() {
       }));
 
       setMessages(formatted);
+      scrollToBottom(false);
     } catch (err) {
       console.error('Failed to fetch messages:', err);
     }
@@ -105,7 +112,11 @@ export default function ChatScreen() {
               fromMe: newMsg.from_user_id === myUserId,
               time: new Date(newMsg.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
             };
-            setMessages((prev) => [...prev, formattedMsg]);
+            setMessages((prev) => {
+              const updated = [...prev, formattedMsg];
+              return updated;
+            });
+            scrollToBottom(true);
           }
         }
       )
@@ -120,7 +131,7 @@ export default function ChatScreen() {
     };
   }, [isLinked, myUserId, partnerUserId]);
 
-  // Polling every second as backup for real-time
+  // Polling every second as backup
   useEffect(() => {
     if (!isLinked) return;
 
@@ -149,7 +160,6 @@ export default function ChatScreen() {
     setInput('');
 
     try {
-      // Use admin client if available to bypass RLS
       const client = supabaseAdmin || supabase;
       const { error } = await client.from('messages').insert({
         from_user_id: myUserId,
@@ -160,6 +170,8 @@ export default function ChatScreen() {
       if (error) {
         console.error('Error sending message:', error);
         Alert.alert('Failed to send', error.message);
+      } else {
+        scrollToBottom(true);
       }
     } catch (err: any) {
       console.error('Failed to send message:', err);
@@ -228,6 +240,7 @@ export default function ChatScreen() {
         keyExtractor={(item) => item.id}
         renderItem={renderMessage}
         contentContainerStyle={styles.messagesContainer}
+        onContentSizeChange={() => scrollToBottom(false)}
         showsVerticalScrollIndicator={false}
       />
 
