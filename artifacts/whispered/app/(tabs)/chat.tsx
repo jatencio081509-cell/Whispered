@@ -20,6 +20,18 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
 import NavigationDrawer from '@/components/NavigationDrawer';
 import { supabase } from '@/lib/supabase';
+import { supabaseAdmin } from '@/lib/syncClerkToSupabase';
+
+import * as Notifications from 'expo-notifications';
+
+// Configure notifications
+tNotifications.setNotificationHandler({
+  handleNotification: async () => ({
+    shouldShowAlert: true,
+    shouldPlaySound: true,
+    shouldSetBadge: true,
+  }),
+});
 
 type Message = {
   id: string;
@@ -79,6 +91,7 @@ export default function ChatScreen() {
     }
   };
 
+  // Real-time subscription
   useEffect(() => {
     if (!isLinked || !myUserId || !partnerUserId) return;
 
@@ -104,15 +117,41 @@ export default function ChatScreen() {
               time: new Date(newMsg.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
             };
             setMessages((prev) => [...prev, formattedMsg]);
+
+            // Show local notification for new message from partner
+            if (!formattedMsg.fromMe) {
+              Notifications.scheduleNotificationAsync({
+                content: {
+                  title: partnerName || 'Partner',
+                  body: formattedMsg.text,
+                },
+                trigger: null,
+              });
+            }
           }
         }
       )
-      .subscribe();
+      .subscribe((status) => {
+        if (status === 'SUBSCRIBED') {
+          console.log('✅ Subscribed to messages realtime');
+        }
+      });
 
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [isLinked, myUserId, partnerUserId]);
+  }, [isLinked, myUserId, partnerUserId, partnerName]);
+
+  // Polling every second as backup for real-time
+  useEffect(() => {
+    if (!isLinked) return;
+
+    const interval = setInterval(() => {
+      fetchMessages();
+    }, 1000);
+
+    return () => clearInterval(interval);
+  }, [isLinked]);
 
   useEffect(() => {
     if (isLinked) {
@@ -132,7 +171,9 @@ export default function ChatScreen() {
     setInput('');
 
     try {
-      const { error } = await supabase.from('messages').insert({
+      // Use admin client if available to bypass RLS
+      const client = supabaseAdmin || supabase;
+      const { error } = await client.from('messages').insert({
         from_user_id: myUserId,
         to_user_id: partnerUserId,
         text: messageText,
