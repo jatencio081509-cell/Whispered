@@ -39,6 +39,7 @@ export default function ChatScreen() {
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState('');
   const [showNavigationDrawer, setShowNavigationDrawer] = useState(false);
+  const [isNearBottom, setIsNearBottom] = useState(true);
 
   const partnerCode = user?.unsafeMetadata?.partnerCode as string | undefined;
   const partnerName = user?.unsafeMetadata?.partnerName as string | undefined;
@@ -50,6 +51,13 @@ export default function ChatScreen() {
     setTimeout(() => {
       flatListRef.current?.scrollToEnd({ animated });
     }, 50);
+  };
+
+  const handleScroll = (event: any) => {
+    const { contentOffset, contentSize, layoutMeasurement } = event.nativeEvent;
+    const distanceFromBottom = contentSize.height - layoutMeasurement.height - contentOffset.y;
+    const nearBottom = distanceFromBottom < 120;
+    setIsNearBottom(nearBottom);
   };
 
   const fetchMessages = async () => {
@@ -81,7 +89,7 @@ export default function ChatScreen() {
       }));
 
       setMessages(formatted);
-      scrollToBottom(false);
+      if (isNearBottom) scrollToBottom(false);
     } catch (err) {
       console.error('Failed to fetch messages:', err);
     }
@@ -112,11 +120,11 @@ export default function ChatScreen() {
               fromMe: newMsg.from_user_id === myUserId,
               time: new Date(newMsg.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
             };
-            setMessages((prev) => {
-              const updated = [...prev, formattedMsg];
-              return updated;
-            });
-            scrollToBottom(true);
+            setMessages((prev) => [...prev, formattedMsg]);
+
+            if (isNearBottom) {
+              scrollToBottom(true);
+            }
           }
         }
       )
@@ -171,12 +179,18 @@ export default function ChatScreen() {
         console.error('Error sending message:', error);
         Alert.alert('Failed to send', error.message);
       } else {
+        setIsNearBottom(true);
         scrollToBottom(true);
       }
     } catch (err: any) {
       console.error('Failed to send message:', err);
       Alert.alert('Failed to send', err.message || 'Unknown error');
     }
+  };
+
+  const jumpToBottom = () => {
+    setIsNearBottom(true);
+    scrollToBottom(true);
   };
 
   const renderMessage: ListRenderItem<Message> = ({ item }) => (
@@ -234,15 +248,31 @@ export default function ChatScreen() {
         </View>
       </View>
 
-      <FlatList
-        ref={flatListRef}
-        data={messages}
-        keyExtractor={(item) => item.id}
-        renderItem={renderMessage}
-        contentContainerStyle={styles.messagesContainer}
-        onContentSizeChange={() => scrollToBottom(false)}
-        showsVerticalScrollIndicator={false}
-      />
+      <View style={{ flex: 1 }}>
+        <FlatList
+          ref={flatListRef}
+          data={messages}
+          keyExtractor={(item) => item.id}
+          renderItem={renderMessage}
+          contentContainerStyle={styles.messagesContainer}
+          onScroll={handleScroll}
+          scrollEventThrottle={16}
+          onContentSizeChange={() => {
+            if (isNearBottom) scrollToBottom(false);
+          }}
+          maintainVisibleContentPosition={{
+            minIndexForVisible: 0,
+            autoscrollToTopThreshold: 10,
+          }}
+          showsVerticalScrollIndicator={false}
+        />
+
+        {!isNearBottom && messages.length > 0 && (
+          <Pressable onPress={jumpToBottom} style={styles.jumpToBottomButton}>
+            <Feather name="arrow-down" size={18} color="#fff" />
+          </Pressable>
+        )}
+      </View>
 
       <View style={[styles.inputBar, { paddingBottom: insets.bottom + 50 }]}>
         <View style={styles.inputContainer}>
@@ -298,6 +328,22 @@ const styles = StyleSheet.create({
   input: { flex: 1, color: '#FFFFFF', fontSize: 16, paddingHorizontal: 16, paddingVertical: 10, maxHeight: 100 },
   sendButton: { width: 36, height: 36, borderRadius: 18, backgroundColor: '#00E5FF', justifyContent: 'center', alignItems: 'center', marginLeft: 6 },
   sendButtonDisabled: { backgroundColor: '#333' },
+  jumpToBottomButton: {
+    position: 'absolute',
+    bottom: 80,
+    alignSelf: 'center',
+    backgroundColor: '#00E5FF',
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    justifyContent: 'center',
+    alignItems: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.3,
+    shadowRadius: 4,
+    elevation: 5,
+  },
   title: { fontSize: 24, fontWeight: '700' },
   subtitle: { fontSize: 16 },
   button: { paddingVertical: 14, paddingHorizontal: 32, borderRadius: 999 },
