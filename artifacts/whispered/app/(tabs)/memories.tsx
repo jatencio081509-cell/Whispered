@@ -12,7 +12,6 @@ import {
   Platform,
   Image,
   Alert,
-  Animated,
 } from 'react-native';
 import { useUser } from '@clerk/expo';
 import { useColors } from '@/hooks/useColors';
@@ -102,7 +101,6 @@ export default function MemoriesScreen() {
       const asset = result.assets[0];
       setSelectedImage(asset.uri);
 
-      // Explicit size check warning
       if (asset.fileSize) {
         const sizeMB = asset.fileSize / (1024 * 1024);
 
@@ -139,7 +137,6 @@ export default function MemoriesScreen() {
 
       const storageClient = supabaseAdmin?.storage || supabase.storage;
 
-      // Simulate progress for better UX
       setUploadingProgress(0.1);
 
       const { data, error } = await storageClient
@@ -204,6 +201,19 @@ export default function MemoriesScreen() {
         setNewMemoryText('');
         setSelectedImage(null);
         setShowAddModal(false);
+
+        // Send push notification to partner
+        const partnerUserId = user.unsafeMetadata?.partner_user_id as string | undefined;
+        if (partnerUserId) {
+          const partnerName = user.unsafeMetadata?.partnerName as string | undefined;
+          supabase.functions.invoke('send-push-notification', {
+            body: {
+              toUserId: partnerUserId,
+              title: partnerName || 'New memory',
+              body: newMemoryText.trim() || 'Added a new memory',
+            },
+          }).catch(console.error);
+        }
       }
     } catch (err) {
       console.error('Failed to add memory:', err);
