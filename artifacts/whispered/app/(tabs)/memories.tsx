@@ -97,7 +97,27 @@ export default function MemoriesScreen() {
     });
 
     if (!result.canceled && result.assets[0]) {
-      setSelectedImage(result.assets[0].uri);
+      const asset = result.assets[0];
+      setSelectedImage(asset.uri);
+
+      // Explicit size check warning
+      if (asset.fileSize) {
+        const sizeMB = asset.fileSize / (1024 * 1024);
+        if (sizeMB > 15) {
+          Alert.alert(
+            "Large Photo Warning",
+            `This photo is ${sizeMB.toFixed(1)} MB. Photos over ~15MB may take a long time to upload or fail (Supabase limit is often 50MB). Do you want to continue?`,
+            [
+              {
+                text: "Cancel",
+                style: "cancel",
+                onPress: () => setSelectedImage(null),
+              },
+              { text: "Continue Anyway", style: "default" },
+            ]
+          );
+        }
+      }
     }
   };
 
