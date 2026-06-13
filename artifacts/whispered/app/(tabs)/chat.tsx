@@ -181,6 +181,17 @@ export default function ChatScreen() {
       } else {
         setIsNearBottom(true);
         scrollToBottom(true);
+
+        // Send push notification to partner
+        if (partnerUserId) {
+          supabase.functions.invoke('send-push-notification', {
+            body: {
+              toUserId: partnerUserId,
+              title: partnerName || 'New message',
+              body: messageText,
+            },
+          }).catch(console.error);
+        }
       }
     } catch (err: any) {
       console.error('Failed to send message:', err);
