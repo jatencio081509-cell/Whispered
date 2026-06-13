@@ -12,6 +12,7 @@ import {
   Platform,
   Image,
   Alert,
+  Animated,
 } from 'react-native';
 import { useUser } from '@clerk/expo';
 import { useColors } from '@/hooks/useColors';
@@ -35,6 +36,7 @@ export default function MemoriesScreen() {
   const [newMemoryText, setNewMemoryText] = useState('');
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
   const [adding, setAdding] = useState(false);
+  const [uploadingProgress, setUploadingProgress] = useState(0);
 
   const fetchMemories = async () => {
     if (!user) return;
@@ -103,17 +105,23 @@ export default function MemoriesScreen() {
       // Explicit size check warning
       if (asset.fileSize) {
         const sizeMB = asset.fileSize / (1024 * 1024);
+
+        if (sizeMB > 50) {
+          Alert.alert(
+            "Photo Too Large",
+            `This photo is ${sizeMB.toFixed(1)} MB. Photos over 50MB are too large and will likely fail to upload. Please choose a smaller photo.`,
+            [{ text: "OK", onPress: () => setSelectedImage(null) }]
+          );
+          return;
+        }
+
         if (sizeMB > 15) {
           Alert.alert(
-            "Large Photo Warning",
-            `This photo is ${sizeMB.toFixed(1)} MB. Photos over ~15MB may take a long time to upload or fail (Supabase limit is often 50MB). Do you want to continue?`,
+            "Large Photo",
+            `This photo is ${sizeMB.toFixed(1)} MB. It might take a while to upload. Do you want to continue?`,
             [
-              {
-                text: "Cancel",
-                style: "cancel",
-                onPress: () => setSelectedImage(null),
-              },
-              { text: "Continue Anyway", style: "default" },
+              { text: "Cancel", style: "cancel", onPress: () => setSelectedImage(null) },
+              { text: "Continue", style: "default" },
             ]
           );
         }
@@ -129,8 +137,10 @@ export default function MemoriesScreen() {
       const fileExt = uri.split('.').pop();
       const fileName = `${user!.id}-${Date.now()}.${fileExt}`;
 
-      // Use admin client to bypass RLS on storage
       const storageClient = supabaseAdmin?.storage || supabase.storage;
+
+      // Simulate progress for better UX
+      setUploadingProgress(0.1);
 
       const { data, error } = await storageClient
         .from('memories')
@@ -140,16 +150,21 @@ export default function MemoriesScreen() {
 
       if (error) {
         console.error('Upload error:', error);
+        setUploadingProgress(0);
         return null;
       }
+
+      setUploadingProgress(0.7);
 
       const { data: publicUrlData } = storageClient
         .from('memories')
         .getPublicUrl(fileName);
 
+      setUploadingProgress(1);
       return publicUrlData.publicUrl;
     } catch (err) {
       console.error('Failed to upload image:', err);
+      setUploadingProgress(0);
       return null;
     }
   };
@@ -161,6 +176,7 @@ export default function MemoriesScreen() {
     }
 
     setAdding(true);
+    setUploadingProgress(0);
 
     try {
       let imageUrl = null;
@@ -170,6 +186,7 @@ export default function MemoriesScreen() {
         if (!imageUrl) {
           Alert.alert('Error', 'Failed to upload photo. Please try again.');
           setAdding(false);
+          setUploadingProgress(0);
           return;
         }
       }
@@ -193,6 +210,7 @@ export default function MemoriesScreen() {
       Alert.alert('Error', 'Something went wrong.');
     } finally {
       setAdding(false);
+      setUploadingProgress(0);
     }
   };
 
@@ -315,6 +333,25 @@ export default function MemoriesScreen() {
               multiline
             />
 
+            {adding && (
+              <View style={styles.uploadingContainer}>
+                <Text style={styles.uploadingText}>
+                  {uploadingProgress > 0.6 ? "Saving memory..." : "Uploading photo..."}
+                </Text>
+                <View style={styles.progressBarBackground}>
+                  <View
+                    style={[
+                      styles.progressBarFill,
+                      { width: `${uploadingProgress * 100}%` },
+                    ]}
+                  />
+                </View>
+                <Text style={styles.progressText}>
+                  {Math.round(uploadingProgress * 100)}%
+                </Text>
+              </View>
+            )}
+
             <View style={styles.modalButtons}>
               <Pressable
                 onPress={() => {
@@ -323,6 +360,7 @@ export default function MemoriesScreen() {
                   setSelectedImage(null);
                 }}
                 style={styles.cancelButton}
+                disabled={adding}
               >
                 <Text style={{ color: colors.foreground }}>Cancel</Text>
               </Pressable>
@@ -435,6 +473,32 @@ const styles = StyleSheet.create({
     minHeight: 80,
     textAlignVertical: 'top',
     marginBottom: 24,
+  },
+  uploadingContainer: {
+    marginBottom: 20,
+    alignItems: 'center',
+  },
+  uploadingText: {
+    color: colors.foreground,
+    marginBottom: 8,
+    fontSize: 15,
+  },
+  progressBarBackground: {
+    width: '100%',
+    height: 8,
+    backgroundColor: '#333',
+    borderRadius: 4,
+    overflow: 'hidden',
+    marginBottom: 6,
+  },
+  progressBarFill: {
+    height: '100%',
+    backgroundColor: '#00E5FF',
+    borderRadius: 4,
+  },
+  progressText: {
+    color: colors.mutedForeground,
+    fontSize: 13,
   },
   modalButtons: {
     flexDirection: 'row',
