@@ -5,7 +5,7 @@ import {
   Inter_700Bold,
   useFonts,
 } from "@expo-google-fonts/inter";
-import { ClerkProvider, ClerkLoaded, useAuth } from "@clerk/expo";
+import { ClerkProvider, ClerkLoaded, useAuth, useUser } from "@clerk/expo";
 import { tokenCache } from "@clerk/expo/token-cache";
 import { setBaseUrl, setAuthTokenGetter } from "@workspace/api-client-react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
@@ -15,6 +15,7 @@ import React, { useEffect } from "react";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { SafeAreaProvider } from "react-native-safe-area-context";
 import * as Notifications from "expo-notifications";
+import { supabase } from "@/lib/supabase";
 
 import { ErrorBoundary } from "@/components/ErrorBoundary";
 import { AppProvider } from "@/context/AppContext";
@@ -30,7 +31,32 @@ Notifications.setNotificationHandler({
   }),
 });
 
-async function registerForPushNotificationsAsync() {
+async function savePushTokenToSupabase(token: string, userId: string) {
+  try {
+    const { error } = await supabase
+      .from("users")
+      .upsert(
+        {
+          id: userId,
+          push_token: token,
+          updated_at: new Date().toISOString(),
+        },
+        { onConflict: "id" }
+      );
+
+    if (error) {
+      console.error("Error saving push token to Supabase:", error);
+    } else {
+      console.log("Push token saved to Supabase successfully");
+    }
+  } catch (err) {
+    console.error("Failed to save push token:", err);
+  }
+}
+
+async function registerForPushNotificationsAsync(userId: string | null) {
+  if (!userId) return null;
+
   try {
     const { status: existingStatus } = await Notifications.getPermissionsAsync();
     let finalStatus = existingStatus;
@@ -48,8 +74,8 @@ async function registerForPushNotificationsAsync() {
     const token = (await Notifications.getExpoPushTokenAsync()).data;
     console.log("Expo Push Token:", token);
 
-    // TODO: Save this token to Supabase users table
-    // You can call a function here to upsert the push_token for the current user
+    // Save token to Supabase
+    await savePushTokenToSupabase(token, userId);
 
     return token;
   } catch (error) {
@@ -67,6 +93,7 @@ const queryClient = new QueryClient();
 
 function AuthGate({ children }: { children: React.ReactNode }) {
   const { isSignedIn, isLoaded, getToken } = useAuth();
+  const { user } = useUser();
   const segments = useSegments();
 
   useEffect(() => {
@@ -75,10 +102,10 @@ function AuthGate({ children }: { children: React.ReactNode }) {
 
   // Register for push notifications when user signs in
   useEffect(() => {
-    if (isSignedIn) {
-      registerForPushNotificationsAsync();
+    if (isSignedIn && user?.id) {
+      registerForPushNotificationsAsync(user.id);
     }
-  }, [isSignedIn]);
+  }, [isSignedIn, user?.id]);
 
   if (!isLoaded) return null;
 
