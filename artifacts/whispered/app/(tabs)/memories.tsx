@@ -21,6 +21,7 @@ import { Feather } from '@expo/vector-icons';
 import NavigationDrawer from '@/components/NavigationDrawer';
 import * as ImagePicker from 'expo-image-picker';
 import { supabase } from '@/lib/supabase';
+import { supabaseAdmin } from '@/lib/syncClerkToSupabase';
 
 export default function MemoriesScreen() {
   const { user, isLoaded } = useUser();
@@ -108,7 +109,10 @@ export default function MemoriesScreen() {
       const fileExt = uri.split('.').pop();
       const fileName = `${user!.id}-${Date.now()}.${fileExt}`;
 
-      const { data, error } = await supabase.storage
+      // Use admin client to bypass RLS on storage
+      const storageClient = supabaseAdmin?.storage || supabase.storage;
+
+      const { data, error } = await storageClient
         .from('memories')
         .upload(fileName, blob, {
           contentType: 'image/jpeg',
@@ -119,7 +123,7 @@ export default function MemoriesScreen() {
         return null;
       }
 
-      const { data: publicUrlData } = supabase.storage
+      const { data: publicUrlData } = storageClient
         .from('memories')
         .getPublicUrl(fileName);
 
@@ -163,7 +167,6 @@ export default function MemoriesScreen() {
         setNewMemoryText('');
         setSelectedImage(null);
         setShowAddModal(false);
-        // Realtime will refresh the list
       }
     } catch (err) {
       console.error('Failed to add memory:', err);
