@@ -14,11 +14,49 @@ import * as SplashScreen from "expo-splash-screen";
 import React, { useEffect } from "react";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { SafeAreaProvider } from "react-native-safe-area-context";
+import * as Notifications from "expo-notifications";
 
 import { ErrorBoundary } from "@/components/ErrorBoundary";
 import { AppProvider } from "@/context/AppContext";
 
 SplashScreen.preventAutoHideAsync();
+
+// Configure push notifications
+Notifications.setNotificationHandler({
+  handleNotification: async () => ({
+    shouldShowAlert: true,
+    shouldPlaySound: true,
+    shouldSetBadge: false,
+  }),
+});
+
+async function registerForPushNotificationsAsync() {
+  try {
+    const { status: existingStatus } = await Notifications.getPermissionsAsync();
+    let finalStatus = existingStatus;
+
+    if (existingStatus !== "granted") {
+      const { status } = await Notifications.requestPermissionsAsync();
+      finalStatus = status;
+    }
+
+    if (finalStatus !== "granted") {
+      console.log("Push notification permission not granted");
+      return null;
+    }
+
+    const token = (await Notifications.getExpoPushTokenAsync()).data;
+    console.log("Expo Push Token:", token);
+
+    // TODO: Save this token to Supabase users table
+    // You can call a function here to upsert the push_token for the current user
+
+    return token;
+  } catch (error) {
+    console.error("Error getting push token:", error);
+    return null;
+  }
+}
 
 const domain = process.env.EXPO_PUBLIC_DOMAIN;
 if (domain) setBaseUrl(`https://${domain}`);
@@ -34,6 +72,13 @@ function AuthGate({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     setAuthTokenGetter(() => getToken());
   }, [getToken]);
+
+  // Register for push notifications when user signs in
+  useEffect(() => {
+    if (isSignedIn) {
+      registerForPushNotificationsAsync();
+    }
+  }, [isSignedIn]);
 
   if (!isLoaded) return null;
 
