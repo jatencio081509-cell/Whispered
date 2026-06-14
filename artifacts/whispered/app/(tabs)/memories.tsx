@@ -345,7 +345,7 @@ export default function MemoriesScreen() {
 
             {adding && (
               <View style={styles.uploadingContainer}>
-                <Text style={styles.uploadingText}>
+                <Text style={[styles.uploadingText, { color: colors.foreground }]}>
                   {uploadingProgress > 0.6 ? "Saving memory..." : "Uploading photo..."}
                 </Text>
                 <View style={styles.progressBarBackground}>
@@ -489,9 +489,8 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   uploadingText: {
-    color: colors.foreground,
-    marginBottom: 8,
     fontSize: 15,
+    marginBottom: 8,
   },
   progressBarBackground: {
     width: '100%',
@@ -507,7 +506,7 @@ const styles = StyleSheet.create({
     borderRadius: 4,
   },
   progressText: {
-    color: colors.mutedForeground,
+    color: '#888',
     fontSize: 13,
   },
   modalButtons: {
