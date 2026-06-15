@@ -36,8 +36,8 @@ export default function SignInScreen() {
     console.log("[SignIn] Button pressed");
     console.log("[SignIn] isLoaded:", isLoaded, "signIn exists:", !!signIn);
 
-    if (!isLoaded || !signIn) {
-      console.log("[SignIn] Early return - Clerk not loaded");
+    if (!signIn) {
+      console.log("[SignIn] Early return - signIn not ready");
       return;
     }
 
