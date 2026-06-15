@@ -33,15 +33,32 @@ export default function SignInScreen() {
   const [error, setError] = useState("");
 
   const handleSignIn = async () => {
-    if (!isLoaded || !signIn) return;
+    console.log("[SignIn] Button pressed");
+    console.log("[SignIn] isLoaded:", isLoaded, "signIn exists:", !!signIn);
+
+    if (!isLoaded || !signIn) {
+      console.log("[SignIn] Early return - Clerk not loaded");
+      return;
+    }
+
+    if (!email || !password) {
+      console.log("[SignIn] Early return - Email or password empty");
+      setError("Please enter email and password");
+      return;
+    }
+
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     setLoading(true);
     setError("");
+
     try {
+      console.log("[SignIn] Attempting sign in for:", email.trim());
       const result = await signIn.create({
         identifier: email.trim(),
         password,
       });
+
+      console.log("[SignIn] Result status:", result.status);
 
       if (result.status === "complete") {
         const sessionId =
@@ -54,6 +71,7 @@ export default function SignInScreen() {
         setError("Sign in incomplete. Please try again.");
       }
     } catch (err: unknown) {
+      console.error("[SignIn] Error:", err);
       const clerkErr = err as {
         errors?: { message: string; longMessage?: string }[];
       };
@@ -182,12 +200,12 @@ const styles = StyleSheet.create({
   eyeBtn: { position: "absolute", right: 14, top: 16 },
   errorBox: { flexDirection: "row", alignItems: "center", gap: 8, padding: 12, borderRadius: 10, borderWidth: 1 },
   errorText: { fontSize: 13, fontFamily: "Inter_400Regular", flex: 1 },
-  submitBtn: { borderRadius: 14, overflow: "hidden", marginTop: 4 },
-  submitGradient: { height: 54, alignItems: "center", justifyContent: "center" },
-  submitText: { fontSize: 16, fontFamily: "Inter_600SemiBold", color: "#030712", letterSpacing: 0.3 },
-  forgotBtn: { alignItems: "center", paddingVertical: 4 },
+  submitBtn: { borderRadius: 14, overflow: "hidden" },
+  submitGradient: { paddingVertical: 16, alignItems: "center", justifyContent: "center" },
+  submitText: { color: "#030712", fontSize: 16, fontFamily: "Inter_600SemiBold" },
+  forgotBtn: { alignItems: "center", paddingVertical: 8 },
   forgotText: { fontSize: 14, fontFamily: "Inter_400Regular" },
-  footer: { flexDirection: "row", justifyContent: "center", flexWrap: "wrap" },
+  footer: { flexDirection: "row", justifyContent: "center", alignItems: "center" },
   footerText: { fontSize: 14, fontFamily: "Inter_400Regular" },
   footerLink: { fontSize: 14, fontFamily: "Inter_600SemiBold" },
 });
