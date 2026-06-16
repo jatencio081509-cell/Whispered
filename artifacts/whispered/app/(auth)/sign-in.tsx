@@ -58,7 +58,8 @@ export default function SignInScreen() {
         password,
       });
 
-      console.log("[SignIn] Result status:", result.status);
+      console.log("[SignIn] Full result:", result);
+      console.log("[SignIn] Result status:", result?.status);
 
       if (result.status === "complete") {
         const sessionId =
@@ -68,10 +69,12 @@ export default function SignInScreen() {
         }
         router.replace("/(tabs)");
       } else {
+        // Log more details when status is not complete
+        console.log("[SignIn] Sign in not complete. Status:", result?.status);
         setError("Sign in incomplete. Please try again.");
       }
     } catch (err: unknown) {
-      console.error("[SignIn] Error:", err);
+      console.error("[SignIn] Caught error:", err);
       const clerkErr = err as {
         errors?: { message: string; longMessage?: string }[];
       };
