@@ -34,10 +34,11 @@ export default function SignInScreen() {
 
   const handleSignIn = async () => {
     console.log("[SignIn] Button pressed");
-    console.log("[SignIn] isLoaded:", isLoaded, "signIn exists:", !!signIn);
 
-    if (!signIn) {
-      console.log("[SignIn] Early return - signIn not ready");
+    const activeSignIn = signIn || clerk.client?.signIn;
+
+    if (!activeSignIn) {
+      console.log("[SignIn] Early return - No signIn available");
       return;
     }
 
@@ -53,13 +54,12 @@ export default function SignInScreen() {
 
     try {
       console.log("[SignIn] Attempting sign in for:", email.trim());
-      const result = await signIn.create({
+      const result = await activeSignIn.create({
         identifier: email.trim(),
         password,
       });
 
       console.log("[SignIn] Full result:", result);
-      console.log("[SignIn] Result status:", result?.status);
 
       if (result.status === "complete") {
         const sessionId =
@@ -69,7 +69,6 @@ export default function SignInScreen() {
         }
         router.replace("/(tabs)");
       } else {
-        // Log more details when status is not complete
         console.log("[SignIn] Sign in not complete. Status:", result?.status);
         setError("Sign in incomplete. Please try again.");
       }
