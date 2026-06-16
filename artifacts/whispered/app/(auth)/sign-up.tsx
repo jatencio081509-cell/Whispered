@@ -35,8 +35,10 @@ export default function SignUpScreen() {
   const [step, setStep] = useState<"form" | "verify">("form");
   const [code, setCode] = useState("");
 
+  const isClerkReady = isLoaded && !!signUp;
+
   const handleSignUp = async () => {
-    if (!isLoaded || !signUp) {
+    if (!isClerkReady) {
       Alert.alert("Not ready", "Please wait a moment and try again.");
       return;
     }
@@ -64,7 +66,6 @@ export default function SignUpScreen() {
         await signUpAttempt.prepareEmailAddressVerification({ strategy: "email_code" });
         setStep("verify");
       } else if (signUpAttempt.status === "complete") {
-        // Rare case where sign up completes without email verification
         const sessionId = signUpAttempt.createdSessionId ?? clerk.client?.lastActiveSession?.id;
         if (sessionId) {
           await clerk.setActive({ session: sessionId });
@@ -221,13 +222,23 @@ export default function SignUpScreen() {
           ) : null}
 
           <Pressable
-            style={({ pressed }) => [styles.submitBtn, { opacity: !email || !password || loading || pressed ? 0.6 : 1 }]}
+            style={({ pressed }) => [styles.submitBtn, { opacity: !isClerkReady || !email || !password || loading || pressed ? 0.6 : 1 }]}
             onPress={handleSignUp}
-            disabled={!email || !password || loading}
+            disabled={!isClerkReady || !email || !password || loading}
           >
             <LinearGradient colors={["#00E5FF", "#0072FF"]} style={styles.submitGradient}>
-              {loading ? <ActivityIndicator color="#030712" /> : <Text style={styles.submitText}>Create account</Text>}
+              {!isClerkReady ? (
+                <ActivityIndicator color="#030712" />
+              ) : loading ? (
+                <ActivityIndicator color="#030712" />
+              ) : (
+                <Text style={styles.submitText}>Create account</Text>
+              )}
             </LinearGradient>
+          </Pressable>
+
+          <Pressable style={styles.forgotBtn} onPress={() => router.push("/(auth)/forgot-password")}>
+            <Text style={[styles.forgotText, { color: colors.mutedForeground }]}>Forgot password?</Text>
           </Pressable>
         </View>
 
