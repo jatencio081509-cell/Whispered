@@ -17,7 +17,6 @@ import { useRouter } from 'expo-router';
 import { Feather } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { LinearGradient } from 'expo-linear-gradient';
 import NavigationDrawer from '@/components/NavigationDrawer';
 import { supabase } from '@/lib/supabase';
 import { supabaseAdmin } from '@/lib/syncClerkToSupabase';
@@ -239,18 +238,11 @@ export default function ChatScreen() {
   }
 
   return (
-    <KeyboardAvoidingView
-      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-      style={styles.container}
-      keyboardVerticalOffset={-25}
-    >
-      <LinearGradient
-        colors={['#0A1628', '#0D2840', '#0F3A5C', '#0A4A6E', '#0A1628']}
-        style={StyleSheet.absoluteFillObject}
-      />
+    <View style={[styles.container, { backgroundColor: colors.background }]}>
+      <View style={styles.scanLine} />
       <View style={{ paddingTop: insets.top, paddingHorizontal: 20 }}>
         <View style={styles.headerRow}>
-          <Text style={[styles.headerTitle, { color: colors.foreground }]}>
+          <Text style={[styles.headerTitle, { color: colors.text }]}>
             {partnerName ? partnerName : 'Partner'}
           </Text>
           <Pressable onPress={() => setShowNavigationDrawer(true)}>
@@ -311,12 +303,13 @@ export default function ChatScreen() {
         visible={showNavigationDrawer}
         onClose={() => setShowNavigationDrawer(false)}
       />
-    </KeyboardAvoidingView>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
   container: { flex: 1 },
+  scanLine: { position: "absolute", top: 0, left: 0, right: 0, height: 1, backgroundColor: "rgba(0,229,255,0.3)", zIndex: 10 },
   centered: { flex: 1, justifyContent: 'center', alignItems: 'center', padding: 24 },
   headerRow: {
     flexDirection: 'row',

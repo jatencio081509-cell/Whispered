@@ -16,7 +16,6 @@ import {
 import { useUser } from '@clerk/expo';
 import { useColors } from '@/hooks/useColors';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { LinearGradient } from 'expo-linear-gradient';
 import { Feather } from '@expo/vector-icons';
 import NavigationDrawer from '@/components/NavigationDrawer';
 import * as ImagePicker from 'expo-image-picker';
@@ -239,16 +238,13 @@ export default function MemoriesScreen() {
   }
 
   return (
-    <View style={styles.container}>
-      <LinearGradient
-        colors={['#0A1628', '#0D2840', '#0F3A5C', '#0A4A6E', '#0A1628']}
-        style={StyleSheet.absoluteFillObject}
-      />
+    <View style={[styles.container, { backgroundColor: colors.background }]}>
+      <View style={styles.scanLine} />
 
       {/* Header */}
       <View style={{ paddingTop: insets.top, paddingHorizontal: 20 }}>
         <View style={styles.headerRow}>
-          <Text style={[styles.title, { color: colors.foreground }]}>Memories</Text>
+          <Text style={[styles.title, { color: colors.text }]}>Memories</Text>
           <View style={{ flexDirection: 'row', alignItems: 'center', gap: 16 }}>
             <Pressable onPress={openAddModal}>
               <Feather name="plus" size={26} color={colors.primary} />
@@ -401,6 +397,7 @@ export default function MemoriesScreen() {
 
 const styles = StyleSheet.create({
   container: { flex: 1 },
+  scanLine: { position: "absolute", top: 0, left: 0, right: 0, height: 1, backgroundColor: "rgba(0,229,255,0.3)", zIndex: 10 },
   title: { fontSize: 28, fontWeight: '700' },
   headerRow: {
     flexDirection: 'row',

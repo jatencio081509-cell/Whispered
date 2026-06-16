@@ -19,7 +19,6 @@ import * as Haptics from "expo-haptics";
 import { useUser } from "@clerk/expo";
 import { supabase } from "@/lib/supabase";
 import NavigationDrawer from '@/components/NavigationDrawer';
-import { LinearGradient } from 'expo-linear-gradient';
 
 interface JournalEntry {
   id: string;
@@ -192,12 +191,7 @@ export default function JournalScreen() {
   };
 
   return (
-    <LinearGradient
-      colors={['#0A1628', '#0D2840', '#0F3A5C', '#0A4A6E', '#0A1628']}
-      start={{ x: 0, y: 0 }}
-      end={{ x: 0, y: 1 }}
-      style={styles.gradientContainer}
-    >
+    <View style={[styles.gradientContainer, { backgroundColor: colors.background }]}>
       <View style={styles.scanLine} />
       <View style={[styles.header, { paddingTop: topPad + 12, borderBottomColor: colors.border }]}>
         <Text style={[styles.headerTitle, { color: colors.text }]}>Journal</Text>
@@ -325,7 +319,7 @@ export default function JournalScreen() {
         visible={showNavigationDrawer}
         onClose={() => setShowNavigationDrawer(false)}
       />
-    </LinearGradient>
+    </View>
   );
 }
 

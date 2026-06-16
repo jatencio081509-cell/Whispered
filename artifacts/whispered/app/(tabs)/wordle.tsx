@@ -9,7 +9,6 @@ import {
 import { useColors } from '@/hooks/useColors';
 import { useRouter } from 'expo-router';
 import NavigationDrawer from '@/components/NavigationDrawer';
-import { LinearGradient } from 'expo-linear-gradient';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Feather } from '@expo/vector-icons';
 
@@ -21,12 +20,7 @@ export default function WordleScreen() {
   const topPad = Platform.OS === "web" ? insets.top + 67 : insets.top;
 
   return (
-    <LinearGradient
-      colors={['#0A1628', '#0D2840', '#0F3A5C', '#0A4A6E', '#0A1628']}
-      start={{ x: 0, y: 0 }}
-      end={{ x: 0, y: 1 }}
-      style={styles.gradientContainer}
-    >
+    <View style={[styles.gradientContainer, { backgroundColor: colors.background }]}>
       <View style={styles.scanLine} />
       <View style={[styles.headerRow, { paddingTop: topPad + 12 }]}>
         <Text style={[styles.title, { color: colors.text }]}>Home</Text>
@@ -45,7 +39,7 @@ export default function WordleScreen() {
         visible={showNavigationDrawer}
         onClose={() => setShowNavigationDrawer(false)}
       />
-    </LinearGradient>
+    </View>
   );
 }
 

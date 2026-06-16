@@ -5,7 +5,6 @@ import { useRouter } from 'expo-router';
 import { useUser } from '@clerk/expo';
 import { useColors } from '@/hooks/useColors';
 import { useFocusEffect } from 'expo-router';
-import { LinearGradient } from 'expo-linear-gradient';
 import { supabase } from '@/lib/supabase';
 import { useApp } from '@/context/AppContext';
 
@@ -171,12 +170,7 @@ export default function HomeScreen() {
   const strokeDashoffset = circumference * (1 - progress);
 
   return (
-    <LinearGradient
-      colors={['#0A1628', '#0D2840', '#0F3A5C', '#0A4A6E', '#0A1628']}
-      start={{ x: 0, y: 0 }}
-      end={{ x: 0, y: 1 }}
-      style={styles.gradientContainer}
-    >
+    <View style={[styles.gradientContainer, { backgroundColor: colors.background }]}>
       <View style={styles.scanLine} />
       <ScrollView style={[styles.scrollView, { paddingTop: insets.top + 12 }]} key={refreshKey}>
         <View style={styles.content}>
@@ -382,7 +376,7 @@ export default function HomeScreen() {
       />
 
       </ScrollView>
-    </LinearGradient>
+    </View>
   );
 }
 
