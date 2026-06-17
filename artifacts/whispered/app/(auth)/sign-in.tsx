@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useEffect } from "react";
 import {
   ActivityIndicator,
   KeyboardAvoidingView,
@@ -31,6 +31,13 @@ export default function SignInScreen() {
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+
+  // Auto-redirect if already signed in
+  useEffect(() => {
+    if (clerk.user) {
+      router.replace("/(tabs)");
+    }
+  }, [clerk.user]);
 
   const handleSignIn = async () => {
     console.log("[SignIn] Button pressed");
