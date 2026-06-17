@@ -31,6 +31,34 @@ Notifications.setNotificationHandler({
   }),
 });
 
+async function registerForPushNotificationsAsync(userId: string | null) {
+  if (!userId) return;
+
+  try {
+    // Add timeout so it doesn't hang forever
+    const timeoutPromise = new Promise<null>((resolve) =>
+      setTimeout(() => resolve(null), 8000)
+    );
+
+    const tokenPromise = Notifications.getExpoPushTokenAsync();
+
+    const tokenResult = await Promise.race([tokenPromise, timeoutPromise]);
+
+    if (!tokenResult) {
+      console.log("[Push] Push token registration timed out");
+      return;
+    }
+
+    const token = tokenResult.data;
+    console.log("[Push] Expo Push Token:", token);
+
+    // Save to Supabase (non-blocking)
+    savePushTokenToSupabase(token, userId);
+  } catch (error) {
+    console.log("[Push] Error getting push token (non-critical):", error);
+  }
+}
+
 async function savePushTokenToSupabase(token: string, userId: string) {
   try {
     const { error } = await supabase
@@ -45,42 +73,12 @@ async function savePushTokenToSupabase(token: string, userId: string) {
       );
 
     if (error) {
-      console.error("Error saving push token to Supabase:", error);
+      console.log("[Push] Error saving push token:", error.message);
     } else {
-      console.log("Push token saved to Supabase successfully");
+      console.log("[Push] Push token saved successfully");
     }
   } catch (err) {
-    console.error("Failed to save push token:", err);
-  }
-}
-
-async function registerForPushNotificationsAsync(userId: string | null) {
-  if (!userId) return null;
-
-  try {
-    const { status: existingStatus } = await Notifications.getPermissionsAsync();
-    let finalStatus = existingStatus;
-
-    if (existingStatus !== "granted") {
-      const { status } = await Notifications.requestPermissionsAsync();
-      finalStatus = status;
-    }
-
-    if (finalStatus !== "granted") {
-      console.log("Push notification permission not granted");
-      return null;
-    }
-
-    const token = (await Notifications.getExpoPushTokenAsync()).data;
-    console.log("Expo Push Token:", token);
-
-    // Save token to Supabase
-    await savePushTokenToSupabase(token, userId);
-
-    return token;
-  } catch (error) {
-    console.error("Error getting push token:", error);
-    return null;
+    console.log("[Push] Failed to save push token:", err);
   }
 }
 
@@ -100,9 +98,10 @@ function AuthGate({ children }: { children: React.ReactNode }) {
     setAuthTokenGetter(() => getToken());
   }, [getToken]);
 
-  // Register for push notifications when user signs in
+  // Register for push notifications only after sign in (non-blocking)
   useEffect(() => {
     if (isSignedIn && user?.id) {
+      // Fire and forget so it doesn't block the app
       registerForPushNotificationsAsync(user.id);
     }
   }, [isSignedIn, user?.id]);
