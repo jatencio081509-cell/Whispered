@@ -20,7 +20,6 @@ import { Feather } from '@expo/vector-icons';
 import NavigationDrawer from '@/components/NavigationDrawer';
 import * as ImagePicker from 'expo-image-picker';
 import { supabase } from '@/lib/supabase';
-import { supabaseAdmin } from '@/lib/syncClerkToSupabase';
 
 export default function MemoriesScreen() {
   const { user, isLoaded } = useUser();
@@ -44,6 +43,9 @@ export default function MemoriesScreen() {
         .from('memories')
         .select('*')
         .order('created_at', { ascending: false });
+
+      console.log('Fetched memories:', data);
+      console.log('Fetch error:', error);
 
       if (error) {
         console.error('Error fetching memories:', error);
@@ -134,7 +136,7 @@ export default function MemoriesScreen() {
       const fileExt = uri.split('.').pop();
       const fileName = `${user!.id}-${Date.now()}.${fileExt}`;
 
-      const storageClient = supabaseAdmin?.storage || supabase.storage;
+      const storageClient = supabase.storage;
 
       setUploadingProgress(0.1);
 
@@ -142,6 +144,7 @@ export default function MemoriesScreen() {
         .from('memories')
         .upload(fileName, blob, {
           contentType: 'image/jpeg',
+          upsert: true,
         });
 
       if (error) {
@@ -188,9 +191,10 @@ export default function MemoriesScreen() {
       }
 
       const { error } = await supabase.from('memories').insert({
-        text: newMemoryText.trim() || '',
+        id: `${user.id}-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+        caption: newMemoryText.trim() || '',
         image_url: imageUrl,
-        created_by: user.id,
+        user_id: user.id,
       });
 
       if (error) {
@@ -283,9 +287,9 @@ export default function MemoriesScreen() {
                   resizeMode="cover"
                 />
               )}
-              {item.text ? (
+              {item.caption ? (
                 <Text style={[styles.memoryText, { color: colors.foreground }]}>
-                  {item.text}
+                  {item.caption}
                 </Text>
               ) : null}
               <Text style={styles.memoryDate}>
