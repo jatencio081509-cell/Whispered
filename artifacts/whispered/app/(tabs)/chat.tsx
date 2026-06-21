@@ -238,18 +238,28 @@ export default function ChatScreen() {
   }
 
   return (
-    <View style={[styles.container, { backgroundColor: colors.background }]}>
-      <View style={styles.scanLine} />
-      <View style={{ paddingTop: insets.top, paddingHorizontal: 20 }}>
-        <View style={styles.headerRow}>
-          <Text style={[styles.headerTitle, { color: colors.text }]}>
-            {partnerName ? partnerName : 'Partner'}
-          </Text>
-          <Pressable onPress={() => setShowNavigationDrawer(true)}>
-            <Feather name="menu" size={24} color={colors.primary} />
-          </Pressable>
+    <KeyboardAvoidingView
+      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+      keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 0}
+      style={{ flex: 1, backgroundColor: colors.background }}
+    >
+      <View style={[styles.container, { backgroundColor: colors.background }]}>
+        {/* Grid Pattern Background */}
+        <View style={styles.gridBackground}>
+          <View style={styles.gridLineHorizontal} />
+          <View style={styles.gridLineVertical} />
         </View>
-      </View>
+        <View style={styles.scanLine} />
+        <View style={{ paddingTop: insets.top, paddingHorizontal: 20 }}>
+          <View style={styles.headerRow}>
+            <Text style={[styles.headerTitle, { color: colors.text }]}>
+              {partnerName ? partnerName : 'Partner'}
+            </Text>
+            <Pressable onPress={() => setShowNavigationDrawer(true)}>
+              <Feather name="menu" size={24} color={colors.primary} />
+            </Pressable>
+          </View>
+        </View>
 
       <View style={{ flex: 1 }}>
         <FlatList
@@ -277,7 +287,7 @@ export default function ChatScreen() {
         )}
       </View>
 
-      <View style={[styles.inputBar, { paddingBottom: insets.bottom + 50 }]}>
+      <View style={[styles.inputBar, { backgroundColor: 'rgba(0, 0, 0, 0.8)', paddingBottom: insets.bottom + 50 }]}>
         <View style={styles.inputContainer}>
           <TextInput
             value={input}
@@ -304,11 +314,36 @@ export default function ChatScreen() {
         onClose={() => setShowNavigationDrawer(false)}
       />
     </View>
+    </KeyboardAvoidingView>
   );
 }
 
 const styles = StyleSheet.create({
   container: { flex: 1 },
+  gridBackground: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    zIndex: 0,
+  },
+  gridLineHorizontal: {
+    position: 'absolute',
+    top: '50%',
+    left: 0,
+    right: 0,
+    height: 1,
+    backgroundColor: 'rgba(0, 229, 255, 0.1)',
+  },
+  gridLineVertical: {
+    position: 'absolute',
+    left: '50%',
+    top: 0,
+    bottom: 0,
+    width: 1,
+    backgroundColor: 'rgba(0, 229, 255, 0.1)',
+  },
   scanLine: { position: "absolute", top: 0, left: 0, right: 0, height: 1, backgroundColor: "rgba(0,229,255,0.3)", zIndex: 10 },
   centered: { flex: 1, justifyContent: 'center', alignItems: 'center', padding: 24 },
   headerRow: {
@@ -317,21 +352,21 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginBottom: 10,
   },
-  headerTitle: { fontSize: 20, fontWeight: '600', color: '#FFFFFF' },
+  headerTitle: { fontSize: 18, fontWeight: '600', fontFamily: 'System', color: '#FFFFFF' },
   messagesContainer: { paddingHorizontal: 16, paddingVertical: 12, flexGrow: 1 },
   messageRow: { flexDirection: 'row', marginVertical: 4 },
   rowLeft: { justifyContent: 'flex-start' },
   rowRight: { justifyContent: 'flex-end' },
-  messageBubble: { maxWidth: '78%', paddingHorizontal: 14, paddingVertical: 10, borderRadius: 20 },
-  myMessage: { backgroundColor: '#00E5FF', borderBottomRightRadius: 6 },
-  theirMessage: { backgroundColor: '#2C2C2E', borderBottomLeftRadius: 6 },
-  messageText: { fontSize: 16, lineHeight: 22 },
-  messageTime: { fontSize: 11, marginTop: 4, alignSelf: 'flex-end' },
-  inputBar: { paddingHorizontal: 12, paddingTop: 10, backgroundColor: 'rgba(17,17,17,0.9)', borderTopWidth: 1, borderTopColor: '#222' },
-  inputContainer: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#1C1C1E', borderRadius: 22, paddingHorizontal: 4, paddingVertical: 4 },
-  input: { flex: 1, color: '#FFFFFF', fontSize: 16, paddingHorizontal: 16, paddingVertical: 10, maxHeight: 100 },
-  sendButton: { width: 36, height: 36, borderRadius: 18, backgroundColor: '#00E5FF', justifyContent: 'center', alignItems: 'center', marginLeft: 6 },
-  sendButtonDisabled: { backgroundColor: '#333' },
+  messageBubble: { maxWidth: '78%', paddingHorizontal: 14, paddingVertical: 10, borderRadius: 4 },
+  myMessage: { backgroundColor: '#00E5FF', borderBottomRightRadius: 4 },
+  theirMessage: { backgroundColor: 'rgba(0, 0, 0, 0.6)', borderBottomLeftRadius: 4, borderWidth: 1, borderColor: 'rgba(0, 229, 255, 0.2)' },
+  messageText: { fontSize: 16, lineHeight: 22, fontFamily: 'System' },
+  messageTime: { fontSize: 11, marginTop: 4, alignSelf: 'flex-end', fontFamily: 'Courier' },
+  inputBar: { paddingHorizontal: 12, paddingTop: 10, backgroundColor: 'rgba(0, 0, 0, 0.8)', borderTopWidth: 1, borderTopColor: 'rgba(0, 229, 255, 0.2)' },
+  inputContainer: { flexDirection: 'row', alignItems: 'center', backgroundColor: 'rgba(0, 0, 0, 0.6)', borderRadius: 4, paddingHorizontal: 4, paddingVertical: 4, borderWidth: 1, borderColor: 'rgba(0, 229, 255, 0.2)' },
+  input: { flex: 1, color: '#FFFFFF', fontSize: 16, paddingHorizontal: 16, paddingVertical: 10, maxHeight: 100, fontFamily: 'System' },
+  sendButton: { width: 36, height: 36, borderRadius: 4, backgroundColor: '#00E5FF', justifyContent: 'center', alignItems: 'center', marginLeft: 6 },
+  sendButtonDisabled: { backgroundColor: 'rgba(0, 0, 0, 0.6)' },
   jumpToBottomButton: {
     position: 'absolute',
     bottom: 80,
@@ -339,17 +374,14 @@ const styles = StyleSheet.create({
     backgroundColor: '#00E5FF',
     width: 40,
     height: 40,
-    borderRadius: 20,
+    borderRadius: 4,
     justifyContent: 'center',
     alignItems: 'center',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.3,
-    shadowRadius: 4,
-    elevation: 5,
+    borderWidth: 1,
+    borderColor: '#00E5FF',
   },
-  title: { fontSize: 24, fontWeight: '700' },
-  subtitle: { fontSize: 16 },
-  button: { paddingVertical: 14, paddingHorizontal: 32, borderRadius: 999 },
-  buttonText: { fontSize: 16, fontWeight: '600' },
+  title: { fontSize: 20, fontWeight: '600', fontFamily: 'System' },
+  subtitle: { fontSize: 16, fontFamily: 'System' },
+  button: { paddingVertical: 14, paddingHorizontal: 32, borderRadius: 4, borderWidth: 1, borderColor: '#00E5FF' },
+  buttonText: { fontSize: 16, fontWeight: '600', fontFamily: 'System' },
 });

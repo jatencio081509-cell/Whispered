@@ -14,6 +14,7 @@ import { useColors } from "@/hooks/useColors";
 import { useApp } from "@/context/AppContext";
 import * as Haptics from "expo-haptics";
 import NavigationDrawer from '@/components/NavigationDrawer';
+import { useUser } from '@clerk/expo';
 
 const FEATURES = [
   { id: "goals",    label: "Goals",         description: "Track shared dreams",   icon: "target",        color: "#00E5FF", route: "/goals"    },
@@ -31,9 +32,16 @@ export default function MoreScreen() {
   const { couple, streak } = useApp();
   const topPad = Platform.OS === "web" ? insets.top + 67 : insets.top;
   const [showNavigationDrawer, setShowNavigationDrawer] = useState(false);
+  const { user } = useUser();
+  const isLinked = !!user?.unsafeMetadata?.partner_user_id;
 
   return (
-    <View style={[styles.gradientContainer, { backgroundColor: colors.background }]}>
+    <View style={[styles.container, { backgroundColor: colors.background }]}>
+      {/* Grid Pattern Background */}
+      <View style={styles.gridBackground}>
+        <View style={styles.gridLineHorizontal} />
+        <View style={styles.gridLineVertical} />
+      </View>
       <View style={styles.scanLine} />
       <ScrollView
         contentContainerStyle={[styles.inner, { paddingTop: topPad + 16, paddingBottom: insets.bottom + 100 }]}
@@ -50,7 +58,7 @@ export default function MoreScreen() {
         <View style={[styles.statsBanner, { backgroundColor: colors.card, borderColor: colors.border }]}>
           {[
             { icon: "🌊", value: String(streak), label: "streak" },
-            { icon: "💙", value: couple?.isLinked ? "Linked" : "Solo", label: "status" },
+            { icon: "💙", value: isLinked ? "Linked" : "Solo", label: "status" },
             { icon: "💬", value: "7", label: "prompts" },
           ].map((s, i) => (
             <React.Fragment key={s.label}>
@@ -95,21 +103,44 @@ export default function MoreScreen() {
 }
 
 const styles = StyleSheet.create({
-  gradientContainer: { flex: 1 },
   container: { flex: 1 },
+  gridBackground: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    zIndex: 0,
+  },
+  gridLineHorizontal: {
+    position: 'absolute',
+    top: '50%',
+    left: 0,
+    right: 0,
+    height: 1,
+    backgroundColor: 'rgba(0, 229, 255, 0.1)',
+  },
+  gridLineVertical: {
+    position: 'absolute',
+    left: '50%',
+    top: 0,
+    bottom: 0,
+    width: 1,
+    backgroundColor: 'rgba(0, 229, 255, 0.1)',
+  },
   scanLine: { position: "absolute", top: 0, left: 0, right: 0, height: 1, backgroundColor: "rgba(0,229,255,0.3)", zIndex: 10 },
   inner: { paddingHorizontal: 20, gap: 20 },
   headerRow: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 4 },
-  title: { fontSize: 28, fontFamily: "Inter_700Bold", letterSpacing: -0.5 },
-  statsBanner: { flexDirection: "row", borderRadius: 18, borderWidth: 1, padding: 16, alignItems: "center" },
+  title: { fontSize: 24, fontFamily: "System", fontWeight: '600' },
+  statsBanner: { flexDirection: "row", borderRadius: 4, borderWidth: 1, padding: 16, alignItems: "center", borderColor: 'rgba(0, 229, 255, 0.2)', backgroundColor: 'rgba(0, 0, 0, 0.6)' },
   statItem: { flex: 1, alignItems: "center", gap: 4 },
-  statNumber: { fontSize: 14, fontFamily: "Inter_600SemiBold" },
-  statLabel: { fontSize: 10, fontFamily: "Inter_400Regular" },
-  statDivider: { width: 1, height: 32, marginHorizontal: 8 },
+  statNumber: { fontSize: 14, fontFamily: "System", fontWeight: '600' },
+  statLabel: { fontSize: 10, fontFamily: "System" },
+  statDivider: { width: 1, height: 32, marginHorizontal: 8, backgroundColor: 'rgba(0, 229, 255, 0.2)' },
   grid: { gap: 10 },
-  featureCard: { flexDirection: "row", alignItems: "center", gap: 14, padding: 16, borderRadius: 18, borderWidth: 1 },
-  featureIcon: { width: 48, height: 48, borderRadius: 15, alignItems: "center", justifyContent: "center" },
+  featureCard: { flexDirection: "row", alignItems: "center", gap: 14, padding: 16, borderRadius: 4, borderWidth: 1, borderColor: 'rgba(0, 229, 255, 0.2)' },
+  featureIcon: { width: 48, height: 48, borderRadius: 4, alignItems: "center", justifyContent: "center" },
   featureText: { flex: 1 },
-  featureLabel: { fontSize: 15, fontFamily: "Inter_600SemiBold" },
-  featureDesc: { fontSize: 12, fontFamily: "Inter_400Regular", marginTop: 2 },
+  featureLabel: { fontSize: 15, fontFamily: "System", fontWeight: '600' },
+  featureDesc: { fontSize: 12, fontFamily: "System", marginTop: 2 },
 });

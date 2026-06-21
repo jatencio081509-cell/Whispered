@@ -191,7 +191,12 @@ export default function JournalScreen() {
   };
 
   return (
-    <View style={[styles.gradientContainer, { backgroundColor: colors.background }]}>
+    <View style={[styles.container, { backgroundColor: colors.background }]}>
+      {/* Grid Pattern Background */}
+      <View style={styles.gridBackground}>
+        <View style={styles.gridLineHorizontal} />
+        <View style={styles.gridLineVertical} />
+      </View>
       <View style={styles.scanLine} />
       <View style={[styles.header, { paddingTop: topPad + 12, borderBottomColor: colors.border }]}>
         <Text style={[styles.headerTitle, { color: colors.text }]}>Journal</Text>
@@ -324,44 +329,67 @@ export default function JournalScreen() {
 }
 
 const styles = StyleSheet.create({
-  gradientContainer: { flex: 1 },
   container: { flex: 1 },
+  gridBackground: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    zIndex: 0,
+  },
+  gridLineHorizontal: {
+    position: 'absolute',
+    top: '50%',
+    left: 0,
+    right: 0,
+    height: 1,
+    backgroundColor: 'rgba(0, 229, 255, 0.1)',
+  },
+  gridLineVertical: {
+    position: 'absolute',
+    left: '50%',
+    top: 0,
+    bottom: 0,
+    width: 1,
+    backgroundColor: 'rgba(0, 229, 255, 0.1)',
+  },
   scanLine: { position: "absolute", top: 0, left: 0, right: 0, height: 1, backgroundColor: "rgba(0,229,255,0.3)", zIndex: 10 },
   header: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", paddingHorizontal: 20, paddingBottom: 12, borderBottomWidth: 1 },
-  headerTitle: { fontSize: 24, fontFamily: "Inter_700Bold", letterSpacing: -0.3 },
+  headerTitle: { fontSize: 20, fontFamily: "System", fontWeight: '600' },
   headerButtons: { flexDirection: "row", alignItems: "center", gap: 12 },
-  addBtn: { width: 38, height: 38, borderRadius: 12, borderWidth: 1, alignItems: "center", justifyContent: "center" },
+  addBtn: { width: 38, height: 38, borderRadius: 4, borderWidth: 1, alignItems: "center", justifyContent: "center", borderColor: 'rgba(0, 229, 255, 0.2)' },
   menuBtn: { padding: 8 },
   empty: { flex: 1, alignItems: "center", justifyContent: "center", gap: 14, padding: 32 },
-  emptyIcon: { width: 72, height: 72, borderRadius: 24, alignItems: "center", justifyContent: "center" },
-  emptyTitle: { fontSize: 18, fontFamily: "Inter_600SemiBold" },
-  emptySubtitle: { fontSize: 14, fontFamily: "Inter_400Regular", textAlign: "center" },
-  emptyBtn: { flexDirection: "row", alignItems: "center", gap: 8, paddingHorizontal: 20, paddingVertical: 12, borderRadius: 12, marginTop: 8 },
-  emptyBtnText: { fontSize: 14, fontFamily: "Inter_500Medium" },
+  emptyIcon: { width: 72, height: 72, borderRadius: 4, alignItems: "center", justifyContent: "center", borderWidth: 1, borderColor: 'rgba(0, 229, 255, 0.2)', backgroundColor: 'rgba(0, 0, 0, 0.6)' },
+  emptyTitle: { fontSize: 16, fontFamily: "System", fontWeight: '600' },
+  emptySubtitle: { fontSize: 14, fontFamily: "System", textAlign: "center" },
+  emptyBtn: { flexDirection: "row", alignItems: "center", gap: 8, paddingHorizontal: 20, paddingVertical: 12, borderRadius: 4, marginTop: 8, borderWidth: 1, borderColor: 'rgba(0, 229, 255, 0.2)' },
+  emptyBtnText: { fontSize: 14, fontFamily: "System", fontWeight: '500' },
   list: { padding: 16, gap: 12 },
-  entryCard: { borderRadius: 16, borderWidth: 1, padding: 16, gap: 8 },
+  entryCard: { borderRadius: 4, borderWidth: 1, padding: 16, gap: 8, borderColor: 'rgba(0, 229, 255, 0.2)', backgroundColor: 'rgba(0, 0, 0, 0.6)' },
   entryHeader: { flexDirection: "row", justifyContent: "space-between", alignItems: "center" },
   entryMeta: { flexDirection: "row", alignItems: "center", gap: 8 },
   moodEmoji: { fontSize: 16 },
-  entryDate: { fontSize: 12, fontFamily: "Inter_400Regular" },
-  youBadge: { paddingHorizontal: 8, paddingVertical: 4, borderRadius: 8 },
-  youText: { fontSize: 10, fontFamily: "Inter_600SemiBold" },
-  entryTitle: { fontSize: 16, fontFamily: "Inter_600SemiBold" },
-  entryContent: { fontSize: 14, fontFamily: "Inter_400Regular", lineHeight: 20 },
-  modalOverlay: { flex: 1, backgroundColor: "rgba(0,0,0,0.7)", justifyContent: "flex-end" },
-  modalSheet: { borderTopLeftRadius: 24, borderTopRightRadius: 24, borderWidth: 1, padding: 24, gap: 16 },
-  modalHandle: { width: 36, height: 4, borderRadius: 2, alignSelf: "center", marginBottom: 4 },
-  modalTitle: { fontSize: 18, fontFamily: "Inter_700Bold" },
-  titleInput: { height: 48, borderRadius: 12, borderWidth: 1, padding: 14, fontSize: 16, fontFamily: "Inter_500Medium" },
-  contentInput: { minHeight: 120, borderRadius: 12, borderWidth: 1, padding: 14, fontSize: 14, fontFamily: "Inter_400Regular" },
-  moodLabel: { fontSize: 12, fontFamily: "Inter_500Medium", marginBottom: 8 },
+  entryDate: { fontSize: 12, fontFamily: "System" },
+  youBadge: { paddingHorizontal: 8, paddingVertical: 4, borderRadius: 4 },
+  youText: { fontSize: 10, fontFamily: "System", fontWeight: '600' },
+  entryTitle: { fontSize: 16, fontFamily: "System", fontWeight: '600' },
+  entryContent: { fontSize: 14, fontFamily: "System", lineHeight: 20 },
+  modalOverlay: { flex: 1, backgroundColor: "rgba(0,0,0,0.8)", justifyContent: "flex-end" },
+  modalSheet: { borderTopLeftRadius: 4, borderTopRightRadius: 4, borderWidth: 1, padding: 24, gap: 16, borderColor: 'rgba(0, 229, 255, 0.2)', backgroundColor: 'rgba(0, 0, 0, 0.8)' },
+  modalHandle: { width: 36, height: 4, borderRadius: 2, alignSelf: "center", marginBottom: 4, backgroundColor: 'rgba(0, 229, 255, 0.2)' },
+  modalTitle: { fontSize: 16, fontFamily: "System", fontWeight: '600' },
+  titleInput: { height: 48, borderRadius: 4, borderWidth: 1, padding: 14, fontSize: 16, fontFamily: "System", backgroundColor: 'rgba(0, 0, 0, 0.6)', borderColor: 'rgba(0, 229, 255, 0.2)' },
+  contentInput: { minHeight: 120, borderRadius: 4, borderWidth: 1, padding: 14, fontSize: 14, fontFamily: "System", backgroundColor: 'rgba(0, 0, 0, 0.6)', borderColor: 'rgba(0, 229, 255, 0.2)' },
+  moodLabel: { fontSize: 12, fontFamily: "System", fontWeight: '500', marginBottom: 8 },
   moodSelector: { flexDirection: "row", gap: 8, flexWrap: "wrap" },
-  moodOption: { width: 44, height: 44, borderRadius: 12, borderWidth: 1, alignItems: "center", justifyContent: "center" },
-  moodOptionSelected: { borderWidth: 2 },
+  moodOption: { width: 44, height: 44, borderRadius: 4, borderWidth: 1, alignItems: "center", justifyContent: "center", borderColor: 'rgba(0, 229, 255, 0.2)' },
+  moodOptionSelected: { borderWidth: 2, borderColor: '#00E5FF' },
   moodOptionText: { fontSize: 20 },
   modalButtons: { flexDirection: "row", gap: 12 },
-  modalCancelBtn: { flex: 1, height: 48, borderRadius: 12, alignItems: "center", justifyContent: "center", borderWidth: 1 },
-  modalCancelText: { fontSize: 14, fontFamily: "Inter_500Medium" },
-  modalSaveBtn: { flex: 1, height: 48, borderRadius: 12, alignItems: "center", justifyContent: "center" },
-  modalSaveText: { fontSize: 14, fontFamily: "Inter_600SemiBold", color: "#030712" },
+  modalCancelBtn: { flex: 1, height: 48, borderRadius: 4, alignItems: "center", justifyContent: "center", borderWidth: 1, backgroundColor: 'rgba(0, 0, 0, 0.6)', borderColor: 'rgba(0, 229, 255, 0.2)' },
+  modalCancelText: { fontSize: 14, fontFamily: "System", fontWeight: '500' },
+  modalSaveBtn: { flex: 1, height: 48, borderRadius: 4, alignItems: "center", justifyContent: "center", backgroundColor: '#00E5FF', borderWidth: 1, borderColor: '#00E5FF' },
+  modalSaveText: { fontSize: 14, fontFamily: "System", fontWeight: '600', color: "#030712" },
 });

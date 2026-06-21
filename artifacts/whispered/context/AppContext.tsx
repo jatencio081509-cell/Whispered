@@ -156,6 +156,8 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       });
       if (res.ok) {
         const data: Couple = await res.json();
+        // Ensure isLinked is set correctly based on user2Id
+        data.isLinked = !!data.user2Id;
         setCouple(data);
       }
     } catch {

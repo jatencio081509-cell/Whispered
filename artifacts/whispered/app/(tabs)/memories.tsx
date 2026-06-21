@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
   View,
   Text,
@@ -12,6 +12,7 @@ import {
   Platform,
   Image,
   Alert,
+  Animated,
 } from 'react-native';
 import { useUser } from '@clerk/expo';
 import { useColors } from '@/hooks/useColors';
@@ -19,6 +20,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Feather } from '@expo/vector-icons';
 import NavigationDrawer from '@/components/NavigationDrawer';
 import * as ImagePicker from 'expo-image-picker';
+import * as FileSystem from 'expo-file-system/legacy';
 import { supabase } from '@/lib/supabase';
 
 export default function MemoriesScreen() {
@@ -34,6 +36,11 @@ export default function MemoriesScreen() {
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
   const [adding, setAdding] = useState(false);
   const [uploadingProgress, setUploadingProgress] = useState(0);
+  const [imageData, setImageData] = useState<Record<string, string>>({});
+  const [reactions, setReactions] = useState<Record<string, any[]>>({});
+  const [showReactionPicker, setShowReactionPicker] = useState<string | null>(null);
+  const [editingMemory, setEditingMemory] = useState<string | null>(null);
+  const [editCaption, setEditCaption] = useState('');
 
   const fetchMemories = async () => {
     if (!user) return;
@@ -53,6 +60,69 @@ export default function MemoriesScreen() {
       }
 
       setMemories(data || []);
+
+      // Pre-fetch images
+      console.log('Starting image pre-fetch for', (data || []).filter(item => item.image_url).length, 'images');
+      const imageDataPromises = (data || [])
+        .filter(item => item.image_url)
+        .map(async (item) => {
+          try {
+            console.log('Fetching image:', item.image_url);
+            const response = await fetch(item.image_url);
+            console.log('Image response status:', response.status);
+            const blob = await response.blob();
+            console.log('Image blob size:', blob.size);
+            const reader = new FileReader();
+            const base64 = await new Promise<string>((resolve, reject) => {
+              reader.onload = () => {
+                const result = reader.result as string;
+                console.log('Image converted to base64, length:', result.length);
+                resolve(result);
+              };
+              reader.onerror = (error) => {
+                console.error('FileReader error:', error);
+                reject(error);
+              };
+              reader.readAsDataURL(blob);
+            });
+            return { id: item.id, base64 };
+          } catch (err) {
+            console.error('Failed to fetch image:', item.image_url, err);
+            return null;
+          }
+        });
+
+      const imageDataResults = await Promise.all(imageDataPromises);
+      const imageDataMap = imageDataResults.reduce((acc, result) => {
+        if (result) {
+          acc[result.id] = result.base64;
+        }
+        return acc;
+      }, {} as Record<string, string>);
+
+      setImageData(imageDataMap);
+
+      // Fetch reactions for memories
+      const memoryIds = (data || []).map(m => m.id);
+      if (memoryIds.length > 0) {
+        const { data: reactionsData, error: reactionsError } = await supabase
+          .from('reactions')
+          .select('*')
+          .in('memory_id', memoryIds);
+        
+        console.log('Reactions data:', reactionsData);
+        console.log('Reactions error:', reactionsError);
+        
+        const reactionsMap = (reactionsData || []).reduce((acc, reaction: any) => {
+          if (!acc[reaction.memory_id]) {
+            acc[reaction.memory_id] = [];
+          }
+          acc[reaction.memory_id].push(reaction);
+          return acc;
+        }, {} as Record<string, any[]>);
+        
+        setReactions(reactionsMap);
+      }
     } catch (err) {
       console.error('Failed to fetch memories:', err);
     } finally {
@@ -74,10 +144,25 @@ export default function MemoriesScreen() {
           table: 'memories',
         },
         (payload) => {
+          console.log('Realtime update received:', payload);
           fetchMemories();
         }
       )
-      .subscribe();
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'reactions',
+        },
+        (payload) => {
+          console.log('Reaction realtime update received:', payload);
+          fetchMemories();
+        }
+      )
+      .subscribe((status) => {
+        console.log('Realtime subscription status:', status);
+      });
 
     return () => {
       supabase.removeChannel(channel);
@@ -130,8 +215,37 @@ export default function MemoriesScreen() {
 
   const uploadImage = async (uri: string): Promise<string | null> => {
     try {
-      const response = await fetch(uri);
-      const blob = await response.blob();
+      console.log('Starting upload for:', uri);
+      
+      // Use FileSystem to read the file
+      const fileInfo = await FileSystem.getInfoAsync(uri);
+      console.log('File info:', fileInfo);
+      
+      if (!fileInfo.exists) {
+        console.error('File does not exist');
+        return null;
+      }
+
+      // Read the file as base64
+      const base64 = await FileSystem.readAsStringAsync(uri, {
+        encoding: 'base64',
+      });
+      
+      console.log('Base64 length:', base64.length);
+      
+      // Convert base64 to Uint8Array for React Native
+      const binaryString = atob(base64);
+      const bytes = new Uint8Array(binaryString.length);
+      for (let i = 0; i < binaryString.length; i++) {
+        bytes[i] = binaryString.charCodeAt(i);
+      }
+
+      console.log('ArrayBuffer size:', bytes.byteLength, 'bytes');
+
+      if (bytes.byteLength === 0) {
+        console.error('ArrayBuffer is empty, cannot upload');
+        return null;
+      }
 
       const fileExt = uri.split('.').pop();
       const fileName = `${user!.id}-${Date.now()}.${fileExt}`;
@@ -140,9 +254,10 @@ export default function MemoriesScreen() {
 
       setUploadingProgress(0.1);
 
+      console.log('Uploading to storage:', fileName);
       const { data, error } = await storageClient
         .from('memories')
-        .upload(fileName, blob, {
+        .upload(fileName, bytes, {
           contentType: 'image/jpeg',
           upsert: true,
         });
@@ -153,11 +268,16 @@ export default function MemoriesScreen() {
         return null;
       }
 
+      console.log('Upload successful:', data);
+      console.log('Upload data path:', data?.path);
+
       setUploadingProgress(0.7);
 
       const { data: publicUrlData } = storageClient
         .from('memories')
         .getPublicUrl(fileName);
+
+      console.log('Public URL:', publicUrlData.publicUrl);
 
       setUploadingProgress(1);
       return publicUrlData.publicUrl;
@@ -233,6 +353,75 @@ export default function MemoriesScreen() {
     setShowAddModal(true);
   };
 
+  const addReaction = async (memoryId: string, emoji: string) => {
+    if (!user) return;
+
+    // Check if reaction already exists
+    const existingReaction = reactions[memoryId]?.find(
+      (r: any) => r.user_id === user.id && r.emoji === emoji
+    );
+
+    if (existingReaction) {
+      // If exists, remove it (toggle behavior)
+      await removeReaction(memoryId, emoji);
+    } else {
+      // If doesn't exist, add it
+      const { error } = await supabase.from('reactions').insert({
+        memory_id: memoryId,
+        user_id: user.id,
+        emoji: emoji,
+      });
+
+      if (error) {
+        // Handle duplicate key error by removing instead
+        if (error.code === '23505') {
+          await removeReaction(memoryId, emoji);
+        } else {
+          console.error('Error adding reaction:', error);
+        }
+      }
+    }
+  };
+
+  const removeReaction = async (memoryId: string, emoji: string) => {
+    if (!user) return;
+
+    const { error } = await supabase
+      .from('reactions')
+      .delete()
+      .match({
+        memory_id: memoryId,
+        user_id: user.id,
+        emoji: emoji,
+      });
+
+    if (error) {
+      console.error('Error removing reaction:', error);
+    }
+  };
+
+  const updateCaption = async () => {
+    if (!editingMemory || !user) return;
+
+    const { error } = await supabase
+      .from('memories')
+      .update({ caption: editCaption })
+      .eq('id', editingMemory)
+      .select();
+
+    if (error) {
+      console.error('Error updating caption:', error);
+      Alert.alert('Error', 'Failed to update caption.');
+    } else {
+      // Update local state immediately to prevent flicker
+      setMemories(memories.map(m => 
+        m.id === editingMemory ? { ...m, caption: editCaption } : m
+      ));
+      setEditingMemory(null);
+      setEditCaption('');
+    }
+  };
+
   if (!isLoaded) {
     return (
       <View style={styles.container}>
@@ -243,6 +432,12 @@ export default function MemoriesScreen() {
 
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>
+      {/* Grid Pattern Background */}
+      <View style={styles.gridBackground}>
+        <View style={styles.gridLineHorizontal} />
+        <View style={styles.gridLineVertical} />
+      </View>
+      
       <View style={styles.scanLine} />
 
       {/* Header */}
@@ -280,21 +475,119 @@ export default function MemoriesScreen() {
           keyExtractor={(item) => item.id}
           renderItem={({ item }) => (
             <View style={styles.memoryCard}>
-              {item.image_url && (
+              {item.image_url && imageData[item.id] ? (
                 <Image
-                  source={{ uri: item.image_url }}
+                  source={{ uri: imageData[item.id] }}
                   style={styles.memoryImage}
                   resizeMode="cover"
                 />
-              )}
-              {item.caption ? (
-                <Text style={[styles.memoryText, { color: colors.foreground }]}>
-                  {item.caption}
-                </Text>
+              ) : item.image_url ? (
+                <View style={[styles.memoryImage, { justifyContent: 'center', alignItems: 'center', backgroundColor: '#333' }]}>
+                  <ActivityIndicator size="small" color="#00E5FF" />
+                </View>
               ) : null}
-              <Text style={styles.memoryDate}>
-                {new Date(item.created_at).toLocaleDateString()}
-              </Text>
+              {editingMemory === item.id ? (
+                <View style={styles.editContainer}>
+                  <TextInput
+                    style={[styles.editInput, { color: colors.foreground, backgroundColor: colors.card }]}
+                    value={editCaption}
+                    onChangeText={setEditCaption}
+                    placeholder="Edit caption..."
+                    placeholderTextColor={colors.mutedForeground}
+                    multiline
+                  />
+                  <View style={styles.editButtons}>
+                    <Pressable onPress={() => setEditingMemory(null)} style={styles.editButton}>
+                      <Text style={{ color: colors.mutedForeground }}>Cancel</Text>
+                    </Pressable>
+                    <Pressable onPress={updateCaption} style={styles.editButton}>
+                      <Text style={{ color: colors.primary }}>Save</Text>
+                    </Pressable>
+                  </View>
+                </View>
+              ) : (
+                <>
+                  {item.caption ? (
+                    <Text style={[styles.memoryText, { color: colors.foreground }]}>
+                      {item.caption}
+                    </Text>
+                  ) : null}
+                  <Text style={styles.memoryDate}>
+                    {new Date(item.created_at).toLocaleDateString()}
+                  </Text>
+                </>
+              )}
+              
+              {/* Reactions and Actions */}
+              <View style={styles.memoryActions}>
+                <View style={styles.reactionsContainer}>
+                  {reactions[item.id]?.map((reaction: any, index: number) => {
+                    const userName = reaction.users 
+                      ? `${reaction.users.first_name || ''} ${reaction.users.last_name || ''}`.trim() || 'You'
+                      : (reaction.user_id === user?.id ? 'You' : reaction.user_id);
+                    
+                    return (
+                      <Pressable
+                        key={index}
+                        onPress={() => removeReaction(item.id, reaction.emoji)}
+                        style={styles.reactionBubble}
+                      >
+                        <Text style={styles.reactionEmoji}>{reaction.emoji}</Text>
+                        <Text style={styles.reactionUser}>{userName}</Text>
+                      </Pressable>
+                    );
+                  })}
+                </View>
+                <View style={styles.actionButtons}>
+                  <Pressable
+                    onPress={() => setShowReactionPicker(showReactionPicker === item.id ? null : item.id)}
+                    style={styles.actionButton}
+                  >
+                    <Feather name="heart" size={20} color={colors.mutedForeground} />
+                  </Pressable>
+                  {item.user_id === user?.id && (
+                    <Pressable
+                      onPress={() => {
+                        setEditingMemory(item.id);
+                        setEditCaption(item.caption || '');
+                      }}
+                      style={styles.actionButton}
+                    >
+                      <Feather name="edit-2" size={18} color={colors.mutedForeground} />
+                    </Pressable>
+                  )}
+                </View>
+              </View>
+
+              {/* Reaction Picker */}
+              {showReactionPicker === item.id && (
+                <View style={[styles.reactionPicker, { backgroundColor: colors.card }]}>
+                  {['❤️', '😂', '😍', '🥰', '😢', '😮', '🔥', '👍'].map((emoji) => {
+                    const hasReacted = reactions[item.id]?.some(
+                      (r: any) => r.user_id === user?.id && r.emoji === emoji
+                    );
+                    return (
+                      <Pressable
+                        key={emoji}
+                        onPress={() => {
+                          if (hasReacted) {
+                            removeReaction(item.id, emoji);
+                          } else {
+                            addReaction(item.id, emoji);
+                          }
+                          setShowReactionPicker(null);
+                        }}
+                        style={[
+                          styles.emojiOption,
+                          hasReacted && { backgroundColor: colors.primary }
+                        ]}
+                      >
+                        <Text style={styles.emojiText}>{emoji}</Text>
+                      </Pressable>
+                    );
+                  })}
+                </View>
+              )}
             </View>
           )}
           contentContainerStyle={{ padding: 16, paddingBottom: 120 }}
@@ -402,7 +695,31 @@ export default function MemoriesScreen() {
 const styles = StyleSheet.create({
   container: { flex: 1 },
   scanLine: { position: "absolute", top: 0, left: 0, right: 0, height: 1, backgroundColor: "rgba(0,229,255,0.3)", zIndex: 10 },
-  title: { fontSize: 28, fontWeight: '700' },
+  gridBackground: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    zIndex: 0,
+  },
+  gridLineHorizontal: {
+    position: 'absolute',
+    top: '50%',
+    left: 0,
+    right: 0,
+    height: 1,
+    backgroundColor: 'rgba(0, 229, 255, 0.1)',
+  },
+  gridLineVertical: {
+    position: 'absolute',
+    left: '50%',
+    top: 0,
+    bottom: 0,
+    width: 1,
+    backgroundColor: 'rgba(0, 229, 255, 0.1)',
+  },
+  title: { fontSize: 28, fontWeight: '600', fontFamily: 'System' },
   headerRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
@@ -415,58 +732,70 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     padding: 40,
   },
-  emptyText: { fontSize: 18, textAlign: 'center', marginBottom: 24 },
+  emptyText: { fontSize: 16, textAlign: 'center', marginBottom: 24, fontFamily: 'System' },
   addFirstButton: {
     backgroundColor: '#00E5FF',
     paddingVertical: 14,
     paddingHorizontal: 32,
-    borderRadius: 999,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: '#00E5FF',
   },
   memoryCard: {
-    backgroundColor: 'rgba(26,26,30,0.85)',
-    borderRadius: 16,
+    backgroundColor: 'rgba(0, 0, 0, 0.6)',
+    borderRadius: 8,
     padding: 16,
-    marginBottom: 14,
+    marginBottom: 16,
     overflow: 'hidden',
+    borderWidth: 1,
+    borderColor: 'rgba(0, 229, 255, 0.3)',
   },
   memoryImage: {
     width: '100%',
     height: 200,
-    borderRadius: 12,
+    borderRadius: 4,
     marginBottom: 12,
+    borderWidth: 1,
+    borderColor: 'rgba(0, 229, 255, 0.2)',
   },
-  memoryText: { fontSize: 16, lineHeight: 24 },
+  memoryText: { fontSize: 16, lineHeight: 24, fontFamily: 'System' },
   memoryDate: {
-    fontSize: 13,
-    color: '#888',
+    fontSize: 12,
+    color: 'rgba(0, 229, 255, 0.7)',
     marginTop: 8,
+    fontFamily: 'Courier',
   },
   modalContainer: {
     flex: 1,
     justifyContent: 'flex-end',
-    backgroundColor: 'rgba(0,0,0,0.6)',
+    backgroundColor: 'rgba(0,0,0,0.8)',
   },
   modalContent: {
-    backgroundColor: '#1A1A1A',
-    borderTopLeftRadius: 24,
-    borderTopRightRadius: 24,
+    backgroundColor: 'rgba(0, 0, 0, 0.8)',
+    borderTopLeftRadius: 8,
+    borderTopRightRadius: 8,
     padding: 24,
     paddingBottom: 40,
+    borderWidth: 1,
+    borderColor: 'rgba(0, 229, 255, 0.3)',
   },
   modalTitle: {
-    fontSize: 22,
-    fontWeight: '700',
+    fontSize: 20,
+    fontWeight: '600',
     marginBottom: 16,
     textAlign: 'center',
+    fontFamily: 'System',
   },
   imagePickerButton: {
     height: 180,
-    backgroundColor: '#111',
-    borderRadius: 16,
+    backgroundColor: 'rgba(0, 0, 0, 0.6)',
+    borderRadius: 8,
     marginBottom: 16,
     justifyContent: 'center',
     alignItems: 'center',
     overflow: 'hidden',
+    borderWidth: 1,
+    borderColor: 'rgba(0, 229, 255, 0.2)',
   },
   imagePlaceholder: {
     alignItems: 'center',
@@ -476,39 +805,43 @@ const styles = StyleSheet.create({
     height: '100%',
   },
   memoryInput: {
-    backgroundColor: '#111',
+    backgroundColor: 'rgba(0, 0, 0, 0.6)',
     color: '#fff',
-    borderRadius: 16,
+    borderRadius: 4,
     padding: 16,
     fontSize: 16,
     minHeight: 80,
     textAlignVertical: 'top',
     marginBottom: 24,
+    borderWidth: 1,
+    borderColor: 'rgba(0, 229, 255, 0.2)',
   },
   uploadingContainer: {
     marginBottom: 20,
     alignItems: 'center',
   },
   uploadingText: {
-    fontSize: 15,
+    fontSize: 14,
     marginBottom: 8,
+    fontFamily: 'System',
   },
   progressBarBackground: {
     width: '100%',
-    height: 8,
-    backgroundColor: '#333',
-    borderRadius: 4,
+    height: 4,
+    backgroundColor: 'rgba(0, 0, 0, 0.6)',
+    borderRadius: 2,
     overflow: 'hidden',
     marginBottom: 6,
   },
   progressBarFill: {
     height: '100%',
     backgroundColor: '#00E5FF',
-    borderRadius: 4,
+    borderRadius: 2,
   },
   progressText: {
-    color: '#888',
-    fontSize: 13,
+    color: 'rgba(0, 229, 255, 0.7)',
+    fontSize: 12,
+    fontFamily: 'Courier',
   },
   modalButtons: {
     flexDirection: 'row',
@@ -518,18 +851,102 @@ const styles = StyleSheet.create({
   cancelButton: {
     flex: 1,
     padding: 16,
-    borderRadius: 16,
+    borderRadius: 4,
     alignItems: 'center',
-    backgroundColor: '#333',
+    backgroundColor: 'rgba(0, 0, 0, 0.6)',
+    borderWidth: 1,
+    borderColor: 'rgba(0, 229, 255, 0.2)',
   },
   saveButton: {
     flex: 1,
     padding: 16,
-    borderRadius: 16,
+    borderRadius: 4,
     alignItems: 'center',
     backgroundColor: '#00E5FF',
+    borderWidth: 1,
+    borderColor: '#00E5FF',
   },
   saveButtonDisabled: {
-    backgroundColor: '#444',
+    backgroundColor: 'rgba(0, 0, 0, 0.6)',
+    borderColor: 'rgba(0, 229, 255, 0.2)',
+  },
+  editContainer: {
+    marginBottom: 12,
+  },
+  editInput: {
+    borderWidth: 1,
+    borderColor: 'rgba(0, 229, 255, 0.2)',
+    borderRadius: 4,
+    padding: 12,
+    fontSize: 16,
+    minHeight: 80,
+    backgroundColor: 'rgba(0, 0, 0, 0.6)',
+  },
+  editButtons: {
+    flexDirection: 'row',
+    justifyContent: 'flex-end',
+    gap: 12,
+    marginTop: 8,
+  },
+  editButton: {
+    padding: 8,
+  },
+  memoryActions: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginTop: 12,
+    paddingTop: 12,
+    borderTopWidth: 1,
+    borderTopColor: 'rgba(0, 229, 255, 0.1)',
+  },
+  reactionsContainer: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 6,
+  },
+  reactionBubble: {
+    backgroundColor: 'rgba(0, 0, 0, 0.6)',
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 4,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    borderWidth: 1,
+    borderColor: 'rgba(0, 229, 255, 0.2)',
+  },
+  reactionEmoji: {
+    fontSize: 14,
+  },
+  reactionUser: {
+    fontSize: 10,
+    color: 'rgba(0, 229, 255, 0.7)',
+    fontFamily: 'Courier',
+  },
+  actionButtons: {
+    flexDirection: 'row',
+    gap: 12,
+  },
+  actionButton: {
+    padding: 8,
+  },
+  reactionPicker: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+    padding: 12,
+    borderRadius: 4,
+    marginTop: 8,
+    backgroundColor: 'rgba(0, 0, 0, 0.6)',
+    borderWidth: 1,
+    borderColor: 'rgba(0, 229, 255, 0.2)',
+  },
+  emojiOption: {
+    padding: 6,
+    borderRadius: 4,
+  },
+  emojiText: {
+    fontSize: 18,
   },
 });

@@ -19,7 +19,7 @@ interface NavigationDrawerProps {
 }
 
 const NAVIGATION_ITEMS = [
-  { name: 'Main', icon: 'home', route: '/(tabs)/index' },
+  { name: 'Main', icon: 'home', route: '/' },
   { name: 'Wordle', icon: 'grid', route: '/(tabs)/wordle' },
   { name: 'Chat', icon: 'message-circle', route: '/(tabs)/chat' },
   { name: 'Memories', icon: 'image', route: '/(tabs)/memories' },
@@ -33,7 +33,11 @@ export default function NavigationDrawer({ visible, onClose }: NavigationDrawerP
 
   const navigateTo = (route: string) => {
     console.log('Navigating to:', route);
-    router.replace(route as any);
+    if (route === '/') {
+      router.replace('/' as any);
+    } else {
+      router.push(route as any);
+    }
     onClose();
   };
 
@@ -46,7 +50,7 @@ export default function NavigationDrawer({ visible, onClose }: NavigationDrawerP
     >
       <Pressable style={styles.overlay} onPress={onClose}>
         <LinearGradient
-          colors={['#0A1628', '#0D2840', '#0F3A5C', '#0A4A6E', '#0A1628']}
+          colors={['rgba(0, 0, 0, 0.9)', 'rgba(0, 0, 0, 0.8)', 'rgba(0, 0, 0, 0.9)']}
           start={{ x: 0, y: 0 }}
           end={{ x: 0, y: 1 }}
           style={[styles.drawer, { paddingTop: insets.top, paddingBottom: insets.bottom }]}
@@ -88,12 +92,13 @@ const styles = StyleSheet.create({
   overlay: {
     flex: 1,
     backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    flexDirection: 'row',
   },
   drawer: {
     width: '80%',
     height: '100%',
-    borderTopRightRadius: 24,
-    borderBottomRightRadius: 24,
+    borderTopRightRadius: 4,
+    borderBottomRightRadius: 4,
   },
   drawerContent: {
     flex: 1,
@@ -104,11 +109,12 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     padding: 20,
     borderBottomWidth: 1,
-    borderBottomColor: 'rgba(14, 165, 233, 0.2)',
+    borderBottomColor: 'rgba(0, 229, 255, 0.2)',
   },
   title: {
-    fontSize: 24,
-    fontWeight: '700',
+    fontSize: 20,
+    fontWeight: '600',
+    fontFamily: 'System',
   },
   closeButton: {
     padding: 8,
@@ -125,14 +131,15 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     padding: 16,
     marginBottom: 8,
-    backgroundColor: 'rgba(20, 40, 70, 0.6)',
-    borderRadius: 12,
+    backgroundColor: 'rgba(0, 0, 0, 0.6)',
+    borderRadius: 4,
     borderWidth: 1,
-    borderColor: 'rgba(14, 165, 233, 0.3)',
+    borderColor: 'rgba(0, 229, 255, 0.2)',
   },
   navigationItemText: {
-    fontSize: 18,
+    fontSize: 16,
     fontWeight: '600',
     marginLeft: 16,
+    fontFamily: 'System',
   },
 });

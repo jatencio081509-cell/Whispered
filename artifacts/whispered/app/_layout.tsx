@@ -28,6 +28,8 @@ Notifications.setNotificationHandler({
     shouldShowAlert: true,
     shouldPlaySound: true,
     shouldSetBadge: false,
+    shouldShowBanner: true,
+    shouldShowList: true,
   }),
 });
 
@@ -101,8 +103,25 @@ function AuthGate({ children }: { children: React.ReactNode }) {
   // Register for push notifications only after sign in (non-blocking)
   useEffect(() => {
     if (isSignedIn && user?.id) {
-      // Fire and forget so it doesn't block the app
-      registerForPushNotificationsAsync(user.id);
+      // Request notification permissions first
+      (async () => {
+        try {
+          const { status: existingStatus } = await Notifications.getPermissionsAsync();
+          let finalStatus = existingStatus;
+          if (existingStatus !== 'granted') {
+            const { status } = await Notifications.requestPermissionsAsync();
+            finalStatus = status;
+          }
+          if (finalStatus !== 'granted') {
+            console.log('[Push] Failed to get push token for push notification!');
+            return;
+          }
+          // Fire and forget so it doesn't block the app
+          registerForPushNotificationsAsync(user.id);
+        } catch (error) {
+          console.log('[Push] Error requesting permissions:', error);
+        }
+      })();
     }
   }, [isSignedIn, user?.id]);
 

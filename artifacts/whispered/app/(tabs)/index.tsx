@@ -170,7 +170,12 @@ export default function HomeScreen() {
   const strokeDashoffset = circumference * (1 - progress);
 
   return (
-    <View style={[styles.gradientContainer, { backgroundColor: colors.background }]}>
+    <View style={[styles.container, { backgroundColor: colors.background }]}>
+      {/* Grid Pattern Background */}
+      <View style={styles.gridBackground}>
+        <View style={styles.gridLineHorizontal} />
+        <View style={styles.gridLineVertical} />
+      </View>
       <View style={styles.scanLine} />
       <ScrollView style={[styles.scrollView, { paddingTop: insets.top + 12 }]} key={refreshKey}>
         <View style={styles.content}>
@@ -381,11 +386,32 @@ export default function HomeScreen() {
 }
 
 const styles = StyleSheet.create({
-  gradientContainer: {
-    flex: 1,
-  },
   container: {
     flex: 1,
+  },
+  gridBackground: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    zIndex: 0,
+  },
+  gridLineHorizontal: {
+    position: 'absolute',
+    top: '50%',
+    left: 0,
+    right: 0,
+    height: 1,
+    backgroundColor: 'rgba(0, 229, 255, 0.1)',
+  },
+  gridLineVertical: {
+    position: 'absolute',
+    left: '50%',
+    top: 0,
+    bottom: 0,
+    width: 1,
+    backgroundColor: 'rgba(0, 229, 255, 0.1)',
   },
   scanLine: { position: "absolute", top: 0, left: 0, right: 0, height: 1, backgroundColor: "rgba(0,229,255,0.3)", zIndex: 10 },
   scrollView: {
@@ -401,20 +427,21 @@ const styles = StyleSheet.create({
     marginBottom: 32,
   },
   greeting: {
-    fontSize: 16,
-    fontFamily: "Inter_400Regular",
+    fontSize: 14,
+    fontFamily: "System",
   },
   name: {
-    fontSize: 32,
-    fontFamily: "Inter_700Bold",
-    letterSpacing: -0.5,
+    fontSize: 28,
+    fontFamily: "System",
+    fontWeight: '600',
   },
   section: {
     marginBottom: 32,
   },
   sectionTitle: {
-    fontSize: 18,
-    fontFamily: "Inter_600SemiBold",
+    fontSize: 16,
+    fontFamily: "System",
+    fontWeight: '600',
     marginBottom: 16,
   },
   moodContainer: {
@@ -423,13 +450,13 @@ const styles = StyleSheet.create({
     gap: 12,
   },
   moodButton: {
-    backgroundColor: '#1A1A1A',
-    borderRadius: 16,
+    backgroundColor: 'rgba(0, 0, 0, 0.6)',
+    borderRadius: 4,
     padding: 16,
     alignItems: 'center',
     width: '30%',
-    borderWidth: 2,
-    borderColor: '#333',
+    borderWidth: 1,
+    borderColor: 'rgba(0, 229, 255, 0.2)',
   },
   moodButtonActive: {
     backgroundColor: 'rgba(0, 229, 255, 0.1)',
@@ -448,11 +475,11 @@ const styles = StyleSheet.create({
     textAlign: 'center',
   },
   partnerCard: {
-    backgroundColor: '#1A1A1A',
-    borderRadius: 16,
+    backgroundColor: 'rgba(0, 0, 0, 0.6)',
+    borderRadius: 4,
     padding: 20,
     borderWidth: 1,
-    borderColor: '#333',
+    borderColor: 'rgba(0, 229, 255, 0.2)',
   },
   partnerHeader: {
     flexDirection: 'row',
@@ -461,35 +488,41 @@ const styles = StyleSheet.create({
     marginBottom: 8,
   },
   partnerTitle: {
-    fontSize: 17,
+    fontSize: 16,
     fontWeight: '600',
+    fontFamily: 'System',
   },
   partnerSubtext: {
     fontSize: 14,
+    fontFamily: 'System',
   },
   moodPlaceholder: {
     marginTop: 12,
     padding: 12,
-    backgroundColor: '#111',
-    borderRadius: 8,
+    backgroundColor: 'rgba(0, 0, 0, 0.6)',
+    borderRadius: 4,
     alignItems: 'center',
+    borderWidth: 1,
+    borderColor: 'rgba(0, 229, 255, 0.2)',
   },
   anniversaryCard: {
-    backgroundColor: '#1A1A1A',
-    borderRadius: 16,
+    backgroundColor: 'rgba(0, 0, 0, 0.6)',
+    borderRadius: 4,
     padding: 20,
     borderWidth: 1,
-    borderColor: '#333',
+    borderColor: 'rgba(0, 229, 255, 0.2)',
     alignItems: 'center',
     marginTop: 8,
   },
   anniversaryText: {
-    fontSize: 24,
-    fontWeight: '700',
+    fontSize: 20,
+    fontWeight: '600',
+    fontFamily: 'System',
   },
   anniversarySubtext: {
     fontSize: 14,
     marginTop: 4,
+    fontFamily: 'System',
   },
   linkText: {
     fontSize: 15,
@@ -550,17 +583,20 @@ const styles = StyleSheet.create({
     padding: 20,
   },
   modalContent: {
-    borderRadius: 16,
+    borderRadius: 4,
     padding: 20,
     width: '100%',
     maxWidth: 320,
     borderWidth: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.8)',
+    borderColor: 'rgba(0, 229, 255, 0.2)',
   },
   modalTitle: {
-    fontSize: 18,
+    fontSize: 16,
     fontWeight: '600',
     marginBottom: 16,
     textAlign: 'center',
+    fontFamily: 'System',
   },
   moodOption: {
     flexDirection: 'row',
@@ -568,6 +604,7 @@ const styles = StyleSheet.create({
     padding: 14,
     borderBottomWidth: 1,
     gap: 12,
+    borderBottomColor: 'rgba(0, 229, 255, 0.1)',
   },
   moodOptionEmoji: {
     fontSize: 24,
@@ -575,14 +612,17 @@ const styles = StyleSheet.create({
   moodOptionLabel: {
     fontSize: 16,
     fontWeight: '500',
+    fontFamily: 'System',
   },
   editInput: {
     height: 48,
-    borderRadius: 12,
+    borderRadius: 4,
     borderWidth: 1,
     paddingHorizontal: 16,
     fontSize: 16,
     marginBottom: 16,
+    backgroundColor: 'rgba(0, 0, 0, 0.6)',
+    borderColor: 'rgba(0, 229, 255, 0.2)',
   },
   modalButtons: {
     flexDirection: 'row',
@@ -592,17 +632,23 @@ const styles = StyleSheet.create({
   modalButton: {
     flex: 1,
     padding: 14,
-    borderRadius: 12,
+    borderRadius: 4,
     alignItems: 'center',
   },
   cancelButton: {
     borderWidth: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.6)',
+    borderColor: 'rgba(0, 229, 255, 0.2)',
   },
   saveButton: {
-    borderRadius: 12,
+    borderRadius: 4,
+    backgroundColor: '#00E5FF',
+    borderWidth: 1,
+    borderColor: '#00E5FF',
   },
   modalButtonText: {
     fontSize: 16,
     fontWeight: '600',
+    fontFamily: 'System',
   },
 });
