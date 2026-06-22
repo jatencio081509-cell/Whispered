@@ -28,7 +28,7 @@ export default function WordleScreen() {
       </View>
       <View style={styles.scanLine} />
       <View style={[styles.headerRow, { paddingTop: topPad + 12 }]}>
-        <Text style={[styles.title, { color: colors.text }]}>Wordle</Text>
+        <Text style={[styles.title, { color: colors.text }]}>Home</Text>
         <Pressable onPress={() => setShowNavigationDrawer(true)}>
           <Feather name="menu" size={24} color={colors.text} />
         </Pressable>
