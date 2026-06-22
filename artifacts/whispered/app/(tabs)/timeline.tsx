@@ -264,7 +264,7 @@ export default function TimelineScreen() {
         <Text style={[styles.headerTitle, { color: colors.text }]}>Timeline</Text>
         <View style={styles.headerButtons}>
           <Pressable
-            style={({ pressed }) => [styles.addBtn, { opacity: pressed ? 0.8 : 1, backgroundColor: colors.primary, borderColor: colors.primary }]}
+            style={({ pressed }) => [styles.addBtn, { opacity: pressed ? 0.8 : 1, backgroundColor: colors.primary, borderColor: colors.border }]}
             onPress={() => setShowModal(true)}
           >
             <Feather name="plus" size={20} color={colors.primaryForeground} />
@@ -282,7 +282,7 @@ export default function TimelineScreen() {
         </View>
       ) : events.length === 0 ? (
         <View style={styles.empty}>
-          <View style={[styles.emptyIcon, { backgroundColor: "rgba(0,229,255,0.08)", borderColor: colors.border, borderWidth: 1 }]}>
+          <View style={[styles.emptyIcon, { backgroundColor: colors.muted, borderColor: colors.border, borderWidth: 1 }]}>
             <Feather name="calendar" size={32} color={colors.primary} />
           </View>
           <Text style={[styles.emptyTitle, { color: colors.text }]}>No timeline events yet</Text>
@@ -299,12 +299,12 @@ export default function TimelineScreen() {
           contentContainerStyle={[styles.list, { paddingBottom: insets.bottom + 100 }]}
           renderItem={({ item: event }) => (
             <Pressable
-              style={[styles.eventCard, { backgroundColor: colors.card, borderColor: colors.border }]}
+              style={[styles.eventCard, { backgroundColor: colors.card, borderColor: colors.border, opacity: 0.95 }]}
               onLongPress={() => deleteEvent(event.id)}
             >
               <View style={styles.timelineLine}>
                 <View style={[styles.timelineDot, { backgroundColor: getCategoryColor(event.category) }]} />
-                <View style={[styles.timelineConnector, { backgroundColor: colors.border }]} />
+                <View style={[styles.timelineConnector, { backgroundColor: colors.mutedForeground, opacity: 0.3 }]} />
               </View>
               
               <View style={styles.eventContent}>
@@ -338,8 +338,8 @@ export default function TimelineScreen() {
           keyboardVerticalOffset={Platform.OS === 'ios' ? 50 : 0}
           style={styles.modalOverlay}
         >
-          <View style={[styles.modalSheet, { backgroundColor: colors.card, borderColor: colors.border }]}>
-            <View style={[styles.modalHandle, { backgroundColor: colors.border }]} />
+          <View style={[styles.modalSheet, { backgroundColor: colors.card, borderColor: colors.border, opacity: 0.98 }]}>
+            <View style={[styles.modalHandle, { backgroundColor: colors.mutedForeground, opacity: 0.5 }]} />
             <Text style={[styles.modalTitle, { color: colors.text }]}>New timeline event</Text>
             
             <TextInput
@@ -365,10 +365,16 @@ export default function TimelineScreen() {
               {CATEGORIES.map((cat) => (
                 <Pressable
                   key={cat}
-                  style={[styles.categoryOption, category === cat && styles.categoryOptionSelected, { borderColor: colors.border }]}
+                  style={[
+                    styles.categoryOption,
+                    {
+                      borderColor: category === cat ? colors.primary : colors.border,
+                      backgroundColor: category === cat ? `${colors.primary}20` : 'transparent'
+                    }
+                  ]}
                   onPress={() => setCategory(cat)}
                 >
-                  <Text style={[styles.categoryOptionText, category === cat && { color: colors.primary }]}>{cat}</Text>
+                  <Text style={[styles.categoryOptionText, { color: category === cat ? colors.primary : colors.text }]}>{cat}</Text>
                 </Pressable>
               ))}
             </View>
@@ -394,12 +400,12 @@ export default function TimelineScreen() {
 
             <View style={styles.modalButtons}>
               <Pressable
-                style={[styles.modalCancelBtn, { borderColor: colors.border }]}
+                style={[styles.modalCancelBtn, { borderColor: colors.border, backgroundColor: colors.muted }]}
                 onPress={() => { setShowModal(false); setTitle(""); setDescription(""); setCategory(""); setEventDate(""); }}
               >
                 <Text style={[styles.modalCancelText, { color: colors.mutedForeground }]}>Cancel</Text>
               </Pressable>
-              <Pressable style={[styles.modalSaveBtn, { backgroundColor: colors.primary }]} onPress={addEvent} disabled={isSaving}>
+              <Pressable style={[styles.modalSaveBtn, { backgroundColor: colors.primary, borderColor: colors.primary }]} onPress={addEvent} disabled={isSaving}>
                 {isSaving ? (
                   <ActivityIndicator color={colors.primaryForeground} size="small" />
                 ) : (
@@ -433,19 +439,19 @@ const styles = StyleSheet.create({
   header: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", paddingHorizontal: 20, paddingBottom: 12, borderBottomWidth: 1 },
   headerTitle: { fontSize: 20, fontFamily: "System", fontWeight: '600' },
   headerButtons: { flexDirection: "row", alignItems: "center", gap: 12 },
-  addBtn: { width: 44, height: 44, borderRadius: 8, borderWidth: 2, alignItems: "center", justifyContent: "center", borderColor: 'rgba(0, 229, 255, 0.3)', minWidth: 44, minHeight: 44 },
+  addBtn: { width: 44, height: 44, borderRadius: 8, borderWidth: 2, alignItems: "center", justifyContent: "center", minWidth: 44, minHeight: 44 },
   menuBtn: { padding: 8 },
   empty: { flex: 1, alignItems: "center", justifyContent: "center", gap: 14, padding: 32 },
-  emptyIcon: { width: 72, height: 72, borderRadius: 4, alignItems: "center", justifyContent: "center", borderWidth: 1, borderColor: 'rgba(0, 229, 255, 0.2)', backgroundColor: 'rgba(0, 0, 0, 0.6)' },
+  emptyIcon: { width: 72, height: 72, borderRadius: 4, alignItems: "center", justifyContent: "center", borderWidth: 1 },
   emptyTitle: { fontSize: 16, fontFamily: "System", fontWeight: '600' },
   emptySubtitle: { fontSize: 14, fontFamily: "System", textAlign: "center" },
-  emptyBtn: { flexDirection: "row", alignItems: "center", gap: 8, paddingHorizontal: 20, paddingVertical: 12, borderRadius: 4, marginTop: 8, borderWidth: 1, borderColor: 'rgba(0, 229, 255, 0.2)' },
+  emptyBtn: { flexDirection: "row", alignItems: "center", gap: 8, paddingHorizontal: 20, paddingVertical: 12, borderRadius: 4, marginTop: 8, borderWidth: 1 },
   emptyBtnText: { fontSize: 14, fontFamily: "System", fontWeight: '500' },
   list: { padding: 16, gap: 0 },
-  eventCard: { flexDirection: "row", paddingVertical: 16, gap: 16, backgroundColor: 'rgba(0, 0, 0, 0.6)', borderWidth: 1, borderColor: 'rgba(0, 229, 255, 0.2)', borderRadius: 4 },
+  eventCard: { flexDirection: "row", paddingVertical: 16, gap: 16, borderWidth: 1, borderRadius: 4, paddingHorizontal: 16 },
   timelineLine: { alignItems: "center", width: 20 },
   timelineDot: { width: 12, height: 12, borderRadius: 6 },
-  timelineConnector: { width: 2, flex: 1, minHeight: 40, backgroundColor: 'rgba(0, 229, 255, 0.2)' },
+  timelineConnector: { width: 2, flex: 1, minHeight: 40 },
   eventContent: { flex: 1, gap: 8 },
   eventHeader: { flexDirection: "row", justifyContent: "space-between", alignItems: "center" },
   eventDate: { fontSize: 12, fontFamily: "System", fontWeight: '600' },
@@ -456,22 +462,22 @@ const styles = StyleSheet.create({
   youBadge: { paddingHorizontal: 8, paddingVertical: 4, borderRadius: 4 },
   youText: { fontSize: 10, fontFamily: "System", fontWeight: '600' },
   modalOverlay: { flex: 1, backgroundColor: "rgba(0,0,0,0.8)", justifyContent: "flex-end" },
-  modalSheet: { borderTopLeftRadius: 4, borderTopRightRadius: 4, borderWidth: 1, padding: 24, gap: 16, borderColor: 'rgba(0, 229, 255, 0.2)', backgroundColor: 'rgba(0, 0, 0, 0.8)' },
-  modalHandle: { width: 36, height: 4, borderRadius: 2, alignSelf: "center", marginBottom: 4, backgroundColor: 'rgba(0, 229, 255, 0.2)' },
+  modalSheet: { borderTopLeftRadius: 4, borderTopRightRadius: 4, borderWidth: 1, padding: 24, gap: 16 },
+  modalHandle: { width: 36, height: 4, borderRadius: 2, alignSelf: "center", marginBottom: 4 },
   modalTitle: { fontSize: 16, fontFamily: "System", fontWeight: '600' },
-  titleInput: { height: 48, borderRadius: 4, borderWidth: 1, padding: 14, fontSize: 16, fontFamily: "System", backgroundColor: 'rgba(0, 0, 0, 0.6)', borderColor: 'rgba(0, 229, 255, 0.2)' },
-  descriptionInput: { minHeight: 80, borderRadius: 4, borderWidth: 1, padding: 14, fontSize: 14, fontFamily: "System", backgroundColor: 'rgba(0, 0, 0, 0.6)', borderColor: 'rgba(0, 229, 255, 0.2)' },
+  titleInput: { height: 48, borderRadius: 4, borderWidth: 1, padding: 14, fontSize: 16, fontFamily: "System" },
+  descriptionInput: { minHeight: 80, borderRadius: 4, borderWidth: 1, padding: 14, fontSize: 14, fontFamily: "System" },
   label: { fontSize: 12, fontFamily: "System", fontWeight: '500', marginBottom: 8 },
   categorySelector: { flexDirection: "row", gap: 8, flexWrap: "wrap" },
-  categoryOption: { paddingHorizontal: 12, paddingVertical: 8, borderRadius: 4, borderWidth: 1, borderColor: 'rgba(0, 229, 255, 0.2)' },
-  categoryOptionSelected: { borderWidth: 2, borderColor: '#00E5FF' },
+  categoryOption: { paddingHorizontal: 12, paddingVertical: 8, borderRadius: 4, borderWidth: 1 },
+  categoryOptionSelected: { borderWidth: 2 },
   categoryOptionText: { fontSize: 12, fontFamily: "System", fontWeight: '500' },
-  dateInput: { height: 48, borderRadius: 4, borderWidth: 1, paddingHorizontal: 14, flexDirection: "row", alignItems: "center", justifyContent: "space-between", backgroundColor: 'rgba(0, 0, 0, 0.6)', borderColor: 'rgba(0, 229, 255, 0.2)' },
+  dateInput: { height: 48, borderRadius: 4, borderWidth: 1, paddingHorizontal: 14, flexDirection: "row", alignItems: "center", justifyContent: "space-between" },
   dateText: { fontSize: 14, fontFamily: "System" },
   modalButtons: { flexDirection: "row", gap: 12 },
-  modalCancelBtn: { flex: 1, height: 48, borderRadius: 4, alignItems: "center", justifyContent: "center", borderWidth: 1, backgroundColor: 'rgba(0, 0, 0, 0.6)', borderColor: 'rgba(0, 229, 255, 0.2)' },
+  modalCancelBtn: { flex: 1, height: 48, borderRadius: 4, alignItems: "center", justifyContent: "center", borderWidth: 1 },
   modalCancelText: { fontSize: 14, fontFamily: "System", fontWeight: '500' },
-  modalSaveBtn: { flex: 1, height: 48, borderRadius: 4, alignItems: "center", justifyContent: "center", backgroundColor: '#00E5FF', borderWidth: 1, borderColor: '#00E5FF' },
-  modalSaveText: { fontSize: 14, fontFamily: "System", fontWeight: '600', color: "#030712" },
+  modalSaveBtn: { flex: 1, height: 48, borderRadius: 4, alignItems: "center", justifyContent: "center", borderWidth: 1 },
+  modalSaveText: { fontSize: 14, fontFamily: "System", fontWeight: '600' },
   fab: { position: "absolute", right: 20, width: 56, height: 56, borderRadius: 28, alignItems: "center", justifyContent: "center", elevation: 4, shadowColor: "#000", shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.25, shadowRadius: 3.84 },
 });
