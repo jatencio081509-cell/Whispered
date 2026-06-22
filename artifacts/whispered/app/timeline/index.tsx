@@ -84,22 +84,8 @@ export default function TimelineScreen() {
       });
     }
 
-    AsyncStorage.multiGet(["journal", "memories", "goals"]).then(
-      ([j, m, g]) => {
-        if (j[1]) {
-          const entries = JSON.parse(j[1]);
-          if (entries.length > 0) {
-            auto.push({
-              id: "first_journal",
-              title: "First journal entry",
-              description: entries[0].title || "Your thoughts captured",
-              date: entries[0].createdAt,
-              icon: "book-open",
-              color: "#4ADE80",
-              auto: true,
-            });
-          }
-        }
+    AsyncStorage.multiGet(["memories", "goals"]).then(
+      ([m, g]) => {
         if (m[1]) {
           const mems = JSON.parse(m[1]);
           if (mems.length > 0) {

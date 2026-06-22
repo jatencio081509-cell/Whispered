@@ -148,10 +148,6 @@ function RootLayoutNav() {
           options={{ presentation: "modal", animation: "slide_from_bottom" }}
         />
         <Stack.Screen
-          name="journal/index"
-          options={{ presentation: "modal", animation: "slide_from_bottom" }}
-        />
-        <Stack.Screen
           name="prompts/index"
           options={{ presentation: "modal", animation: "slide_from_bottom" }}
         />
