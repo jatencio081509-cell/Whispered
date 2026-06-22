@@ -19,7 +19,6 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import NavigationDrawer from '@/components/NavigationDrawer';
 import { supabase } from '@/lib/supabase';
-import { supabaseAdmin } from '@/lib/syncClerkToSupabase';
 
 type Message = {
   id: string;
@@ -39,6 +38,7 @@ export default function ChatScreen() {
   const [input, setInput] = useState('');
   const [showNavigationDrawer, setShowNavigationDrawer] = useState(false);
   const [isNearBottom, setIsNearBottom] = useState(true);
+  const [initialLoad, setInitialLoad] = useState(true);
 
   const partnerCode = user?.unsafeMetadata?.partnerCode as string | undefined;
   const partnerName = user?.unsafeMetadata?.partnerName as string | undefined;
@@ -59,7 +59,7 @@ export default function ChatScreen() {
     setIsNearBottom(nearBottom);
   };
 
-  const fetchMessages = async () => {
+  const fetchMessages = async (shouldScroll = false) => {
     if (!myUserId || !partnerUserId) return;
 
     try {
@@ -87,8 +87,15 @@ export default function ChatScreen() {
         time: new Date(msg.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
       }));
 
+      const previousLength = messages.length;
       setMessages(formatted);
-      if (isNearBottom) scrollToBottom(false);
+
+      // Scroll to bottom on initial load or if new messages were added and user is near bottom
+      if (shouldScroll) {
+        if (initialLoad || (formatted.length > previousLength && isNearBottom)) {
+          scrollToBottom(false);
+        }
+      }
     } catch (err) {
       console.error('Failed to fetch messages:', err);
     }
@@ -143,7 +150,7 @@ export default function ChatScreen() {
     if (!isLinked) return;
 
     const interval = setInterval(() => {
-      fetchMessages();
+      fetchMessages(false); // Don't auto-scroll on polling
     }, 1000);
 
     return () => clearInterval(interval);
@@ -151,9 +158,19 @@ export default function ChatScreen() {
 
   useEffect(() => {
     if (isLinked) {
-      fetchMessages();
+      fetchMessages(true); // Scroll on initial load
     }
   }, [isLinked, partnerUserId]);
+
+  // Scroll to bottom on initial load after messages are rendered
+  useEffect(() => {
+    if (initialLoad && messages.length > 0) {
+      setTimeout(() => {
+        scrollToBottom(false);
+        setInitialLoad(false);
+      }, 100);
+    }
+  }, [messages, initialLoad]);
 
   const sendMessage = async () => {
     if (!input.trim() || !myUserId || !partnerUserId) {
@@ -167,8 +184,7 @@ export default function ChatScreen() {
     setInput('');
 
     try {
-      const client = supabaseAdmin || supabase;
-      const { error } = await client.from('messages').insert({
+      const { error } = await supabase.from('messages').insert({
         from_user_id: myUserId,
         to_user_id: partnerUserId,
         text: messageText,
@@ -270,9 +286,6 @@ export default function ChatScreen() {
           contentContainerStyle={styles.messagesContainer}
           onScroll={handleScroll}
           scrollEventThrottle={16}
-          onContentSizeChange={() => {
-            if (isNearBottom) scrollToBottom(false);
-          }}
           maintainVisibleContentPosition={{
             minIndexForVisible: 0,
             autoscrollToTopThreshold: 10,
@@ -292,7 +305,7 @@ export default function ChatScreen() {
           <TextInput
             value={input}
             onChangeText={setInput}
-            placeholder="iMessage"
+            placeholder="Message"
             placeholderTextColor={colors.mutedForeground}
             style={styles.input}
             onSubmitEditing={sendMessage}
