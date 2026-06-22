@@ -14,6 +14,7 @@ import { useColors } from "@/hooks/useColors";
 import { useApp } from "@/context/AppContext";
 import * as Haptics from "expo-haptics";
 import NavigationDrawer from '@/components/NavigationDrawer';
+import ThemeBackground from '@/components/ThemeBackground';
 import { useUser } from '@clerk/expo';
 
 const FEATURES = [
@@ -36,12 +37,7 @@ export default function MoreScreen() {
 
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>
-      {/* Grid Pattern Background */}
-      <View style={styles.gridBackground}>
-        <View style={styles.gridLineHorizontal} />
-        <View style={styles.gridLineVertical} />
-      </View>
-      <View style={styles.scanLine} />
+      <ThemeBackground>
       <ScrollView
         contentContainerStyle={[styles.inner, { paddingTop: topPad + 16, paddingBottom: insets.bottom + 100 }]}
         showsVerticalScrollIndicator={false}
@@ -96,38 +92,13 @@ export default function MoreScreen() {
         visible={showNavigationDrawer}
         onClose={() => setShowNavigationDrawer(false)}
       />
-
+      </ThemeBackground>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
   container: { flex: 1 },
-  gridBackground: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
-    zIndex: 0,
-  },
-  gridLineHorizontal: {
-    position: 'absolute',
-    top: '50%',
-    left: 0,
-    right: 0,
-    height: 1,
-    backgroundColor: 'rgba(0, 229, 255, 0.1)',
-  },
-  gridLineVertical: {
-    position: 'absolute',
-    left: '50%',
-    top: 0,
-    bottom: 0,
-    width: 1,
-    backgroundColor: 'rgba(0, 229, 255, 0.1)',
-  },
-  scanLine: { position: "absolute", top: 0, left: 0, right: 0, height: 1, backgroundColor: "rgba(0,229,255,0.3)", zIndex: 10 },
   inner: { paddingHorizontal: 20, gap: 20 },
   headerRow: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 4 },
   title: { fontSize: 24, fontFamily: "System", fontWeight: '600' },

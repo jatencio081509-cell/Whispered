@@ -9,6 +9,7 @@ import {
 import { useColors } from '@/hooks/useColors';
 import { useRouter } from 'expo-router';
 import NavigationDrawer from '@/components/NavigationDrawer';
+import ThemeBackground from '@/components/ThemeBackground';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Feather } from '@expo/vector-icons';
 
@@ -21,12 +22,7 @@ export default function WordleScreen() {
 
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>
-      {/* Grid Pattern Background */}
-      <View style={styles.gridBackground}>
-        <View style={styles.gridLineHorizontal} />
-        <View style={styles.gridLineVertical} />
-      </View>
-      <View style={styles.scanLine} />
+      <ThemeBackground>
       <View style={[styles.headerRow, { paddingTop: topPad + 12 }]}>
         <Text style={[styles.title, { color: colors.text }]}>Home</Text>
         <Pressable onPress={() => setShowNavigationDrawer(true)}>
@@ -44,37 +40,13 @@ export default function WordleScreen() {
         visible={showNavigationDrawer}
         onClose={() => setShowNavigationDrawer(false)}
       />
+      </ThemeBackground>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
   container: { flex: 1 },
-  gridBackground: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
-    zIndex: 0,
-  },
-  gridLineHorizontal: {
-    position: 'absolute',
-    top: '50%',
-    left: 0,
-    right: 0,
-    height: 1,
-    backgroundColor: 'rgba(0, 229, 255, 0.1)',
-  },
-  gridLineVertical: {
-    position: 'absolute',
-    left: '50%',
-    top: 0,
-    bottom: 0,
-    width: 1,
-    backgroundColor: 'rgba(0, 229, 255, 0.1)',
-  },
-  scanLine: { position: "absolute", top: 0, left: 0, right: 0, height: 1, backgroundColor: "rgba(0,229,255,0.3)", zIndex: 10 },
   headerRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',

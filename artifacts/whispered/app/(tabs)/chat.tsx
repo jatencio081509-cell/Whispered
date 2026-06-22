@@ -18,6 +18,7 @@ import { Feather } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import NavigationDrawer from '@/components/NavigationDrawer';
+import ThemeBackground from '@/components/ThemeBackground';
 import { supabase } from '@/lib/supabase';
 
 type Message = {
@@ -221,11 +222,11 @@ export default function ChatScreen() {
 
   const renderMessage: ListRenderItem<Message> = ({ item }) => (
     <View style={[styles.messageRow, item.fromMe ? styles.rowRight : styles.rowLeft]}>
-      <View style={[styles.messageBubble, item.fromMe ? styles.myMessage : styles.theirMessage]}>
-        <Text style={[styles.messageText, { color: item.fromMe ? '#fff' : colors.foreground }]}>
+      <View style={[styles.messageBubble, item.fromMe ? styles.myMessage : styles.theirMessage, item.fromMe && { backgroundColor: colors.chatBoxes }]}>
+        <Text style={[styles.messageText, { color: item.fromMe ? colors.chatBoxesForeground : colors.foreground }]}>
           {item.text}
         </Text>
-        <Text style={[styles.messageTime, { color: item.fromMe ? 'rgba(255,255,255,0.7)' : colors.mutedForeground }]}>
+        <Text style={[styles.messageTime, { color: item.fromMe ? colors.chatBoxesForeground : colors.mutedForeground }]}>
           {item.time}
         </Text>
       </View>
@@ -260,24 +261,19 @@ export default function ChatScreen() {
       style={{ flex: 1, backgroundColor: colors.background }}
     >
       <View style={[styles.container, { backgroundColor: colors.background }]}>
-        {/* Grid Pattern Background */}
-        <View style={styles.gridBackground}>
-          <View style={styles.gridLineHorizontal} />
-          <View style={styles.gridLineVertical} />
-        </View>
-        <View style={styles.scanLine} />
-        <View style={{ paddingTop: insets.top, paddingHorizontal: 20 }}>
-          <View style={styles.headerRow}>
-            <Text style={[styles.headerTitle, { color: colors.text }]}>
-              {partnerName ? partnerName : 'Partner'}
-            </Text>
-            <Pressable onPress={() => setShowNavigationDrawer(true)}>
-              <Feather name="menu" size={24} color={colors.primary} />
-            </Pressable>
+        <ThemeBackground>
+          <View style={{ paddingTop: insets.top, paddingHorizontal: 20 }}>
+            <View style={styles.headerRow}>
+              <Text style={[styles.headerTitle, { color: colors.text }]}>
+                {partnerName ? partnerName : 'Partner'}
+              </Text>
+              <Pressable onPress={() => setShowNavigationDrawer(true)}>
+                <Feather name="menu" size={24} color={colors.primary} />
+              </Pressable>
+            </View>
           </View>
-        </View>
 
-      <View style={{ flex: 1 }}>
+          <View style={{ flex: 1 }}>
         <FlatList
           ref={flatListRef}
           data={messages}
@@ -326,6 +322,7 @@ export default function ChatScreen() {
         visible={showNavigationDrawer}
         onClose={() => setShowNavigationDrawer(false)}
       />
+        </ThemeBackground>
     </View>
     </KeyboardAvoidingView>
   );
@@ -333,31 +330,6 @@ export default function ChatScreen() {
 
 const styles = StyleSheet.create({
   container: { flex: 1 },
-  gridBackground: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
-    zIndex: 0,
-  },
-  gridLineHorizontal: {
-    position: 'absolute',
-    top: '50%',
-    left: 0,
-    right: 0,
-    height: 1,
-    backgroundColor: 'rgba(0, 229, 255, 0.1)',
-  },
-  gridLineVertical: {
-    position: 'absolute',
-    left: '50%',
-    top: 0,
-    bottom: 0,
-    width: 1,
-    backgroundColor: 'rgba(0, 229, 255, 0.1)',
-  },
-  scanLine: { position: "absolute", top: 0, left: 0, right: 0, height: 1, backgroundColor: "rgba(0,229,255,0.3)", zIndex: 10 },
   centered: { flex: 1, justifyContent: 'center', alignItems: 'center', padding: 24 },
   headerRow: {
     flexDirection: 'row',

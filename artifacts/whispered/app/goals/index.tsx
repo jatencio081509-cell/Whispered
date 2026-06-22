@@ -19,6 +19,7 @@ import { useApp } from "@/context/AppContext";
 import { supabase } from "@/lib/supabase";
 import * as Haptics from "expo-haptics";
 import NavigationDrawer from '@/components/NavigationDrawer';
+import ThemeBackground from '@/components/ThemeBackground';
 
 interface Goal {
   id: string;
@@ -70,15 +71,6 @@ export default function GoalsScreen() {
   const effectiveCoupleId = (myUserId && partnerUserId) 
     ? generateCoupleId(myUserId, partnerUserId)
     : coupleId;
-
-  // Debug logging
-  useEffect(() => {
-    console.log('Goals screen - couple data:', couple);
-    console.log('Goals screen - coupleId:', coupleId);
-    console.log('Goals screen - effectiveCoupleId:', effectiveCoupleId);
-    console.log('Goals screen - partnerUserId:', partnerUserId);
-    console.log('Goals screen - myUserId:', myUserId);
-  }, [couple, coupleId, effectiveCoupleId, partnerUserId, myUserId]);
 
   const fetchGoals = async () => {
     if (!effectiveCoupleId) return;
@@ -227,13 +219,21 @@ export default function GoalsScreen() {
         const currentUserProgress = goal.userProgress[myUserId] || 0;
         const newProgress = Math.max(0, Math.min(100, currentUserProgress + delta));
         
+        const updatedUserProgress = {
+          ...goal.userProgress,
+          [myUserId]: newProgress,
+        };
+
+        // Calculate if goal is completed (both users at 100%)
+        const creatorProgress = updatedUserProgress[goal.createdBy] || 0;
+        const partnerProgress = partnerUserId ? (updatedUserProgress[partnerUserId] || 0) : 0;
+        const completed = creatorProgress >= 100 && partnerProgress >= 100;
+        
         const { error } = await supabase
           .from('goals')
           .update({
-            user_progress: {
-              ...goal.userProgress,
-              [myUserId]: newProgress,
-            },
+            user_progress: updatedUserProgress,
+            completed,
             updated_by: myUserId,
           })
           .eq('id', id);
@@ -316,10 +316,18 @@ export default function GoalsScreen() {
   }, [effectiveCoupleId]);
 
   const formatDate = (dateStr: string) => {
-    return new Date(dateStr).toLocaleDateString(undefined, {
-      month: 'short',
-      day: 'numeric',
-    });
+    if (!dateStr) return '';
+    try {
+      const date = new Date(dateStr);
+      if (isNaN(date.getTime())) return '';
+      return date.toLocaleDateString(undefined, {
+        month: 'short',
+        day: 'numeric',
+      });
+    } catch (err) {
+      console.error('Error formatting date:', err);
+      return '';
+    }
   };
 
   const checkAndResetGoal = async (goal: Goal) => {
@@ -337,10 +345,10 @@ export default function GoalsScreen() {
       const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
       needsReset = today > lastResetDate;
     } else if (goal.frequency === 'yearly') {
-      // Check if it's been a year since creation
-      const yearFromCreation = new Date(createdAt);
-      yearFromCreation.setFullYear(yearFromCreation.getFullYear() + 1);
-      needsReset = now >= yearFromCreation;
+      // Check if it's been a year since last reset (not since creation)
+      const lastResetYear = lastReset.getFullYear();
+      const currentYear = now.getFullYear();
+      needsReset = currentYear > lastResetYear;
     }
 
     if (needsReset && myUserId) {
@@ -369,6 +377,8 @@ export default function GoalsScreen() {
 
         if (error) {
           console.error('Error resetting goal:', error);
+          alert('Failed to reset goal: ' + error.message);
+          return goal;
         } else {
           // Return the updated goal
           return {
@@ -382,6 +392,8 @@ export default function GoalsScreen() {
         }
       } catch (err) {
         console.error('Failed to reset goal:', err);
+        alert('Failed to reset goal');
+        return goal;
       }
     }
 
@@ -391,18 +403,23 @@ export default function GoalsScreen() {
   const isCreatedByMe = (goal: Goal) => goal.createdBy === myUserId;
   const isUpdatedByPartner = (goal: Goal) => goal.updatedBy === partnerUserId;
 
+  const isGoalCompleted = (goal: Goal) => {
+    if (!goal.isShared) {
+      return goal.completed;
+    }
+    // For shared goals, check if both users have reached 100%
+    const creatorProgress = goal.userProgress[goal.createdBy] || 0;
+    const partnerProgress = partnerUserId ? (goal.userProgress[partnerUserId] || 0) : 0;
+    return creatorProgress >= 100 && partnerProgress >= 100;
+  };
+
   return (
     <KeyboardAvoidingView
       behavior={Platform.OS === "ios" ? "padding" : "height"}
       style={{ flex: 1, backgroundColor: colors.background }}
     >
       <View style={[styles.container, { backgroundColor: colors.background }]}>
-        {/* Grid Pattern Background */}
-        <View style={styles.gridBackground}>
-          <View style={styles.gridLineHorizontal} />
-          <View style={styles.gridLineVertical} />
-        </View>
-        <View style={styles.scanLine} />
+        <ThemeBackground>
 
         <View
           style={[
@@ -817,7 +834,15 @@ export default function GoalsScreen() {
                 <View style={styles.modalBtns}>
                   <Pressable
                     style={[styles.cancelBtn, { borderColor: colors.border }]}
-                    onPress={() => setShowModal(false)}
+                    onPress={() => {
+                      setShowModal(false);
+                      setEditGoal(null);
+                      setTitle("");
+                      setDescription("");
+                      setDueDate("");
+                      setFrequency('one-time');
+                      setIsShared(false);
+                    }}
                   >
                     <Text style={[styles.cancelText, { color: colors.mutedForeground }]}>
                       Cancel
@@ -845,6 +870,7 @@ export default function GoalsScreen() {
           visible={showNavigationDrawer}
           onClose={() => setShowNavigationDrawer(false)}
         />
+        </ThemeBackground>
       </View>
     </KeyboardAvoidingView>
   );
@@ -852,31 +878,6 @@ export default function GoalsScreen() {
 
 const styles = StyleSheet.create({
   container: { flex: 1 },
-  gridBackground: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
-    zIndex: 0,
-  },
-  gridLineHorizontal: {
-    position: 'absolute',
-    top: '50%',
-    left: 0,
-    right: 0,
-    height: 1,
-    backgroundColor: 'rgba(0, 229, 255, 0.1)',
-  },
-  gridLineVertical: {
-    position: 'absolute',
-    left: '50%',
-    top: 0,
-    bottom: 0,
-    width: 1,
-    backgroundColor: 'rgba(0, 229, 255, 0.1)',
-  },
-  scanLine: { position: "absolute", top: 0, left: 0, right: 0, height: 1, backgroundColor: "rgba(0,229,255,0.3)", zIndex: 10 },
   header: {
     flexDirection: "row",
     alignItems: "center",

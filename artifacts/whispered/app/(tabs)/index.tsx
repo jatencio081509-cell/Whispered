@@ -11,6 +11,7 @@ import { useApp } from '@/context/AppContext';
 import { View, Text, Pressable, StyleSheet, ScrollView, Modal, TextInput } from 'react-native';
 import Svg, { Circle } from 'react-native-svg';
 import NavigationDrawer from '@/components/NavigationDrawer';
+import ThemeBackground from '@/components/ThemeBackground';
 
 const MOODS = [
   { emoji: '😊', label: 'Happy' },
@@ -171,13 +172,8 @@ export default function HomeScreen() {
 
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>
-      {/* Grid Pattern Background */}
-      <View style={styles.gridBackground}>
-        <View style={styles.gridLineHorizontal} />
-        <View style={styles.gridLineVertical} />
-      </View>
-      <View style={styles.scanLine} />
-      <ScrollView style={[styles.scrollView, { paddingTop: insets.top + 12 }]} key={refreshKey}>
+      <ThemeBackground>
+        <ScrollView style={[styles.scrollView, { paddingTop: insets.top + 12 }]} key={refreshKey}>
         <View style={styles.content}>
           {/* Header */}
           <View style={styles.header}>
@@ -256,13 +252,22 @@ export default function HomeScreen() {
             <View style={styles.moodBox}>
               <Text style={[styles.moodBoxTitle, { color: colors.text }]}>My mood</Text>
               <Pressable
-                style={[styles.moodDropdown, { borderColor: colors.border }]}
+                style={({ pressed }) => [
+                  styles.moodDropdown,
+                  { 
+                    borderColor: myMood ? colors.primary : colors.border,
+                    backgroundColor: myMood ? "rgba(0,229,255,0.05)" : colors.surface,
+                    opacity: pressed ? 0.8 : 1
+                  }
+                ]}
                 onPress={() => setShowMyMoodDropdown(true)}
               >
-                <Text style={[styles.moodDropdownText, { color: myMood ? colors.text : colors.mutedForeground }]}>
-                  {myMood || 'Select mood'}
-                </Text>
-                <Feather name="chevron-down" size={16} color={colors.mutedForeground} />
+                <View style={styles.moodDropdownContent}>
+                  <Text style={[styles.moodDropdownText, { color: myMood ? colors.text : colors.mutedForeground }]}>
+                    {myMood ? MOODS.find(m => m.label.toLowerCase() === myMood)?.emoji + ' ' + myMood : 'Select mood'}
+                  </Text>
+                  <Feather name="chevron-down" size={16} color={myMood ? colors.primary : colors.mutedForeground} />
+                </View>
               </Pressable>
             </View>
 
@@ -271,10 +276,15 @@ export default function HomeScreen() {
               <Text style={[styles.moodBoxTitle, { color: colors.text }]}>
                 {partnerName ? `${partnerName}'s mood` : "Partner's mood"}
               </Text>
-              <View style={[styles.moodDropdown, { borderColor: colors.border }]}>
-                <Text style={[styles.moodDropdownText, { color: partnerMood ? colors.text : colors.mutedForeground }]}>
-                  {partnerMood || 'Not set'}
-                </Text>
+              <View style={[styles.moodDropdown, { 
+                borderColor: partnerMood ? colors.primary : colors.border,
+                backgroundColor: partnerMood ? "rgba(0,229,255,0.05)" : colors.surface
+              }]}>
+                <View style={styles.moodDropdownContent}>
+                  <Text style={[styles.moodDropdownText, { color: partnerMood ? colors.text : colors.mutedForeground }]}>
+                    {partnerMood ? MOODS.find(m => m.label.toLowerCase() === partnerMood)?.emoji + ' ' + partnerMood : 'Not set'}
+                  </Text>
+                </View>
               </View>
             </View>
           </View>
@@ -323,19 +333,33 @@ export default function HomeScreen() {
         <Pressable style={styles.modalOverlay} onPress={() => setShowMyMoodDropdown(false)}>
           <View style={[styles.modalContent, { backgroundColor: colors.card, borderColor: colors.border }]}>
             <Text style={[styles.modalTitle, { color: colors.text }]}>Select your mood</Text>
-            {MOODS.map((mood) => (
-              <Pressable
-                key={mood.label}
-                style={[styles.moodOption, { borderBottomColor: colors.border }]}
-                onPress={() => {
-                  setMyMood(mood.label.toLowerCase() as any);
-                  setShowMyMoodDropdown(false);
-                }}
-              >
-                <Text style={styles.moodOptionEmoji}>{mood.emoji}</Text>
-                <Text style={[styles.moodOptionLabel, { color: colors.text }]}>{mood.label}</Text>
-              </Pressable>
-            ))}
+            <View style={styles.moodGrid}>
+              {MOODS.map((mood) => (
+                <Pressable
+                  key={mood.label}
+                  style={({ pressed }) => [
+                    styles.moodOption,
+                    { 
+                      backgroundColor: myMood === mood.label.toLowerCase() ? "rgba(0,229,255,0.1)" : colors.surface,
+                      borderColor: myMood === mood.label.toLowerCase() ? colors.primary : colors.border,
+                      opacity: pressed ? 0.8 : 1
+                    }
+                  ]}
+                  onPress={() => {
+                    setMyMood(mood.label.toLowerCase() as any);
+                    setShowMyMoodDropdown(false);
+                  }}
+                >
+                  <Text style={styles.moodOptionEmoji}>{mood.emoji}</Text>
+                  <Text style={[styles.moodOptionLabel, { color: colors.text }]}>{mood.label}</Text>
+                  {myMood === mood.label.toLowerCase() && (
+                    <View style={styles.selectedIndicator}>
+                      <Feather name="check" size={14} color={colors.primary} />
+                    </View>
+                  )}
+                </Pressable>
+              ))}
+            </View>
           </View>
         </Pressable>
       </Modal>
@@ -381,6 +405,7 @@ export default function HomeScreen() {
       />
 
       </ScrollView>
+      </ThemeBackground>
     </View>
   );
 }
@@ -389,31 +414,6 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
   },
-  gridBackground: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
-    zIndex: 0,
-  },
-  gridLineHorizontal: {
-    position: 'absolute',
-    top: '50%',
-    left: 0,
-    right: 0,
-    height: 1,
-    backgroundColor: 'rgba(0, 229, 255, 0.1)',
-  },
-  gridLineVertical: {
-    position: 'absolute',
-    left: '50%',
-    top: 0,
-    bottom: 0,
-    width: 1,
-    backgroundColor: 'rgba(0, 229, 255, 0.1)',
-  },
-  scanLine: { position: "absolute", top: 0, left: 0, right: 0, height: 1, backgroundColor: "rgba(0,229,255,0.3)", zIndex: 10 },
   scrollView: {
     flex: 1,
   },
@@ -564,13 +564,14 @@ const styles = StyleSheet.create({
     marginBottom: 8,
   },
   moodDropdown: {
-    backgroundColor: '#1A1A1A',
     borderRadius: 12,
     padding: 14,
+    borderWidth: 1,
+  },
+  moodDropdownContent: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    borderWidth: 1,
   },
   moodDropdownText: {
     fontSize: 14,

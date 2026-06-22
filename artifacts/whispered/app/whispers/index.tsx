@@ -1,9 +1,12 @@
 import React, { useEffect, useState } from "react";
 import {
   FlatList,
+  Keyboard,
+  KeyboardAvoidingView,
   Modal,
   Platform,
   Pressable,
+  ScrollView,
   StyleSheet,
   Text,
   TextInput,
@@ -14,8 +17,11 @@ import { Feather } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
 import { LinearGradient } from "expo-linear-gradient";
 import { useColors } from "@/hooks/useColors";
-import AsyncStorage from "@react-native-async-storage/async-storage";
 import * as Haptics from "expo-haptics";
+import { useUser } from '@clerk/expo';
+import { supabase } from '@/lib/supabase';
+import NavigationDrawer from '@/components/NavigationDrawer';
+import ThemeBackground from '@/components/ThemeBackground';
 
 type RevealCondition = "time_delay" | "both_online" | "streak_milestone" | "anniversary" | "prompt_complete";
 
@@ -24,9 +30,11 @@ interface Whisper {
   content: string;
   revealCondition: RevealCondition;
   revealValue: string;
+  user1_id: string;
+  user2_id: string | null;
   revealed: boolean;
-  createdAt: string;
-  revealedAt?: string;
+  created_at: string;
+  revealed_at: string | null;
 }
 
 const CONDITIONS: { key: RevealCondition; label: string; desc: string; icon: string }[] = [
@@ -41,81 +49,264 @@ export default function WhispersScreen() {
   const colors = useColors();
   const insets = useSafeAreaInsets();
   const router = useRouter();
+  const { user } = useUser();
   const [whispers, setWhispers] = useState<Whisper[]>([]);
   const [showCreate, setShowCreate] = useState(false);
   const [content, setContent] = useState("");
   const [condition, setCondition] = useState<RevealCondition>("time_delay");
   const [condValue, setCondValue] = useState("");
+  const [loading, setLoading] = useState(true);
+  const [showNavigationDrawer, setShowNavigationDrawer] = useState(false);
+  const [countdowns, setCountdowns] = useState<Record<string, string>>({});
   const topPad = Platform.OS === "web" ? insets.top + 67 : insets.top;
+  const myUserId = user?.id;
+  const partnerUserId = user?.unsafeMetadata?.partner_user_id as string | undefined;
+
+  // Calculate countdown for time delay whispers
+  const calculateCountdown = (whisper: Whisper): string | null => {
+    if (whisper.revealed || whisper.revealCondition !== "time_delay") return null;
+    
+    const createdAt = new Date(whisper.created_at).getTime();
+    const delayMs = parseDelayToMs(whisper.revealValue);
+    const revealTime = createdAt + delayMs;
+    const now = Date.now();
+    const remainingMs = revealTime - now;
+    
+    if (remainingMs <= 0) return "Ready to reveal";
+    
+    const days = Math.floor(remainingMs / (1000 * 60 * 60 * 24));
+    const hours = Math.floor((remainingMs % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+    const minutes = Math.floor((remainingMs % (1000 * 60 * 60)) / (1000 * 60));
+    const seconds = Math.floor((remainingMs % (1000 * 60)) / 1000);
+    
+    if (days > 0) return `${days}d ${hours}h`;
+    if (hours > 0) return `${hours}h ${minutes}m`;
+    if (minutes > 0) return `${minutes}m ${seconds}s`;
+    return `${seconds}s`;
+  };
+
+  const parseDelayToMs = (delayStr: string): number => {
+    const match = delayStr.match(/(\d+)\s*(day|days|hour|hours|min|mins|minute|minutes|second|seconds|s|m|h|d)/i);
+    if (!match) return 7 * 24 * 60 * 60 * 1000; // Default to 7 days
+    
+    const value = parseInt(match[1], 10);
+    const unit = match[2].toLowerCase();
+    
+    switch (unit) {
+      case 'd':
+      case 'day':
+      case 'days':
+        return value * 24 * 60 * 60 * 1000;
+      case 'h':
+      case 'hour':
+      case 'hours':
+        return value * 60 * 60 * 1000;
+      case 'm':
+      case 'min':
+      case 'mins':
+      case 'minute':
+      case 'minutes':
+        return value * 60 * 1000;
+      case 's':
+      case 'second':
+      case 'seconds':
+        return value * 1000;
+      default:
+        return 7 * 24 * 60 * 60 * 1000;
+    }
+  };
+
+  // Update countdowns every second
+  useEffect(() => {
+    const interval = setInterval(() => {
+      const newCountdowns: Record<string, string> = {};
+      whispers.forEach((whisper) => {
+        const countdown = calculateCountdown(whisper);
+        if (countdown) {
+          newCountdowns[whisper.id] = countdown;
+        }
+      });
+      setCountdowns(newCountdowns);
+    }, 1000);
+
+    return () => clearInterval(interval);
+  }, [whispers]);
+
+  const fetchWhispers = async () => {
+    if (!myUserId) return;
+    
+    try {
+      const { data, error } = await supabase
+        .from('whispers')
+        .select('*')
+        .or(`user1_id.eq.${myUserId},user2_id.eq.${myUserId}`)
+        .order('created_at', { ascending: false });
+
+      if (error) {
+        console.error('Error fetching whispers:', error);
+        return;
+      }
+
+      setWhispers(data || []);
+    } catch (err) {
+      console.error('Failed to fetch whispers:', err);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   useEffect(() => {
-    AsyncStorage.getItem("whispers").then((d) => { if (d) setWhispers(JSON.parse(d)); });
-  }, []);
+    if (myUserId) {
+      fetchWhispers();
 
-  const save = (updated: Whisper[]) => {
-    setWhispers(updated);
-    AsyncStorage.setItem("whispers", JSON.stringify(updated));
-  };
+      // Set up real-time subscription
+      const channel = supabase
+        .channel('whispers_changes')
+        .on(
+          'postgres_changes',
+          {
+            event: '*',
+            schema: 'public',
+            table: 'whispers',
+          },
+          () => {
+            fetchWhispers();
+          }
+        )
+        .subscribe();
 
-  const createWhisper = () => {
-    if (!content.trim()) return;
+      return () => {
+        supabase.removeChannel(channel);
+      };
+    }
+  }, [myUserId]);
+
+  const createWhisper = async () => {
+    if (!content.trim() || !myUserId) return;
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-    const w: Whisper = { id: Date.now().toString(36), content: content.trim(), revealCondition: condition, revealValue: condValue.trim(), revealed: false, createdAt: new Date().toISOString() };
-    save([w, ...whispers]);
-    setShowCreate(false); setContent(""); setCondValue("");
+    
+    try {
+      const { error } = await supabase.from('whispers').insert({
+        content: content.trim(),
+        reveal_condition: condition,
+        reveal_value: condValue.trim(),
+        user1_id: myUserId,
+        user2_id: partnerUserId || null,
+        revealed: false,
+      });
+
+      if (error) {
+        console.error('Error creating whisper:', error);
+        alert('Failed to create whisper: ' + error.message);
+        return;
+      }
+
+      setShowCreate(false);
+      setContent("");
+      setCondValue("");
+      await fetchWhispers();
+    } catch (err) {
+      console.error('Failed to create whisper:', err);
+      alert('Failed to create whisper');
+    }
   };
 
-  const revealWhisper = (id: string) => {
+  const revealWhisper = async (id: string) => {
     Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-    save(whispers.map((w) => w.id === id ? { ...w, revealed: true, revealedAt: new Date().toISOString() } : w));
+    
+    try {
+      const { error } = await supabase
+        .from('whispers')
+        .update({ revealed: true, revealed_at: new Date().toISOString() })
+        .eq('id', id);
+
+      if (error) {
+        console.error('Error revealing whisper:', error);
+        alert('Failed to reveal whisper: ' + error.message);
+        return;
+      }
+
+      await fetchWhispers();
+    } catch (err) {
+      console.error('Failed to reveal whisper:', err);
+      alert('Failed to reveal whisper');
+    }
   };
 
-  const deleteWhisper = (id: string) => save(whispers.filter((w) => w.id !== id));
+  const deleteWhisper = async (id: string) => {
+    try {
+      const { error } = await supabase.from('whispers').delete().eq('id', id);
+
+      if (error) {
+        console.error('Error deleting whisper:', error);
+        return;
+      }
+
+      await fetchWhispers();
+    } catch (err) {
+      console.error('Failed to delete whisper:', err);
+    }
+  };
+
   const getConditionInfo = (key: RevealCondition) => CONDITIONS.find((c) => c.key === key) ?? CONDITIONS[0];
 
   return (
-    <View style={[styles.container, { backgroundColor: colors.background }]}>
-      <View style={styles.scanLine} />
-      <View style={[styles.header, { paddingTop: topPad + 12, borderBottomColor: colors.border }]}>
-        <Pressable onPress={() => router.back()} hitSlop={12}>
-          <Feather name="x" size={22} color={colors.text} />
-        </Pressable>
-        <Text style={[styles.headerTitle, { color: colors.text }]}>Whispers</Text>
+    <KeyboardAvoidingView
+      behavior={Platform.OS === "ios" ? "padding" : "height"}
+      style={{ flex: 1, backgroundColor: colors.background }}
+    >
+      <View style={[styles.container, { backgroundColor: colors.background }]}>
+        <ThemeBackground>
+
+        <View style={[styles.header, { paddingTop: topPad + 12, borderBottomColor: colors.border, zIndex: 20 }]}>
+          <Text style={[styles.headerTitle, { color: colors.text }]}>Whispers</Text>
+          <Pressable onPress={() => setShowNavigationDrawer(true)}>
+            <Feather name="menu" size={24} color={colors.text} />
+          </Pressable>
+        </View>
+
         <Pressable
-          style={[styles.addBtn, { backgroundColor: "rgba(0,229,255,0.1)", borderColor: colors.border, borderWidth: 1 }]}
+          style={[styles.floatingAddBtn, { backgroundColor: colors.primary }]}
           onPress={() => setShowCreate(true)}
         >
-          <Feather name="plus" size={18} color={colors.primary} />
+          <Feather name="plus" size={24} color={colors.primaryForeground} />
         </Pressable>
-      </View>
 
-      <FlatList
-        data={whispers}
-        keyExtractor={(w) => w.id}
-        contentContainerStyle={[styles.list, { paddingBottom: insets.bottom + 32 }]}
-        showsVerticalScrollIndicator={false}
-        ListHeaderComponent={
-          <LinearGradient
-            colors={["rgba(0,229,255,0.12)", "rgba(123,47,255,0.08)"]}
-            style={[styles.heroBanner, { borderColor: "rgba(0,229,255,0.2)" }]}
-            start={{ x: 0, y: 0 }}
-            end={{ x: 1, y: 1 }}
-          >
-            <Text style={{ fontSize: 24 }}>🌊</Text>
-            <View>
-              <Text style={[styles.heroTitle, { color: colors.text }]}>Whisper Moments</Text>
-              <Text style={[styles.heroSubtitle, { color: colors.mutedForeground }]}>
-                Hidden messages that unlock at the perfect moment
+        <FlatList
+          data={whispers}
+          keyExtractor={(w) => w.id}
+          contentContainerStyle={[styles.list, { paddingBottom: insets.bottom + 100 }]}
+          showsVerticalScrollIndicator={false}
+          ListHeaderComponent={
+            loading ? (
+              <View style={styles.empty}>
+                <Text style={[styles.emptyText, { color: colors.text }]}>Loading...</Text>
+              </View>
+            ) : (
+              <LinearGradient
+                colors={["rgba(0,229,255,0.12)", "rgba(123,47,255,0.08)"]}
+                style={[styles.heroBanner, { borderColor: "rgba(0,229,255,0.2)" }]}
+                start={{ x: 0, y: 0 }}
+                end={{ x: 1, y: 1 }}
+              >
+                <Text style={{ fontSize: 24 }}>🌊</Text>
+                <View>
+                  <Text style={[styles.heroTitle, { color: colors.text }]}>Whisper Moments</Text>
+                  <Text style={[styles.heroSubtitle, { color: colors.mutedForeground }]}>
+                    Hidden messages that unlock at the perfect moment
+                  </Text>
+                </View>
+              </LinearGradient>
+            )
+          }
+        ListEmptyComponent={
+          loading ? null : (
+            <View style={styles.empty}>
+              <Text style={[styles.emptyText, { color: colors.mutedForeground }]}>
+                No whispers yet. Create your first hidden message.
               </Text>
             </View>
-          </LinearGradient>
-        }
-        ListEmptyComponent={
-          <View style={styles.empty}>
-            <Text style={[styles.emptyText, { color: colors.mutedForeground }]}>
-              No whispers yet. Create your first hidden message.
-            </Text>
-          </View>
+          )
         }
         renderItem={({ item: w }) => {
           const cond = getConditionInfo(w.revealCondition);
@@ -145,6 +336,12 @@ export default function WhispersScreen() {
                     <Feather name="lock" size={18} color={colors.mutedForeground} />
                     <Text style={[styles.lockedText, { color: colors.mutedForeground }]}>Hidden until condition met</Text>
                   </View>
+                  {w.revealCondition === "time_delay" && countdowns[w.id] && (
+                    <View style={styles.countdownBadge}>
+                      <Feather name="clock" size={12} color={colors.primary} />
+                      <Text style={[styles.countdownText, { color: colors.primary }]}>{countdowns[w.id]}</Text>
+                    </View>
+                  )}
                   <Pressable
                     style={({ pressed }) => [styles.previewBtn, { backgroundColor: "rgba(0,229,255,0.08)", borderColor: "rgba(0,229,255,0.22)", borderWidth: 1, opacity: pressed ? 0.8 : 1 }]}
                     onPress={() => revealWhisper(w.id)}
@@ -159,76 +356,111 @@ export default function WhispersScreen() {
       />
 
       <Modal visible={showCreate} transparent animationType="slide" onRequestClose={() => setShowCreate(false)}>
-        <View style={styles.modalOverlay}>
-          <View style={[styles.modalSheet, { backgroundColor: colors.card, borderColor: colors.border }]}>
-            <View style={[styles.modalHandle, { backgroundColor: "rgba(0,229,255,0.25)" }]} />
-            <Text style={[styles.modalTitle, { color: colors.text }]}>Create whisper</Text>
-
-            <TextInput
-              style={[styles.contentInput, { backgroundColor: colors.input, borderColor: colors.border, color: colors.text }]}
-              value={content}
-              onChangeText={setContent}
-              placeholder="Write your hidden message..."
-              placeholderTextColor={colors.mutedForeground}
-              multiline
-              textAlignVertical="top"
-            />
-
-            <Text style={[styles.condTitle, { color: colors.mutedForeground }]}>Reveal when</Text>
-            <View style={styles.condGrid}>
-              {CONDITIONS.map((c) => (
-                <Pressable
-                  key={c.key}
-                  style={[
-                    styles.condBtn,
-                    {
-                      backgroundColor: condition === c.key ? "rgba(0,229,255,0.1)" : colors.surface,
-                      borderColor: condition === c.key ? colors.primary : colors.border,
-                    },
-                  ]}
-                  onPress={() => setCondition(c.key)}
+        <Pressable style={{ flex: 1 }} onPress={() => { Keyboard.dismiss(); setShowCreate(false); }}>
+          <KeyboardAvoidingView
+            behavior={Platform.OS === "ios" ? "padding" : "height"}
+            keyboardVerticalOffset={Platform.OS === "ios" ? 0 : 0}
+            style={{ flex: 1 }}
+          >
+            <Pressable style={styles.modalOverlay} onPress={(e) => e.stopPropagation()}>
+              <View style={[styles.modalSheet, { backgroundColor: colors.card, borderColor: colors.border }]}>
+                <ScrollView
+                  keyboardDismissMode="interactive"
+                  keyboardShouldPersistTaps="handled"
+                  contentContainerStyle={{ paddingBottom: 20 }}
                 >
-                  <Feather name={c.icon as any} size={14} color={condition === c.key ? colors.primary : colors.mutedForeground} />
-                  <Text style={[styles.condBtnText, { color: condition === c.key ? colors.primary : colors.mutedForeground }]}>{c.label}</Text>
-                </Pressable>
-              ))}
-            </View>
+                  <View style={[styles.modalHandle, { backgroundColor: "rgba(0,229,255,0.25)" }]} />
+                  <Text style={[styles.modalTitle, { color: colors.text }]}>Create whisper</Text>
 
-            {(condition === "time_delay" || condition === "streak_milestone" || condition === "anniversary") ? (
-              <TextInput
-                style={[styles.valueInput, { backgroundColor: colors.input, borderColor: colors.border, color: colors.text }]}
-                value={condValue}
-                onChangeText={setCondValue}
-                placeholder={condition === "time_delay" ? "e.g. 7 days" : condition === "streak_milestone" ? "e.g. 30" : "e.g. Jun 15, 2025"}
-                placeholderTextColor={colors.mutedForeground}
-              />
-            ) : null}
+                  <TextInput
+                    style={[styles.contentInput, { backgroundColor: colors.input, borderColor: colors.border, color: colors.text }]}
+                    value={content}
+                    onChangeText={setContent}
+                    placeholder="Write your hidden message..."
+                    placeholderTextColor={colors.mutedForeground}
+                    multiline
+                    textAlignVertical="top"
+                  />
 
-            <View style={styles.modalBtns}>
-              <Pressable style={[styles.cancelBtn, { borderColor: colors.border }]} onPress={() => setShowCreate(false)}>
-                <Text style={[styles.cancelText, { color: colors.mutedForeground }]}>Cancel</Text>
-              </Pressable>
-              <Pressable
-                style={[styles.createBtn, { backgroundColor: colors.primary, opacity: !content.trim() ? 0.5 : 1 }]}
-                onPress={createWhisper}
-                disabled={!content.trim()}
-              >
-                <Text style={[styles.createBtnText, { color: colors.primaryForeground }]}>Create</Text>
-              </Pressable>
-            </View>
-          </View>
-        </View>
+                  <Text style={[styles.condTitle, { color: colors.mutedForeground }]}>Reveal when</Text>
+                  <View style={styles.condGrid}>
+                    {CONDITIONS.map((c) => (
+                      <Pressable
+                        key={c.key}
+                        style={[
+                          styles.condBtn,
+                          {
+                            backgroundColor: condition === c.key ? "rgba(0,229,255,0.1)" : colors.surface,
+                            borderColor: condition === c.key ? colors.primary : colors.border,
+                          },
+                        ]}
+                        onPress={() => setCondition(c.key)}
+                      >
+                        <Feather name={c.icon as any} size={14} color={condition === c.key ? colors.primary : colors.mutedForeground} />
+                        <Text style={[styles.condBtnText, { color: condition === c.key ? colors.primary : colors.mutedForeground }]}>{c.label}</Text>
+                      </Pressable>
+                    ))}
+                  </View>
+
+                  {(condition === "time_delay" || condition === "streak_milestone" || condition === "anniversary") ? (
+                    <TextInput
+                      style={[styles.valueInput, { backgroundColor: colors.input, borderColor: colors.border, color: colors.text }]}
+                      value={condValue}
+                      onChangeText={setCondValue}
+                      placeholder={condition === "time_delay" ? "e.g. 7 days" : condition === "streak_milestone" ? "e.g. 30" : "e.g. Jun 15, 2025"}
+                      placeholderTextColor={colors.mutedForeground}
+                    />
+                  ) : null}
+
+                  <View style={styles.modalBtns}>
+                    <Pressable style={[styles.cancelBtn, { borderColor: colors.border }]} onPress={() => setShowCreate(false)}>
+                      <Text style={[styles.cancelText, { color: colors.mutedForeground }]}>Cancel</Text>
+                    </Pressable>
+                    <Pressable
+                      style={[styles.createBtn, { backgroundColor: colors.primary, opacity: !content.trim() ? 0.5 : 1 }]}
+                      onPress={createWhisper}
+                      disabled={!content.trim()}
+                    >
+                      <Text style={[styles.createBtnText, { color: colors.primaryForeground }]}>Create</Text>
+                    </Pressable>
+                  </View>
+                </ScrollView>
+              </View>
+            </Pressable>
+        </KeyboardAvoidingView>
+        </Pressable>
       </Modal>
-    </View>
+
+      <NavigationDrawer
+        visible={showNavigationDrawer}
+        onClose={() => setShowNavigationDrawer(false)}
+      />
+      </ThemeBackground>
+      </View>
+    </KeyboardAvoidingView>
   );
 }
 
 const styles = StyleSheet.create({
   container: { flex: 1 },
-  scanLine: { position: "absolute", top: 0, left: 0, right: 0, height: 1, backgroundColor: "rgba(0,229,255,0.3)", zIndex: 10 },
   header: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", paddingHorizontal: 20, paddingBottom: 12, borderBottomWidth: 1 },
-  headerTitle: { fontSize: 18, fontFamily: "Inter_600SemiBold" },
-  addBtn: { width: 36, height: 36, borderRadius: 12, alignItems: "center", justifyContent: "center" },
+  headerTitle: { fontSize: 24, fontFamily: "System", fontWeight: '600' },
+  floatingAddBtn: {
+    position: 'absolute',
+    bottom: 100,
+    right: 20,
+    width: 56,
+    height: 56,
+    borderRadius: 28,
+    alignItems: 'center',
+    justifyContent: 'center',
+    zIndex: 30,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.25,
+    shadowRadius: 4,
+    elevation: 5,
+  },
   list: { padding: 20, gap: 14 },
   heroBanner: { flexDirection: "row", alignItems: "center", gap: 14, padding: 20, borderRadius: 20, borderWidth: 1, marginBottom: 4 },
   heroTitle: { fontSize: 16, fontFamily: "Inter_600SemiBold" },
@@ -242,6 +474,8 @@ const styles = StyleSheet.create({
   whisperContent: { fontSize: 15, fontFamily: "Inter_400Regular", lineHeight: 22 },
   revealedBadge: { flexDirection: "row", alignItems: "center", gap: 6 },
   revealedText: { fontSize: 12, fontFamily: "Inter_500Medium" },
+  countdownBadge: { flexDirection: "row", alignItems: "center", gap: 6, marginTop: 8 },
+  countdownText: { fontSize: 12, fontFamily: "Inter_500Medium" },
   lockedContent: { flexDirection: "row", alignItems: "center", gap: 10, padding: 14, borderRadius: 12 },
   lockedText: { fontSize: 13, fontFamily: "Inter_400Regular" },
   previewBtn: { paddingVertical: 8, paddingHorizontal: 14, borderRadius: 10, alignSelf: "flex-start" },

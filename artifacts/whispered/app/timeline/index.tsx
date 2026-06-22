@@ -12,6 +12,8 @@ import { Feather } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
 import { useColors } from "@/hooks/useColors";
 import { useApp } from "@/context/AppContext";
+import { useUser } from "@clerk/expo";
+import { supabase } from "@/lib/supabase";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 
 interface Milestone {
@@ -35,95 +37,120 @@ export default function TimelineScreen() {
   const insets = useSafeAreaInsets();
   const router = useRouter();
   const { couple, streak } = useApp();
+  const { user } = useUser();
   const [milestones, setMilestones] = useState<Milestone[]>([]);
 
   const topPad = Platform.OS === "web" ? insets.top + 67 : insets.top;
 
   useEffect(() => {
-    const auto: Milestone[] = [];
+    const loadMilestones = async () => {
+      const auto: Milestone[] = [];
 
-    if (couple?.startDate) {
-      auto.push({
-        id: "start",
-        title: "Your story began",
-        description: "The day you connected on Whispered",
-        date: couple.startDate,
-        icon: "heart",
-        color: colors.primary,
-        auto: true,
-      });
+      if (couple?.startDate) {
+        auto.push({
+          id: "start",
+          title: "Your story began",
+          description: "The day you connected on Whispered",
+          date: couple.startDate,
+          icon: "heart",
+          color: colors.primary,
+          auto: true,
+        });
 
-      const days = daysSince(couple.startDate);
-      const milestonedays = [7, 30, 50, 100, 200, 365];
-      for (const d of milestonedays) {
-        if (days >= d) {
-          const ms = new Date(couple.startDate);
-          ms.setDate(ms.getDate() + d);
-          auto.push({
-            id: `days_${d}`,
-            title: `${d} days together`,
-            description: `A milestone worth celebrating`,
-            date: ms.toISOString(),
-            icon: "calendar",
-            color: "#F59E0B",
-            auto: true,
-          });
-        }
-      }
-    }
-
-    if (streak >= 7) {
-      auto.push({
-        id: "streak_7",
-        title: "7-day streak",
-        description: "One week of daily connection",
-        date: new Date().toISOString(),
-        icon: "zap",
-        color: colors.streak,
-        auto: true,
-      });
-    }
-
-    AsyncStorage.multiGet(["memories", "goals"]).then(
-      ([m, g]) => {
-        if (m[1]) {
-          const mems = JSON.parse(m[1]);
-          if (mems.length > 0) {
+        const days = daysSince(couple.startDate);
+        const milestonedays = [7, 30, 50, 100, 200, 365];
+        for (const d of milestonedays) {
+          if (days >= d) {
+            const ms = new Date(couple.startDate);
+            ms.setDate(ms.getDate() + d);
             auto.push({
-              id: "first_memory",
-              title: "First memory added",
-              description: mems[0].caption || "A photo to remember",
-              date: mems[0].date,
-              icon: "image",
-              color: "#06B6D4",
+              id: `days_${d}`,
+              title: `${d} days together`,
+              description: `A milestone worth celebrating`,
+              date: ms.toISOString(),
+              icon: "calendar",
+              color: "#F59E0B",
               auto: true,
             });
           }
         }
-        if (g[1]) {
-          const goals = JSON.parse(g[1]);
-          const completed = goals.filter((g: any) => g.completed);
-          if (completed.length > 0) {
+      }
+
+      if (streak >= 7) {
+        auto.push({
+          id: "streak_7",
+          title: "7-day streak",
+          description: "One week of daily connection",
+          date: new Date().toISOString(),
+          icon: "zap",
+          color: colors.streak,
+          auto: true,
+        });
+      }
+
+      // Fetch memories from AsyncStorage
+      const [memResult] = await AsyncStorage.multiGet(["memories"]);
+      if (memResult[1]) {
+        const mems = JSON.parse(memResult[1]);
+        if (mems.length > 0) {
+          auto.push({
+            id: "first_memory",
+            title: "First memory added",
+            description: mems[0].caption || "A photo to remember",
+            date: mems[0].date,
+            icon: "image",
+            color: "#06B6D4",
+            auto: true,
+          });
+        }
+      }
+
+      // Fetch goals from Supabase
+      const partnerUserId = user?.unsafeMetadata?.partner_user_id as string | undefined;
+      const myUserId = user?.id;
+      
+      if (myUserId && partnerUserId) {
+        const generateCoupleId = (userId1: string, userId2: string) => {
+          const sorted = [userId1, userId2].sort();
+          return `${sorted[0]}-${sorted[1]}`;
+        };
+        
+        const effectiveCoupleId = generateCoupleId(myUserId, partnerUserId);
+        
+        try {
+          const { data: goals, error } = await supabase
+            .from('goals')
+            .select('*')
+            .eq('couple_id', effectiveCoupleId)
+            .eq('completed', true)
+            .order('created_at', { ascending: true })
+            .limit(1);
+
+          if (!error && goals && goals.length > 0) {
             auto.push({
               id: "first_goal",
               title: "First goal completed",
-              description: completed[0].title,
-              date: completed[0].createdAt,
+              description: goals[0].title,
+              date: goals[0].created_at,
               icon: "target",
               color: "#8B5CF6",
               auto: true,
             });
           }
+        } catch (err) {
+          console.error('Error fetching goals for timeline:', err);
         }
+      }
 
-        const sorted = auto.sort(
-          (a, b) =>
-            new Date(b.date).getTime() - new Date(a.date).getTime(),
-        );
-        setMilestones(sorted);
-      },
-    );
-  }, [couple, streak]);
+      const sorted = auto.sort(
+        (a, b) =>
+          new Date(b.date).getTime() - new Date(a.date).getTime(),
+      );
+      setMilestones(sorted);
+    };
+
+    loadMilestones();
+  }, [couple, streak, user]);
 
   const formatDate = (iso: string) =>
     new Date(iso).toLocaleDateString(undefined, {

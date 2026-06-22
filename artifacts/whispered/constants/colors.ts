@@ -1,6 +1,6 @@
 import type { Theme } from "@/context/AppContext";
 
-interface Palette {
+export interface Palette {
   text: string;
   tint: string;
   background: string;
@@ -9,8 +9,8 @@ interface Palette {
   cardForeground: string;
   primary: string;
   primaryForeground: string;
-  secondary: string;
-  secondaryForeground: string;
+  chatBoxes: string;
+  chatBoxesForeground: string;
   muted: string;
   mutedForeground: string;
   accent: string;
@@ -25,7 +25,32 @@ interface Palette {
   rose: string;
 }
 
-const base: Omit<Palette, "primary" | "primaryForeground" | "secondary" | "secondaryForeground" | "accent" | "accentForeground" | "border" | "tint" | "streak"> = {
+export interface CustomColors {
+  text?: string;
+  tint?: string;
+  background?: string;
+  foreground?: string;
+  card?: string;
+  cardForeground?: string;
+  primary?: string;
+  primaryForeground?: string;
+  chatBoxes?: string;
+  chatBoxesForeground?: string;
+  muted?: string;
+  mutedForeground?: string;
+  accent?: string;
+  accentForeground?: string;
+  destructive?: string;
+  destructiveForeground?: string;
+  border?: string;
+  input?: string;
+  surface?: string;
+  streak?: string;
+  success?: string;
+  rose?: string;
+}
+
+const base: Omit<Palette, "primary" | "primaryForeground" | "chatBoxes" | "chatBoxesForeground" | "accent" | "accentForeground" | "border" | "tint" | "streak"> = {
   text: "#FFFFFF",
   background: "#0A1628",
   foreground: "#FFFFFF",
@@ -42,64 +67,77 @@ const base: Omit<Palette, "primary" | "primaryForeground" | "secondary" | "secon
 };
 
 export const THEME_PALETTES: Record<Theme, Palette> = {
-  // Ocean — deep ocean blues + white (default)
-  calm: {
+  // Ocean — deep ocean blues + white
+  ocean: {
     ...base,
     tint: "#0EA5E9",
     primary: "#0EA5E9",
     primaryForeground: "#FFFFFF",
-    secondary: "#06B6D4",
-    secondaryForeground: "#FFFFFF",
+    chatBoxes: "#06B6D4",
+    chatBoxesForeground: "#FFFFFF",
     accent: "#38BDF8",
     accentForeground: "#FFFFFF",
     border: "rgba(14, 165, 233, 0.3)",
     streak: "#0EA5E9",
   },
-  // Warm — rose pink + amber
-  warm: {
+  // Romance — soft pinks + rose
+  romance: {
     ...base,
     tint: "#F43F5E",
     primary: "#F43F5E",
     primaryForeground: "#FFFFFF",
-    secondary: "#F59E0B",
-    secondaryForeground: "#030712",
-    accent: "#F59E0B",
-    accentForeground: "#030712",
-    border: "rgba(244,63,94,0.15)",
-    streak: "#F59E0B",
+    chatBoxes: "#F472B6",
+    chatBoxesForeground: "#FFFFFF",
+    accent: "#FB7185",
+    accentForeground: "#FFFFFF",
+    border: "rgba(244,63,94,0.2)",
+    streak: "#F43F5E",
   },
-  // Playful — emerald green + orange
-  playful: {
+  // Futuristic — cyan + dark (current theme)
+  futuristic: {
+    ...base,
+    tint: "#00E5FF",
+    primary: "#00E5FF",
+    primaryForeground: "#000000",
+    chatBoxes: "#00E5FF",
+    chatBoxesForeground: "#000000",
+    accent: "#00FFFF",
+    accentForeground: "#000000",
+    border: "rgba(0, 229, 255, 0.3)",
+    streak: "#00E5FF",
+  },
+  // Simplistic — clean grays + white
+  simplistic: {
+    ...base,
+    tint: "#6B7280",
+    primary: "#6B7280",
+    primaryForeground: "#FFFFFF",
+    chatBoxes: "#9CA3AF",
+    chatBoxesForeground: "#FFFFFF",
+    accent: "#D1D5DB",
+    accentForeground: "#000000",
+    border: "rgba(107,114,128,0.2)",
+    streak: "#6B7280",
+  },
+  // Nature — forest greens + earth tones
+  nature: {
     ...base,
     tint: "#22C55E",
     primary: "#22C55E",
-    primaryForeground: "#030712",
-    secondary: "#F97316",
-    secondaryForeground: "#030712",
-    accent: "#F97316",
-    accentForeground: "#030712",
-    border: "rgba(34,197,94,0.15)",
+    primaryForeground: "#FFFFFF",
+    chatBoxes: "#4ADE80",
+    chatBoxesForeground: "#FFFFFF",
+    accent: "#86EFAC",
+    accentForeground: "#000000",
+    border: "rgba(34,197,94,0.3)",
     streak: "#22C55E",
-  },
-  // Elegant — cool silver + slate
-  elegant: {
-    ...base,
-    tint: "#CBD5E1",
-    primary: "#CBD5E1",
-    primaryForeground: "#030712",
-    secondary: "#94A3B8",
-    secondaryForeground: "#030712",
-    accent: "#94A3B8",
-    accentForeground: "#030712",
-    border: "rgba(203,213,225,0.12)",
-    streak: "#CBD5E1",
   },
 };
 
 // Kept for any legacy imports that reference `colors.light` / `colors.dark`
 const colors = {
-  light: THEME_PALETTES.calm,
-  dark: THEME_PALETTES.calm,
+  light: THEME_PALETTES.ocean,
+  dark: THEME_PALETTES.futuristic,
   radius: 14,
 };
 

@@ -20,7 +20,11 @@ import { supabase } from "@/lib/supabase";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
 import { AppProvider } from "@/context/AppContext";
 
-SplashScreen.preventAutoHideAsync();
+try {
+  SplashScreen.preventAutoHideAsync();
+} catch (e) {
+  console.log('SplashScreen.preventAutoHideAsync error:', e);
+}
 
 // Configure push notifications
 Notifications.setNotificationHandler({
@@ -178,7 +182,11 @@ export default function RootLayout() {
 
   useEffect(() => {
     if (fontsLoaded || fontError) {
-      SplashScreen.hideAsync();
+      try {
+        SplashScreen.hideAsync();
+      } catch (e) {
+        console.log('SplashScreen.hideAsync error:', e);
+      }
     }
   }, [fontsLoaded, fontError]);
 

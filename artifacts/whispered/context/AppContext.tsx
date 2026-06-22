@@ -9,8 +9,9 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useAuth, useUser } from "@clerk/expo";
 import { syncAllData } from "@/lib/syncClerkToSupabase";
 import { supabase } from "@/lib/supabase";
+import { CustomColors } from "@/constants/colors";
 
-export type Theme = "calm" | "warm" | "playful" | "elegant";
+export type Theme = "ocean" | "romance" | "futuristic" | "simplistic" | "nature";
 export type Mood = "happy" | "calm" | "okay" | "sad" | "loved" | "motivated" | null;
 
 export interface Couple {
@@ -28,6 +29,8 @@ interface AppContextValue {
   setCouple: (c: Couple | null) => void;
   theme: Theme;
   setTheme: (t: Theme) => void;
+  customColors: CustomColors | null;
+  setCustomColors: (c: CustomColors | null) => void;
   myMood: Mood;
   setMyMood: (m: Mood) => void;
   partnerMood: Mood;
@@ -41,8 +44,10 @@ interface AppContextValue {
 export const AppContext = createContext<AppContextValue>({
   couple: null,
   setCouple: () => {},
-  theme: "calm",
+  theme: "futuristic",
   setTheme: () => {},
+  customColors: null,
+  setCustomColors: () => {},
   myMood: null,
   setMyMood: () => {},
   partnerMood: null,
@@ -57,7 +62,8 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   const { getToken, isSignedIn } = useAuth();
   const { user } = useUser();
   const [couple, setCoupleState] = useState<Couple | null>(null);
-  const [theme, setThemeState] = useState<Theme>("calm");
+  const [theme, setThemeState] = useState<Theme>("futuristic");
+  const [customColors, setCustomColorsState] = useState<CustomColors | null>(null);
   const [myMood, setMyMoodState] = useState<Mood>(null);
   const [partnerMood, setPartnerMood] = useState<Mood>(null);
   const [streak, setStreakState] = useState(0);
@@ -75,6 +81,16 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       if (m[1]) setMyMoodState(m[1] as Mood);
       if (s[1]) setStreakState(Number(s[1]));
       if (c[1]) setCoupleState(JSON.parse(c[1]));
+
+      // Load custom colors from user metadata
+      if (user?.unsafeMetadata?.customColors) {
+        try {
+          const customColorsData = JSON.parse(user.unsafeMetadata.customColors as string);
+          setCustomColorsState(customColorsData);
+        } catch (err) {
+          console.error('Failed to parse custom colors:', err);
+        }
+      }
 
       // Load mood from Supabase if user is signed in
       if (user) {
@@ -110,6 +126,19 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   const setTheme = (t: Theme) => {
     setThemeState(t);
     AsyncStorage.setItem("theme", t);
+  };
+
+  const setCustomColors = (c: CustomColors | null) => {
+    setCustomColorsState(c);
+    // Save to user metadata
+    if (user) {
+      user.update({
+        unsafeMetadata: {
+          ...user.unsafeMetadata,
+          customColors: c ? JSON.stringify(c) : null,
+        },
+      }).catch((err) => console.error('Failed to save custom colors:', err));
+    }
   };
 
   const setMyMood = async (m: Mood) => {
@@ -241,6 +270,8 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         setCouple,
         theme,
         setTheme,
+        customColors,
+        setCustomColors,
         myMood,
         setMyMood,
         partnerMood,

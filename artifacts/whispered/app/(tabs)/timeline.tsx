@@ -11,7 +11,9 @@ import {
   View,
   Alert,
   KeyboardAvoidingView,
+  Button,
 } from "react-native";
+import DateTimePicker from '@react-native-community/datetimepicker';
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Feather } from "@expo/vector-icons";
 import { useColors } from "@/hooks/useColors";
@@ -19,6 +21,7 @@ import * as Haptics from "expo-haptics";
 import { useUser } from "@clerk/expo";
 import { supabase } from "@/lib/supabase";
 import NavigationDrawer from '@/components/NavigationDrawer';
+import ThemeBackground from '@/components/ThemeBackground';
 
 interface TimelineEvent {
   id: string;
@@ -40,6 +43,7 @@ export default function TimelineScreen() {
   const [description, setDescription] = useState("");
   const [category, setCategory] = useState("");
   const [eventDate, setEventDate] = useState("");
+  const [showDatePicker, setShowDatePicker] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [loading, setLoading] = useState(true);
   const [showNavigationDrawer, setShowNavigationDrawer] = useState(false);
@@ -51,10 +55,66 @@ export default function TimelineScreen() {
     loadEvents();
   }, [user]);
 
+  // Auto-generate milestone events
+  useEffect(() => {
+    const generateMilestones = async () => {
+      if (!user) return;
+
+      const partnerUserId = user.unsafeMetadata?.partner_user_id as string | undefined;
+      if (!partnerUserId) return;
+
+      const coupleId = generateCoupleId(user.id, partnerUserId);
+
+      // Get couple start date from user metadata or other source
+      const startDate = user.unsafeMetadata?.relationship_start_date as string | undefined;
+      if (!startDate) return;
+
+      const daysTogether = Math.floor((Date.now() - new Date(startDate).getTime()) / (1000 * 60 * 60 * 24));
+      const milestoneDays = [7, 30, 50, 100, 200, 365];
+
+      for (const days of milestoneDays) {
+        if (daysTogether >= days) {
+          const milestoneDate = new Date(startDate);
+          milestoneDate.setDate(milestoneDate.getDate() + days);
+          const milestoneId = `milestone_${days}`;
+
+          // Check if this milestone already exists
+          const { data: existing } = await supabase
+            .from('timeline_events')
+            .select('id')
+            .eq('id', milestoneId)
+            .eq('couple_id', coupleId)
+            .single();
+
+          if (!existing) {
+            await supabase
+              .from('timeline_events')
+              .insert({
+                id: milestoneId,
+                user_id: user.id,
+                couple_id: coupleId,
+                title: `${days} days together`,
+                description: 'A milestone worth celebrating',
+                event_date: milestoneDate.toISOString().split('T')[0],
+                category: 'Milestone',
+              });
+          }
+        }
+      }
+
+      // Reload events after generating milestones
+      await loadEvents();
+    };
+
+    generateMilestones();
+  }, [user]);
+
   // Real-time sync for timeline events
   useEffect(() => {
     const partnerUserId = user?.unsafeMetadata?.partner_user_id as string | undefined;
     if (!partnerUserId || !user) return;
+
+    const coupleId = generateCoupleId(user.id, partnerUserId);
 
     const channel = supabase
       .channel('timeline')
@@ -64,23 +124,10 @@ export default function TimelineScreen() {
           event: '*',
           schema: 'public',
           table: 'timeline_events',
-          filter: `user_id=eq.${user.id}`,
+          filter: `couple_id=eq.${coupleId}`,
         },
         (payload) => {
           console.log('Timeline change:', payload);
-          loadEvents();
-        }
-      )
-      .on(
-        'postgres_changes',
-        {
-          event: '*',
-          schema: 'public',
-          table: 'timeline_events',
-          filter: `user_id=eq.${partnerUserId}`,
-        },
-        (payload) => {
-          console.log('Partner timeline change:', payload);
           loadEvents();
         }
       )
@@ -90,6 +137,11 @@ export default function TimelineScreen() {
       supabase.removeChannel(channel);
     };
   }, [user?.unsafeMetadata?.partner_user_id, user?.id]);
+
+  const generateCoupleId = (userId1: string, userId2: string) => {
+    const sorted = [userId1, userId2].sort();
+    return `${sorted[0]}-${sorted[1]}`;
+  };
 
   const loadEvents = async () => {
     if (!user) return;
@@ -101,10 +153,12 @@ export default function TimelineScreen() {
         return;
       }
 
+      const coupleId = generateCoupleId(user.id, partnerUserId);
+      
       const { data, error } = await supabase
         .from('timeline_events')
         .select('*')
-        .or(`user_id.eq.${user.id},user_id.eq.${partnerUserId}`)
+        .eq('couple_id', coupleId)
         .order('event_date', { ascending: false });
 
       if (error) throw error;
@@ -130,9 +184,12 @@ export default function TimelineScreen() {
         return;
       }
 
+      const coupleId = generateCoupleId(user.id, partnerUserId);
+
       const newEvent = {
         id: Date.now().toString(36),
         user_id: user.id,
+        couple_id: coupleId,
         title: title.trim(),
         description: description.trim() || null,
         category: category || null,
@@ -182,6 +239,13 @@ export default function TimelineScreen() {
     return new Date(dateString).toLocaleDateString(undefined, { month: "long", day: "numeric", year: "numeric" });
   };
 
+  const handleDateChange = (event: any, selectedDate?: Date) => {
+    setShowDatePicker(Platform.OS === 'ios');
+    if (selectedDate) {
+      setEventDate(selectedDate.toISOString().split('T')[0]);
+    }
+  };
+
   const getCategoryColor = (category: string | null) => {
     const categoryColors: { [key: string]: string } = {
       Relationship: '#FF6B6B',
@@ -195,20 +259,15 @@ export default function TimelineScreen() {
 
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>
-      {/* Grid Pattern Background */}
-      <View style={styles.gridBackground}>
-        <View style={styles.gridLineHorizontal} />
-        <View style={styles.gridLineVertical} />
-      </View>
-      <View style={styles.scanLine} />
+      <ThemeBackground>
       <View style={[styles.header, { paddingTop: topPad + 12, borderBottomColor: colors.border }]}>
         <Text style={[styles.headerTitle, { color: colors.text }]}>Timeline</Text>
         <View style={styles.headerButtons}>
           <Pressable
-            style={({ pressed }) => [styles.addBtn, { opacity: pressed ? 0.8 : 1, borderColor: colors.border }]}
+            style={({ pressed }) => [styles.addBtn, { opacity: pressed ? 0.8 : 1, backgroundColor: colors.primary, borderColor: colors.primary }]}
             onPress={() => setShowModal(true)}
           >
-            <Feather name="plus" size={20} color={colors.primary} />
+            <Feather name="plus" size={20} color={colors.primaryForeground} />
           </Pressable>
           <Pressable onPress={() => setShowNavigationDrawer(true)} style={styles.menuBtn}>
             <Feather name="menu" size={24} color={colors.text} />
@@ -315,13 +374,23 @@ export default function TimelineScreen() {
             </View>
 
             <Text style={[styles.label, { color: colors.mutedForeground }]}>Event date</Text>
-            <TextInput
-              style={[styles.dateInput, { backgroundColor: colors.input, borderColor: colors.border, color: colors.text }]}
-              value={eventDate}
-              onChangeText={setEventDate}
-              placeholder="YYYY-MM-DD"
-              placeholderTextColor={colors.mutedForeground}
-            />
+            <Pressable
+              style={[styles.dateInput, { backgroundColor: colors.input, borderColor: colors.border }]}
+              onPress={() => setShowDatePicker(true)}
+            >
+              <Text style={[styles.dateText, { color: eventDate ? colors.text : colors.mutedForeground }]}>
+                {eventDate ? formatDate(eventDate) : 'Select date'}
+              </Text>
+              <Feather name="calendar" size={20} color={colors.primary} />
+            </Pressable>
+            {showDatePicker && (
+              <DateTimePicker
+                value={eventDate ? new Date(eventDate) : new Date()}
+                mode="date"
+                display={Platform.OS === 'ios' ? 'compact' : 'default'}
+                onChange={handleDateChange}
+              />
+            )}
 
             <View style={styles.modalButtons}>
               <Pressable
@@ -346,41 +415,25 @@ export default function TimelineScreen() {
         visible={showNavigationDrawer}
         onClose={() => setShowNavigationDrawer(false)}
       />
+
+      {/* Floating Action Button */}
+      <Pressable
+        style={[styles.fab, { backgroundColor: colors.primary, bottom: insets.bottom + 20 }]}
+        onPress={() => setShowModal(true)}
+      >
+        <Feather name="plus" size={24} color={colors.primaryForeground} />
+      </Pressable>
+      </ThemeBackground>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
   container: { flex: 1 },
-  gridBackground: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
-    zIndex: 0,
-  },
-  gridLineHorizontal: {
-    position: 'absolute',
-    top: '50%',
-    left: 0,
-    right: 0,
-    height: 1,
-    backgroundColor: 'rgba(0, 229, 255, 0.1)',
-  },
-  gridLineVertical: {
-    position: 'absolute',
-    left: '50%',
-    top: 0,
-    bottom: 0,
-    width: 1,
-    backgroundColor: 'rgba(0, 229, 255, 0.1)',
-  },
-  scanLine: { position: "absolute", top: 0, left: 0, right: 0, height: 1, backgroundColor: "rgba(0,229,255,0.3)", zIndex: 10 },
   header: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", paddingHorizontal: 20, paddingBottom: 12, borderBottomWidth: 1 },
   headerTitle: { fontSize: 20, fontFamily: "System", fontWeight: '600' },
   headerButtons: { flexDirection: "row", alignItems: "center", gap: 12 },
-  addBtn: { width: 38, height: 38, borderRadius: 4, borderWidth: 1, alignItems: "center", justifyContent: "center", borderColor: 'rgba(0, 229, 255, 0.2)' },
+  addBtn: { width: 44, height: 44, borderRadius: 8, borderWidth: 2, alignItems: "center", justifyContent: "center", borderColor: 'rgba(0, 229, 255, 0.3)', minWidth: 44, minHeight: 44 },
   menuBtn: { padding: 8 },
   empty: { flex: 1, alignItems: "center", justifyContent: "center", gap: 14, padding: 32 },
   emptyIcon: { width: 72, height: 72, borderRadius: 4, alignItems: "center", justifyContent: "center", borderWidth: 1, borderColor: 'rgba(0, 229, 255, 0.2)', backgroundColor: 'rgba(0, 0, 0, 0.6)' },
@@ -413,10 +466,12 @@ const styles = StyleSheet.create({
   categoryOption: { paddingHorizontal: 12, paddingVertical: 8, borderRadius: 4, borderWidth: 1, borderColor: 'rgba(0, 229, 255, 0.2)' },
   categoryOptionSelected: { borderWidth: 2, borderColor: '#00E5FF' },
   categoryOptionText: { fontSize: 12, fontFamily: "System", fontWeight: '500' },
-  dateInput: { height: 48, borderRadius: 4, borderWidth: 1, padding: 14, fontSize: 14, fontFamily: "System", backgroundColor: 'rgba(0, 0, 0, 0.6)', borderColor: 'rgba(0, 229, 255, 0.2)' },
+  dateInput: { height: 48, borderRadius: 4, borderWidth: 1, paddingHorizontal: 14, flexDirection: "row", alignItems: "center", justifyContent: "space-between", backgroundColor: 'rgba(0, 0, 0, 0.6)', borderColor: 'rgba(0, 229, 255, 0.2)' },
+  dateText: { fontSize: 14, fontFamily: "System" },
   modalButtons: { flexDirection: "row", gap: 12 },
   modalCancelBtn: { flex: 1, height: 48, borderRadius: 4, alignItems: "center", justifyContent: "center", borderWidth: 1, backgroundColor: 'rgba(0, 0, 0, 0.6)', borderColor: 'rgba(0, 229, 255, 0.2)' },
   modalCancelText: { fontSize: 14, fontFamily: "System", fontWeight: '500' },
   modalSaveBtn: { flex: 1, height: 48, borderRadius: 4, alignItems: "center", justifyContent: "center", backgroundColor: '#00E5FF', borderWidth: 1, borderColor: '#00E5FF' },
   modalSaveText: { fontSize: 14, fontFamily: "System", fontWeight: '600', color: "#030712" },
+  fab: { position: "absolute", right: 20, width: 56, height: 56, borderRadius: 28, alignItems: "center", justifyContent: "center", elevation: 4, shadowColor: "#000", shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.25, shadowRadius: 3.84 },
 });
