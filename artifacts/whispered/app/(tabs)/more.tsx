@@ -21,7 +21,7 @@ const FEATURES = [
   { id: "goals",    label: "Goals",         description: "Track shared dreams",   icon: "target",        color: "#00E5FF", route: "/goals"    },
   { id: "prompts",  label: "Daily Prompts", description: "Answer together",        icon: "message-square",color: "#7B2FFF", route: "/prompts"  },
   { id: "whispers", label: "Whispers",      description: "Hidden messages",        icon: "send",          color: "#FF4FA3", route: "/whispers" },
-  { id: "timeline", label: "Timeline",      description: "Add shared milestones",   icon: "clock",         color: "theme", route: "/(tabs)/timeline" },
+  { id: "timeline", label: "Timeline",      description: "Add shared milestones",   icon: "clock",         color: "theme", route: "/timeline" },
   { id: "settings", label: "Settings",      description: "Themes & couple config", icon: "settings",      color: "#5B7A9A", route: "/settings" },
 ];
 

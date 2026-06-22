@@ -39,6 +39,7 @@ export default function TimelineScreen() {
   const { user } = useUser();
   const [events, setEvents] = useState<TimelineEvent[]>([]);
   const [showModal, setShowModal] = useState(false);
+  const [editingEvent, setEditingEvent] = useState<TimelineEvent | null>(null);
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
   const [category, setCategory] = useState("");
@@ -159,7 +160,7 @@ export default function TimelineScreen() {
         .from('timeline_events')
         .select('*')
         .eq('couple_id', coupleId)
-        .order('event_date', { ascending: false });
+        .order('event_date', { ascending: true });
 
       if (error) throw error;
       setEvents(data || []);
@@ -169,6 +170,25 @@ export default function TimelineScreen() {
     } finally {
       setLoading(false);
     }
+  };
+
+  const openEditModal = (event: TimelineEvent) => {
+    setEditingEvent(event);
+    setTitle(event.title);
+    setDescription(event.description || "");
+    setCategory(event.category || "");
+    setEventDate(event.event_date);
+    setShowModal(true);
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+  };
+
+  const closeModal = () => {
+    setShowModal(false);
+    setEditingEvent(null);
+    setTitle("");
+    setDescription("");
+    setCategory("");
+    setEventDate("");
   };
 
   const addEvent = async () => {
@@ -186,35 +206,62 @@ export default function TimelineScreen() {
 
       const coupleId = generateCoupleId(user.id, partnerUserId);
 
-      const newEvent = {
-        id: Date.now().toString(36),
-        user_id: user.id,
-        couple_id: coupleId,
-        title: title.trim(),
-        description: description.trim() || null,
-        category: category || null,
-        event_date: eventDate.trim(),
-      };
+      if (editingEvent) {
+        // Update existing event
+        const { error } = await supabase
+          .from('timeline_events')
+          .update({
+            title: title.trim(),
+            description: description.trim() || null,
+            category: category || null,
+            event_date: eventDate.trim(),
+          })
+          .eq('id', editingEvent.id);
 
-      const { error } = await supabase
-        .from('timeline_events')
-        .insert(newEvent);
+        if (error) throw error;
+      } else {
+        // Create new event
+        const newEvent = {
+          id: Date.now().toString(36),
+          user_id: user.id,
+          couple_id: coupleId,
+          title: title.trim(),
+          description: description.trim() || null,
+          category: category || null,
+          event_date: eventDate.trim(),
+        };
 
-      if (error) throw error;
+        const { error } = await supabase
+          .from('timeline_events')
+          .insert(newEvent);
+
+        if (error) throw error;
+      }
 
       await loadEvents();
-      setShowModal(false);
-      setTitle("");
-      setDescription("");
-      setCategory("");
-      setEventDate("");
+      closeModal();
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
     } catch (error) {
-      console.error('Error adding timeline event:', error);
-      Alert.alert('Error', 'Failed to add timeline event');
+      console.error('Error saving timeline event:', error);
+      Alert.alert('Error', 'Failed to save timeline event');
     } finally {
       setIsSaving(false);
     }
+  };
+
+  const confirmDelete = (event: TimelineEvent) => {
+    Alert.alert(
+      'Delete Event',
+      `Are you sure you want to delete "${event.title}"?`,
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Delete',
+          style: 'destructive',
+          onPress: () => deleteEvent(event.id),
+        },
+      ]
+    );
   };
 
   const deleteEvent = async (id: string) => {
@@ -229,6 +276,7 @@ export default function TimelineScreen() {
       if (error) throw error;
 
       await loadEvents();
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
     } catch (error) {
       console.error('Error deleting timeline event:', error);
       Alert.alert('Error', 'Failed to delete timeline event');
@@ -298,10 +346,7 @@ export default function TimelineScreen() {
           keyExtractor={(e) => e.id}
           contentContainerStyle={[styles.list, { paddingBottom: insets.bottom + 100 }]}
           renderItem={({ item: event }) => (
-            <Pressable
-              style={[styles.eventCard, { backgroundColor: colors.card, borderColor: colors.border, opacity: 0.95 }]}
-              onLongPress={() => deleteEvent(event.id)}
-            >
+            <View style={[styles.eventCard, { backgroundColor: colors.card, borderColor: colors.border, opacity: 0.95 }]}>
               <View style={styles.timelineLine}>
                 <View style={[styles.timelineDot, { backgroundColor: getCategoryColor(event.category) }]} />
                 <View style={[styles.timelineConnector, { backgroundColor: colors.mutedForeground, opacity: 0.3 }]} />
@@ -310,11 +355,25 @@ export default function TimelineScreen() {
               <View style={styles.eventContent}>
                 <View style={styles.eventHeader}>
                   <Text style={[styles.eventDate, { color: colors.primary }]}>{formatDate(event.event_date)}</Text>
-                  {event.user_id === user?.id && (
-                    <View style={[styles.youBadge, { backgroundColor: `${colors.primary}20` }]}>
-                      <Text style={[styles.youText, { color: colors.primary }]}>You</Text>
-                    </View>
-                  )}
+                  <View style={styles.eventActions}>
+                    {event.user_id === user?.id && (
+                      <View style={[styles.youBadge, { backgroundColor: `${colors.primary}20` }]}>
+                        <Text style={[styles.youText, { color: colors.primary }]}>You</Text>
+                      </View>
+                    )}
+                    <Pressable
+                      onPress={() => openEditModal(event)}
+                      style={styles.actionButton}
+                    >
+                      <Feather name="edit-2" size={16} color={colors.primary} />
+                    </Pressable>
+                    <Pressable
+                      onPress={() => confirmDelete(event)}
+                      style={styles.actionButton}
+                    >
+                      <Feather name="trash-2" size={16} color="#FF4444" />
+                    </Pressable>
+                  </View>
                 </View>
                 
                 <Text style={[styles.eventTitle, { color: colors.text }]}>{event.title}</Text>
@@ -327,7 +386,7 @@ export default function TimelineScreen() {
                   </View>
                 )}
               </View>
-            </Pressable>
+            </View>
           )}
         />
       )}
@@ -340,7 +399,9 @@ export default function TimelineScreen() {
         >
           <View style={[styles.modalSheet, { backgroundColor: colors.card, borderColor: colors.border, opacity: 0.98 }]}>
             <View style={[styles.modalHandle, { backgroundColor: colors.mutedForeground, opacity: 0.5 }]} />
-            <Text style={[styles.modalTitle, { color: colors.text }]}>New timeline event</Text>
+            <Text style={[styles.modalTitle, { color: colors.text }]}>
+              {editingEvent ? 'Edit timeline event' : 'New timeline event'}
+            </Text>
             
             <TextInput
               style={[styles.titleInput, { backgroundColor: colors.input, borderColor: colors.border, color: colors.text }]}
@@ -401,7 +462,7 @@ export default function TimelineScreen() {
             <View style={styles.modalButtons}>
               <Pressable
                 style={[styles.modalCancelBtn, { borderColor: colors.border, backgroundColor: colors.muted }]}
-                onPress={() => { setShowModal(false); setTitle(""); setDescription(""); setCategory(""); setEventDate(""); }}
+                onPress={closeModal}
               >
                 <Text style={[styles.modalCancelText, { color: colors.mutedForeground }]}>Cancel</Text>
               </Pressable>
@@ -409,7 +470,9 @@ export default function TimelineScreen() {
                 {isSaving ? (
                   <ActivityIndicator color={colors.primaryForeground} size="small" />
                 ) : (
-                  <Text style={[styles.modalSaveText, { color: colors.primaryForeground }]}>Save event</Text>
+                  <Text style={[styles.modalSaveText, { color: colors.primaryForeground }]}>
+                    {editingEvent ? 'Update event' : 'Save event'}
+                  </Text>
                 )}
               </Pressable>
             </View>
@@ -454,6 +517,8 @@ const styles = StyleSheet.create({
   timelineConnector: { width: 2, flex: 1, minHeight: 40 },
   eventContent: { flex: 1, gap: 8 },
   eventHeader: { flexDirection: "row", justifyContent: "space-between", alignItems: "center" },
+  eventActions: { flexDirection: "row", alignItems: "center", gap: 8 },
+  actionButton: { padding: 4 },
   eventDate: { fontSize: 12, fontFamily: "System", fontWeight: '600' },
   eventTitle: { fontSize: 16, fontFamily: "System", fontWeight: '600' },
   eventDescription: { fontSize: 14, fontFamily: "System", lineHeight: 20 },
