@@ -116,6 +116,7 @@ const styles = StyleSheet.create({
     borderBottomRightRadius: 18,
     borderRightWidth: 1,
     overflow: 'hidden',
+    backgroundColor: 'transparent',
   },
   drawerContent: {
     flex: 1,
