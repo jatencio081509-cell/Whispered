@@ -10,8 +10,8 @@ import {
 import { Feather } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { useColors } from '@/hooks/useColors';
-import { LinearGradient } from 'expo-linear-gradient';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import ThemeBackground from '@/components/ThemeBackground';
 
 interface NavigationDrawerProps {
   visible: boolean;
@@ -49,17 +49,25 @@ export default function NavigationDrawer({ visible, onClose }: NavigationDrawerP
       onRequestClose={onClose}
     >
       <Pressable style={styles.overlay} onPress={onClose}>
-        <LinearGradient
-          colors={['rgba(0, 0, 0, 0.9)', 'rgba(0, 0, 0, 0.8)', 'rgba(0, 0, 0, 0.9)']}
-          start={{ x: 0, y: 0 }}
-          end={{ x: 0, y: 1 }}
-          style={[styles.drawer, { paddingTop: insets.top, paddingBottom: insets.bottom }]}
+        <View
+          style={[
+            styles.drawer,
+            {
+              paddingTop: insets.top,
+              paddingBottom: insets.bottom,
+              backgroundColor: colors.background,
+              borderColor: colors.border,
+            },
+          ]}
         >
+          <ThemeBackground>
+            <View />
+          </ThemeBackground>
           <Pressable onPress={(e) => e.stopPropagation()} style={styles.drawerContent}>
-            <View style={styles.header}>
-              <Text style={[styles.title, { color: colors.foreground }]}>Navigation</Text>
+            <View style={[styles.header, { borderBottomColor: colors.border }]}>
+              <Text style={[styles.title, { color: colors.text }]}>Navigation</Text>
               <Pressable onPress={onClose} style={styles.closeButton}>
-                <Feather name="x" size={24} color={colors.foreground} />
+                <Feather name="x" size={24} color={colors.text} />
               </Pressable>
             </View>
 
@@ -71,18 +79,25 @@ export default function NavigationDrawer({ visible, onClose }: NavigationDrawerP
               {NAVIGATION_ITEMS.map((item) => (
                 <Pressable
                   key={item.name}
-                  style={styles.navigationItem}
+                  style={({ pressed }) => [
+                    styles.navigationItem,
+                    {
+                      backgroundColor: colors.card,
+                      borderColor: colors.border,
+                      opacity: pressed ? 0.75 : 1,
+                    },
+                  ]}
                   onPress={() => navigateTo(item.route)}
                 >
                   <Feather name={item.icon as any} size={24} color={colors.primary} />
-                  <Text style={[styles.navigationItemText, { color: colors.foreground }]}>
+                  <Text style={[styles.navigationItemText, { color: colors.text }]}>
                     {item.name}
                   </Text>
                 </Pressable>
               ))}
             </ScrollView>
           </Pressable>
-        </LinearGradient>
+        </View>
       </Pressable>
     </Modal>
   );
@@ -97,11 +112,14 @@ const styles = StyleSheet.create({
   drawer: {
     width: '80%',
     height: '100%',
-    borderTopRightRadius: 4,
-    borderBottomRightRadius: 4,
+    borderTopRightRadius: 18,
+    borderBottomRightRadius: 18,
+    borderRightWidth: 1,
+    overflow: 'hidden',
   },
   drawerContent: {
     flex: 1,
+    zIndex: 1,
   },
   header: {
     flexDirection: 'row',
@@ -109,7 +127,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     padding: 20,
     borderBottomWidth: 1,
-    borderBottomColor: 'rgba(0, 229, 255, 0.2)',
   },
   title: {
     fontSize: 20,
@@ -131,10 +148,8 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     padding: 16,
     marginBottom: 8,
-    backgroundColor: 'rgba(0, 0, 0, 0.6)',
-    borderRadius: 4,
+    borderRadius: 12,
     borderWidth: 1,
-    borderColor: 'rgba(0, 229, 255, 0.2)',
   },
   navigationItemText: {
     fontSize: 16,

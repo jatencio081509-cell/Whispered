@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Feather } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
@@ -8,7 +8,7 @@ import { useFocusEffect } from 'expo-router';
 import { supabase } from '@/lib/supabase';
 import { useApp } from '@/context/AppContext';
 
-import { View, Text, Pressable, StyleSheet, ScrollView, Modal, TextInput } from 'react-native';
+import { Animated, Easing, View, Text, Pressable, StyleSheet, ScrollView, Modal, TextInput } from 'react-native';
 import Svg, { Circle } from 'react-native-svg';
 import NavigationDrawer from '@/components/NavigationDrawer';
 import ThemeBackground from '@/components/ThemeBackground';
@@ -33,6 +33,17 @@ export default function HomeScreen() {
   const [showEditPartnerName, setShowEditPartnerName] = useState(false);
   const [editingPartnerName, setEditingPartnerName] = useState('');
   const [showNavigationDrawer, setShowNavigationDrawer] = useState(false);
+  const entrance = useRef(new Animated.Value(0)).current;
+
+  useEffect(() => {
+    entrance.setValue(0);
+    Animated.timing(entrance, {
+      toValue: 1,
+      duration: 520,
+      easing: Easing.out(Easing.cubic),
+      useNativeDriver: true,
+    }).start();
+  }, [entrance]);
 
   if (!isLoaded) {
     return (
@@ -174,7 +185,28 @@ export default function HomeScreen() {
     <View style={[styles.container, { backgroundColor: colors.background }]}>
       <ThemeBackground>
         <ScrollView style={[styles.scrollView, { paddingTop: insets.top + 12 }]} key={refreshKey}>
-        <View style={styles.content}>
+        <Animated.View
+          style={[
+            styles.content,
+            {
+              opacity: entrance,
+              transform: [
+                {
+                  translateY: entrance.interpolate({
+                    inputRange: [0, 1],
+                    outputRange: [18, 0],
+                  }),
+                },
+                {
+                  scale: entrance.interpolate({
+                    inputRange: [0, 1],
+                    outputRange: [0.98, 1],
+                  }),
+                },
+              ],
+            },
+          ]}
+        >
           {/* Header */}
           <View style={styles.header}>
             <View>
@@ -203,7 +235,7 @@ export default function HomeScreen() {
                   cx={100}
                   cy={100}
                   r={80}
-                  stroke="rgba(0, 229, 255, 0.1)"
+                  stroke={colors.border}
                   strokeWidth={8}
                   fill="transparent"
                 />
@@ -212,7 +244,7 @@ export default function HomeScreen() {
                   cx={100}
                   cy={100}
                   r={80}
-                  stroke="#00E5FF"
+                  stroke={colors.primary}
                   strokeWidth={8}
                   fill="transparent"
                   strokeDasharray={circumference}
@@ -231,7 +263,7 @@ export default function HomeScreen() {
               </View>
             </View>
 
-            <View style={styles.anniversaryCard}>
+            <View style={[styles.anniversaryCard, { backgroundColor: colors.card, borderColor: colors.border }]}>
               <Text style={[styles.anniversaryText, { color: colors.text }]}>
                 {daysTogether} days together
               </Text>
@@ -256,7 +288,7 @@ export default function HomeScreen() {
                   styles.moodDropdown,
                   { 
                     borderColor: myMood ? colors.primary : colors.border,
-                    backgroundColor: myMood ? "rgba(0,229,255,0.05)" : colors.surface,
+                    backgroundColor: myMood ? colors.chatBoxes : colors.surface,
                     opacity: pressed ? 0.8 : 1
                   }
                 ]}
@@ -278,7 +310,7 @@ export default function HomeScreen() {
               </Text>
               <View style={[styles.moodDropdown, { 
                 borderColor: partnerMood ? colors.primary : colors.border,
-                backgroundColor: partnerMood ? "rgba(0,229,255,0.05)" : colors.surface
+                backgroundColor: partnerMood ? colors.chatBoxes : colors.surface
               }]}>
                 <View style={styles.moodDropdownContent}>
                   <Text style={[styles.moodDropdownText, { color: partnerMood ? colors.text : colors.mutedForeground }]}>
@@ -295,7 +327,7 @@ export default function HomeScreen() {
           <Text style={[styles.sectionTitle, { color: colors.text }]}>Partner</Text>
           
           {isLinked ? (
-            <View style={styles.partnerCard}>
+            <View style={[styles.partnerCard, { backgroundColor: colors.card, borderColor: colors.border }]}>
               <View style={styles.partnerHeader}>
                 <Feather name="heart" size={20} color={colors.primary} />
                 <Text style={[styles.partnerTitle, { color: colors.text }]}>
@@ -308,7 +340,7 @@ export default function HomeScreen() {
             </View>
           ) : (
             <Pressable 
-              style={styles.partnerCard}
+              style={[styles.partnerCard, { backgroundColor: colors.card, borderColor: colors.border }]}
               onPress={() => router.push('/(auth)/link-partner')}
             >
               <Text style={[styles.partnerTitle, { color: colors.mutedForeground }]}>
@@ -321,7 +353,7 @@ export default function HomeScreen() {
           )}
         </View>
 
-      </View>
+      </Animated.View>
 
       {/* My Mood Dropdown Modal */}
       <Modal
@@ -340,8 +372,9 @@ export default function HomeScreen() {
                   style={({ pressed }) => [
                     styles.moodOption,
                     { 
-                      backgroundColor: myMood === mood.label.toLowerCase() ? "rgba(0,229,255,0.1)" : colors.surface,
+                      backgroundColor: myMood === mood.label.toLowerCase() ? colors.chatBoxes : colors.surface,
                       borderColor: myMood === mood.label.toLowerCase() ? colors.primary : colors.border,
+                      borderBottomColor: colors.border,
                       opacity: pressed ? 0.8 : 1
                     }
                   ]}
@@ -389,7 +422,7 @@ export default function HomeScreen() {
                 <Text style={[styles.modalButtonText, { color: colors.text }]}>Cancel</Text>
               </Pressable>
               <Pressable
-                style={[styles.modalButton, styles.saveButton, { backgroundColor: colors.primary }]}
+                style={[styles.modalButton, styles.saveButton, { backgroundColor: colors.primary, borderColor: colors.primary }]}
                 onPress={savePartnerName}
               >
                 <Text style={[styles.modalButtonText, { color: colors.primaryForeground }]}>Save</Text>
@@ -475,11 +508,9 @@ const styles = StyleSheet.create({
     textAlign: 'center',
   },
   partnerCard: {
-    backgroundColor: 'rgba(0, 0, 0, 0.6)',
     borderRadius: 4,
     padding: 20,
     borderWidth: 1,
-    borderColor: 'rgba(0, 229, 255, 0.2)',
   },
   partnerHeader: {
     flexDirection: 'row',
@@ -506,11 +537,9 @@ const styles = StyleSheet.create({
     borderColor: 'rgba(0, 229, 255, 0.2)',
   },
   anniversaryCard: {
-    backgroundColor: 'rgba(0, 0, 0, 0.6)',
     borderRadius: 4,
     padding: 20,
     borderWidth: 1,
-    borderColor: 'rgba(0, 229, 255, 0.2)',
     alignItems: 'center',
     marginTop: 8,
   },
@@ -528,7 +557,6 @@ const styles = StyleSheet.create({
     fontSize: 15,
     fontWeight: '600',
     marginTop: 8,
-    color: '#00E5FF',
   },
   circleContainer: {
     alignItems: 'center',
@@ -589,8 +617,6 @@ const styles = StyleSheet.create({
     width: '100%',
     maxWidth: 320,
     borderWidth: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.8)',
-    borderColor: 'rgba(0, 229, 255, 0.2)',
   },
   modalTitle: {
     fontSize: 16,
@@ -605,7 +631,9 @@ const styles = StyleSheet.create({
     padding: 14,
     borderBottomWidth: 1,
     gap: 12,
-    borderBottomColor: 'rgba(0, 229, 255, 0.1)',
+  },
+  moodGrid: {
+    gap: 8,
   },
   moodOptionEmoji: {
     fontSize: 24,
@@ -638,14 +666,13 @@ const styles = StyleSheet.create({
   },
   cancelButton: {
     borderWidth: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.6)',
-    borderColor: 'rgba(0, 229, 255, 0.2)',
   },
   saveButton: {
     borderRadius: 4,
-    backgroundColor: '#00E5FF',
     borderWidth: 1,
-    borderColor: '#00E5FF',
+  },
+  selectedIndicator: {
+    marginLeft: 'auto',
   },
   modalButtonText: {
     fontSize: 16,

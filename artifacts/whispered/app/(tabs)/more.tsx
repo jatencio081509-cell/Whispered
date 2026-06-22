@@ -21,7 +21,7 @@ const FEATURES = [
   { id: "goals",    label: "Goals",         description: "Track shared dreams",   icon: "target",        color: "#00E5FF", route: "/goals"    },
   { id: "prompts",  label: "Daily Prompts", description: "Answer together",        icon: "message-square",color: "#7B2FFF", route: "/prompts"  },
   { id: "whispers", label: "Whispers",      description: "Hidden messages",        icon: "send",          color: "#FF4FA3", route: "/whispers" },
-  { id: "timeline", label: "Timeline",      description: "Your milestones",        icon: "clock",         color: "#00E5FF", route: "/timeline" },
+  { id: "timeline", label: "Timeline",      description: "Add shared milestones",   icon: "clock",         color: "theme", route: "/timeline" },
   { id: "settings", label: "Settings",      description: "Themes & couple config", icon: "settings",      color: "#5B7A9A", route: "/settings" },
 ];
 
@@ -70,13 +70,16 @@ export default function MoreScreen() {
         {/* Feature list */}
         <View style={styles.grid}>
           {FEATURES.map((f) => (
+            (() => {
+              const featureColor = f.color === "theme" ? colors.primary : f.color;
+              return (
             <Pressable
               key={f.id}
               style={({ pressed }) => [styles.featureCard, { backgroundColor: colors.card, borderColor: colors.border, opacity: pressed ? 0.8 : 1 }]}
               onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); router.push(f.route as any); }}
             >
-              <View style={[styles.featureIcon, { backgroundColor: `${f.color}14`, borderColor: `${f.color}28`, borderWidth: 1 }]}>
-                <Feather name={f.icon as any} size={22} color={f.color} />
+              <View style={[styles.featureIcon, { backgroundColor: `${featureColor}14`, borderColor: `${featureColor}28`, borderWidth: 1 }]}>
+                <Feather name={f.icon as any} size={22} color={featureColor} />
               </View>
               <View style={styles.featureText}>
                 <Text style={[styles.featureLabel, { color: colors.text }]}>{f.label}</Text>
@@ -84,6 +87,8 @@ export default function MoreScreen() {
               </View>
               <Feather name="chevron-right" size={16} color={colors.mutedForeground} />
             </Pressable>
+              );
+            })()
           ))}
         </View>
       </ScrollView>
