@@ -58,56 +58,355 @@ export default function TimelineScreen() {
 
   // Auto-generate milestone events
   useEffect(() => {
-    const generateMilestones = async () => {
+    const generateAutoEvents = async () => {
       if (!user) return;
 
       const partnerUserId = user.unsafeMetadata?.partner_user_id as string | undefined;
-      if (!partnerUserId) return;
+      if (!partnerUserId) {
+        console.log('No partner linked, skipping auto events');
+        return;
+      }
 
       const coupleId = generateCoupleId(user.id, partnerUserId);
+      console.log('Generating auto events for couple:', coupleId);
 
-      // Get couple start date from user metadata or other source
-      const startDate = user.unsafeMetadata?.relationship_start_date as string | undefined;
-      if (!startDate) return;
+      try {
+        // Get couple data from Supabase - try to find by either user
+        const { data: coupleData, error: coupleError } = await supabase
+          .from('couples')
+          .select('id, start_date, official_date, engagement_date, wedding_date')
+          .or(`user1_id.eq.${user.id},user2_id.eq.${user.id}`)
+          .single();
 
-      const daysTogether = Math.floor((Date.now() - new Date(startDate).getTime()) / (1000 * 60 * 60 * 24));
-      const milestoneDays = [7, 30, 50, 100, 200, 365];
+        if (coupleError) {
+          console.log('No couple found in database:', coupleError);
+        } else {
+          console.log('Found couple data:', coupleData);
+        }
 
-      for (const days of milestoneDays) {
-        if (daysTogether >= days) {
-          const milestoneDate = new Date(startDate);
-          milestoneDate.setDate(milestoneDate.getDate() + days);
-          const milestoneId = `milestone_${days}`;
+        if (!coupleData) {
+          console.log('No couple data available, skipping auto events');
+          return;
+        }
 
-          // Check if this milestone already exists
-          const { data: existing } = await supabase
+        // Use the actual couple ID from the database
+        const actualCoupleId = coupleData.id;
+        console.log('Using couple ID:', actualCoupleId);
+
+        // 1. Add "First Chat" event (most reliable - based on actual messages)
+        const { data: firstMessage, error: msgError } = await supabase
+          .from('messages')
+          .select('created_at')
+          .or(`from_user_id.eq.${user.id},to_user_id.eq.${user.id},from_user_id.eq.${partnerUserId},to_user_id.eq.${partnerUserId}`)
+          .order('created_at', { ascending: true })
+          .limit(1)
+          .single();
+
+        if (firstMessage && !msgError) {
+          const firstChatId = 'auto_first_chat';
+          const { data: existingFirstChat } = await supabase
             .from('timeline_events')
             .select('id')
-            .eq('id', milestoneId)
-            .eq('couple_id', coupleId)
+            .eq('id', firstChatId)
+            .eq('couple_id', actualCoupleId)
             .single();
 
-          if (!existing) {
+          if (!existingFirstChat) {
+            const firstChatDate = new Date(firstMessage.created_at).toISOString().split('T')[0];
+            console.log('Creating First Chat event for date:', firstChatDate);
+            const { error: insertError } = await supabase
+              .from('timeline_events')
+              .insert({
+                id: firstChatId,
+                user_id: user.id,
+                couple_id: actualCoupleId,
+                title: 'First Chat',
+                description: 'Our first message to each other 💬',
+                event_date: firstChatDate,
+                category: 'Milestone',
+              });
+            
+            if (insertError) {
+              console.error('Error creating First Chat event:', insertError);
+            } else {
+              console.log('First Chat event created successfully');
+            }
+          }
+        }
+
+        // 2. Add "First Memory" event
+        const { data: firstMemory, error: memoryError } = await supabase
+          .from('memories')
+          .select('created_at')
+          .eq('couple_id', actualCoupleId)
+          .order('created_at', { ascending: true })
+          .limit(1)
+          .single();
+
+        if (firstMemory && !memoryError) {
+          const firstMemoryId = 'auto_first_memory';
+          const { data: existingFirstMemory } = await supabase
+            .from('timeline_events')
+            .select('id')
+            .eq('id', firstMemoryId)
+            .eq('couple_id', actualCoupleId)
+            .single();
+
+          if (!existingFirstMemory) {
+            const memoryDate = new Date(firstMemory.created_at).toISOString().split('T')[0];
+            console.log('Creating First Memory event for:', memoryDate);
             await supabase
               .from('timeline_events')
               .insert({
-                id: milestoneId,
+                id: firstMemoryId,
                 user_id: user.id,
-                couple_id: coupleId,
-                title: `${days} days together`,
-                description: 'A milestone worth celebrating',
-                event_date: milestoneDate.toISOString().split('T')[0],
+                couple_id: actualCoupleId,
+                title: 'First Memory Saved',
+                description: 'Started capturing our moments together 📸',
+                event_date: memoryDate,
                 category: 'Milestone',
               });
           }
         }
-      }
 
-      // Reload events after generating milestones
-      await loadEvents();
+        // 3. Add "Connected on Whispered" event (when couple was created)
+        if (coupleData.start_date) {
+          const linkedId = 'auto_linked_accounts';
+          const { data: existingLinked } = await supabase
+            .from('timeline_events')
+            .select('id')
+            .eq('id', linkedId)
+            .eq('couple_id', actualCoupleId)
+            .single();
+
+          if (!existingLinked) {
+            const linkedDate = new Date(coupleData.start_date).toISOString().split('T')[0];
+            console.log('Creating Connected on Whispered event for:', linkedDate);
+            await supabase
+              .from('timeline_events')
+              .insert({
+                id: linkedId,
+                user_id: user.id,
+                couple_id: actualCoupleId,
+                title: 'Connected on Whispered',
+                description: 'Started our digital journey together 💕',
+                event_date: linkedDate,
+                category: 'Milestone',
+              });
+          }
+        }
+
+        // 3. Add "Official Date" event if set
+        if (coupleData.official_date) {
+          const officialId = 'auto_official_date';
+          const { data: existingOfficial } = await supabase
+            .from('timeline_events')
+            .select('id')
+            .eq('id', officialId)
+            .eq('couple_id', actualCoupleId)
+            .single();
+
+          if (!existingOfficial) {
+            console.log('Creating Official Date event for:', coupleData.official_date);
+            await supabase
+              .from('timeline_events')
+              .insert({
+                id: officialId,
+                user_id: user.id,
+                couple_id: actualCoupleId,
+                title: 'Made It Official',
+                description: 'The day we became official ❤️',
+                event_date: coupleData.official_date,
+                category: 'Anniversary',
+              });
+
+            // Generate relationship milestones based on official date
+            const daysTogether = Math.floor((Date.now() - new Date(coupleData.official_date).getTime()) / (1000 * 60 * 60 * 24));
+            const milestoneDays = [7, 30, 50, 100, 200, 365, 500, 730, 1000];
+
+            for (const days of milestoneDays) {
+              if (daysTogether >= days) {
+                const milestoneDate = new Date(coupleData.official_date);
+                milestoneDate.setDate(milestoneDate.getDate() + days);
+                const milestoneId = `milestone_${days}`;
+
+                const { data: existing } = await supabase
+                  .from('timeline_events')
+                  .select('id')
+                  .eq('id', milestoneId)
+                  .eq('couple_id', actualCoupleId)
+                  .single();
+
+                if (!existing) {
+                  console.log(`Creating ${days} day milestone`);
+                  await supabase
+                    .from('timeline_events')
+                    .insert({
+                      id: milestoneId,
+                      user_id: user.id,
+                      couple_id: actualCoupleId,
+                      title: `${days} days together`,
+                      description: days >= 365 ? `${Math.floor(days / 365)} year${Math.floor(days / 365) > 1 ? 's' : ''} together! 🎉` : 'A milestone worth celebrating',
+                      event_date: milestoneDate.toISOString().split('T')[0],
+                      category: 'Milestone',
+                    });
+                }
+              }
+            }
+          }
+        }
+
+        // 4. Add "Engagement" event if set
+        if (coupleData.engagement_date) {
+          const engagementId = 'auto_engagement';
+          const { data: existingEngagement } = await supabase
+            .from('timeline_events')
+            .select('id')
+            .eq('id', engagementId)
+            .eq('couple_id', actualCoupleId)
+            .single();
+
+          if (!existingEngagement) {
+            console.log('Creating Engagement event for:', coupleData.engagement_date);
+            await supabase
+              .from('timeline_events')
+              .insert({
+                id: engagementId,
+                user_id: user.id,
+                couple_id: actualCoupleId,
+                title: 'Engaged! 💍',
+                description: 'We said yes to forever!',
+                event_date: coupleData.engagement_date,
+                category: 'Anniversary',
+              });
+          }
+        }
+
+        // 5. Add "Wedding" event if set
+        if (coupleData.wedding_date) {
+          const weddingId = 'auto_wedding';
+          const { data: existingWedding } = await supabase
+            .from('timeline_events')
+            .select('id')
+            .eq('id', weddingId)
+            .eq('couple_id', actualCoupleId)
+            .single();
+
+          if (!existingWedding) {
+            console.log('Creating Wedding event for:', coupleData.wedding_date);
+            await supabase
+              .from('timeline_events')
+              .insert({
+                id: weddingId,
+                user_id: user.id,
+                couple_id: actualCoupleId,
+                title: 'Married! 💒',
+                description: 'Our wedding day - the best day ever!',
+                event_date: coupleData.wedding_date,
+                category: 'Anniversary',
+              });
+          }
+        }
+
+        // 6. Add "Dating Anniversary" event from start_date
+        if (coupleData.start_date) {
+          const anniversaryId = 'auto_dating_anniversary';
+          const { data: existingAnniversary } = await supabase
+            .from('timeline_events')
+            .select('id')
+            .eq('id', anniversaryId)
+            .eq('couple_id', actualCoupleId)
+            .single();
+
+          if (!existingAnniversary) {
+            const anniversaryDate = new Date(coupleData.start_date).toISOString().split('T')[0];
+            console.log('Creating Dating Anniversary event for:', anniversaryDate);
+            await supabase
+              .from('timeline_events')
+              .insert({
+                id: anniversaryId,
+                user_id: user.id,
+                couple_id: actualCoupleId,
+                title: 'Started Dating',
+                description: 'The beginning of our love story 💕',
+                event_date: anniversaryDate,
+                category: 'Anniversary',
+              });
+          }
+        }
+
+        // 7. Add "First Account Created" and "Both Joined" events
+        const { data: users, error: usersError } = await supabase
+          .from('users')
+          .select('id, created_at')
+          .in('id', [user.id, partnerUserId])
+          .order('created_at', { ascending: true });
+
+        if (users && users.length > 0 && !usersError) {
+          // First person to join
+          const firstUser = users[0];
+          const firstAccountId = 'auto_first_account';
+          const { data: existingFirstAccount } = await supabase
+            .from('timeline_events')
+            .select('id')
+            .eq('id', firstAccountId)
+            .eq('couple_id', actualCoupleId)
+            .single();
+
+          if (!existingFirstAccount) {
+            const accountDate = new Date(firstUser.created_at).toISOString().split('T')[0];
+            console.log('Creating First Account event for:', accountDate);
+            await supabase
+              .from('timeline_events')
+              .insert({
+                id: firstAccountId,
+                user_id: user.id,
+                couple_id: actualCoupleId,
+                title: 'First to Join Whispered',
+                description: 'One of us discovered Whispered! 🎉',
+                event_date: accountDate,
+                category: 'Milestone',
+              });
+          }
+
+          // Last person to join (when both were on the app)
+          if (users.length === 2) {
+            const lastUser = users[1];
+            const bothJoinedId = 'auto_both_joined';
+            const { data: existingBothJoined } = await supabase
+              .from('timeline_events')
+              .select('id')
+              .eq('id', bothJoinedId)
+              .eq('couple_id', actualCoupleId)
+              .single();
+
+            if (!existingBothJoined) {
+              const bothJoinedDate = new Date(lastUser.created_at).toISOString().split('T')[0];
+              console.log('Creating Both Joined event for:', bothJoinedDate);
+              await supabase
+                .from('timeline_events')
+                .insert({
+                  id: bothJoinedId,
+                  user_id: user.id,
+                  couple_id: actualCoupleId,
+                  title: 'Both on Whispered',
+                  description: 'We\'re both here now! 💕',
+                  event_date: bothJoinedDate,
+                  category: 'Milestone',
+                });
+            }
+          }
+        }
+
+        // Reload events after generating auto events
+        console.log('Reloading events...');
+        await loadEvents();
+      } catch (error) {
+        console.error('Error generating auto events:', error);
+      }
     };
 
-    generateMilestones();
+    generateAutoEvents();
   }, [user]);
 
   // Real-time sync for timeline events

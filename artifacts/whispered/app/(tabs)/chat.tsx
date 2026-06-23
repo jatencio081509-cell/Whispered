@@ -47,6 +47,20 @@ export default function ChatScreen() {
   const isLinked = !!partnerCode;
   const myUserId = user?.id;
 
+  const formatMessageTime = (timestamp: string) => {
+    const messageDate = new Date(timestamp);
+    const now = new Date();
+    const diffInHours = (now.getTime() - messageDate.getTime()) / (1000 * 60 * 60);
+    
+    if (diffInHours < 24) {
+      // Less than 24 hours: show time
+      return messageDate.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    } else {
+      // Over 24 hours: show date
+      return messageDate.toLocaleDateString([], { month: 'short', day: 'numeric' });
+    }
+  };
+
   const scrollToBottom = (animated = true) => {
     setTimeout(() => {
       flatListRef.current?.scrollToEnd({ animated });
@@ -85,7 +99,7 @@ export default function ChatScreen() {
         id: msg.id,
         text: msg.text,
         fromMe: msg.from_user_id === myUserId,
-        time: new Date(msg.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+        time: formatMessageTime(msg.created_at),
       }));
 
       const previousLength = messages.length;
@@ -125,7 +139,7 @@ export default function ChatScreen() {
               id: newMsg.id,
               text: newMsg.text,
               fromMe: newMsg.from_user_id === myUserId,
-              time: new Date(newMsg.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+              time: formatMessageTime(newMsg.created_at),
             };
             setMessages((prev) => [...prev, formattedMsg]);
 

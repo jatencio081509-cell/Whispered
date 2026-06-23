@@ -7,6 +7,7 @@ import { useColors } from '@/hooks/useColors';
 import { useFocusEffect } from 'expo-router';
 import { supabase } from '@/lib/supabase';
 import { useApp } from '@/context/AppContext';
+import * as Location from 'expo-location';
 
 import { Animated, Easing, View, Text, Pressable, StyleSheet, ScrollView, Modal, TextInput } from 'react-native';
 import Svg, { Circle } from 'react-native-svg';
@@ -27,12 +28,22 @@ export default function HomeScreen() {
   const router = useRouter();
   const { user, isLoaded } = useUser();
   const colors = useColors();
-  const { myMood, setMyMood, partnerMood } = useApp();
+  const { myMood, setMyMood, partnerMood, streak } = useApp();
 
   const [showMyMoodDropdown, setShowMyMoodDropdown] = useState(false);
   const [showEditPartnerName, setShowEditPartnerName] = useState(false);
   const [editingPartnerName, setEditingPartnerName] = useState('');
   const [showNavigationDrawer, setShowNavigationDrawer] = useState(false);
+  const [distance, setDistance] = useState<number | null>(null);
+  const [locationPermission, setLocationPermission] = useState<boolean>(false);
+  const [myLocation, setMyLocation] = useState<string | null>(null);
+  const [partnerLocation, setPartnerLocation] = useState<string | null>(null);
+  const [showAddressModal, setShowAddressModal] = useState(false);
+  const [showPartnerAddressModal, setShowPartnerAddressModal] = useState(false);
+  const [manualAddress, setManualAddress] = useState('');
+  const [partnerManualAddress, setPartnerManualAddress] = useState('');
+  const [isGeocodingAddress, setIsGeocodingAddress] = useState(false);
+  const [isGeocodingPartnerAddress, setIsGeocodingPartnerAddress] = useState(false);
   const entrance = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
@@ -44,6 +55,241 @@ export default function HomeScreen() {
       useNativeDriver: true,
     }).start();
   }, [entrance]);
+
+  // Request location permission and start tracking
+  useEffect(() => {
+    const requestLocationPermission = async () => {
+      const { status } = await Location.requestForegroundPermissionsAsync();
+      setLocationPermission(status === 'granted');
+    };
+    requestLocationPermission();
+  }, []);
+
+  // Calculate distance between two coordinates using Haversine formula
+  const calculateDistance = (lat1: number, lon1: number, lat2: number, lon2: number): number => {
+    const R = 3959; // Earth's radius in miles
+    const dLat = (lat2 - lat1) * Math.PI / 180;
+    const dLon = (lon2 - lon1) * Math.PI / 180;
+    const a =
+      Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+      Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
+      Math.sin(dLon / 2) * Math.sin(dLon / 2);
+    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+    return R * c;
+  };
+
+  // Get distance message based on distance
+  const getDistanceMessage = (distanceInMiles: number): string => {
+    const feet = distanceInMiles * 5280;
+    
+    if (feet < 500) return "Together? 💕";
+    if (feet < 1000) return "So close! 🏃";
+    if (distanceInMiles < 1) return "Nearly there 🚶";
+    if (distanceInMiles < 5) return "Just a few miles away 🚗";
+    if (distanceInMiles < 25) return "In the same area 🌆";
+    if (distanceInMiles < 100) return "Same region 🗺️";
+    if (distanceInMiles < 500) return "A drive away 🛣️";
+    return "Far but connected ✨";
+  };
+
+  // Format distance for display
+  const formatDistance = (distanceInMiles: number): string => {
+    const feet = distanceInMiles * 5280;
+    
+    if (feet < 1000) {
+      return `${Math.round(feet)} ft`;
+    } else if (distanceInMiles < 1) {
+      return `${(feet / 5280).toFixed(2)} mi`;
+    } else if (distanceInMiles < 10) {
+      return `${distanceInMiles.toFixed(1)} mi`;
+    } else {
+      return `${Math.round(distanceInMiles)} mi`;
+    }
+  };
+
+  // Get location name from coordinates
+  const getLocationName = async (latitude: number, longitude: number): Promise<string> => {
+    try {
+      const result = await Location.reverseGeocodeAsync({ latitude, longitude });
+      if (result && result.length > 0) {
+        const location = result[0];
+        return `${location.city || location.subregion || location.region || 'Unknown'}`;
+      }
+    } catch (error) {
+      console.error('Error reverse geocoding:', error);
+    }
+    return 'Unknown location';
+  };
+
+  // Geocode address to coordinates
+  const geocodeAddress = async (address: string): Promise<{ latitude: number; longitude: number } | null> => {
+    try {
+      const result = await Location.geocodeAsync(address);
+      if (result && result.length > 0) {
+        return {
+          latitude: result[0].latitude,
+          longitude: result[0].longitude,
+        };
+      }
+    } catch (error) {
+      console.error('Error geocoding address:', error);
+    }
+    return null;
+  };
+
+  // Save manual address
+  const saveManualAddress = async () => {
+    if (!user || !manualAddress.trim()) return;
+    
+    setIsGeocodingAddress(true);
+    try {
+      const coords = await geocodeAddress(manualAddress);
+      if (coords) {
+        const locationName = await getLocationName(coords.latitude, coords.longitude);
+        
+        await supabase
+          .from('users')
+          .upsert({
+            id: user.id,
+            latitude: coords.latitude,
+            longitude: coords.longitude,
+            manual_address: manualAddress,
+            location_name: locationName,
+            location_updated_at: new Date().toISOString(),
+          });
+        
+        setMyLocation(locationName);
+        setShowAddressModal(false);
+        setManualAddress('');
+      } else {
+        alert('Could not find that address. Please try again.');
+      }
+    } catch (error) {
+      console.error('Error saving manual address:', error);
+      alert('Error saving address. Please try again.');
+    } finally {
+      setIsGeocodingAddress(false);
+    }
+  };
+
+  // Save partner's manual address
+  const savePartnerManualAddress = async () => {
+    if (!user || !partnerManualAddress.trim()) return;
+    
+    const partnerUserId = user.unsafeMetadata?.partner_user_id as string | undefined;
+    if (!partnerUserId) return;
+    
+    setIsGeocodingPartnerAddress(true);
+    try {
+      const coords = await geocodeAddress(partnerManualAddress);
+      if (coords) {
+        const locationName = await getLocationName(coords.latitude, coords.longitude);
+        
+        await supabase
+          .from('users')
+          .upsert({
+            id: partnerUserId,
+            latitude: coords.latitude,
+            longitude: coords.longitude,
+            manual_address: partnerManualAddress,
+            location_name: locationName,
+            location_updated_at: new Date().toISOString(),
+          });
+        
+        setPartnerLocation(locationName);
+        setShowPartnerAddressModal(false);
+        setPartnerManualAddress('');
+      } else {
+        alert('Could not find that address. Please try again.');
+      }
+    } catch (error) {
+      console.error('Error saving partner address:', error);
+      alert('Error saving address. Please try again.');
+    } finally {
+      setIsGeocodingPartnerAddress(false);
+    }
+  };
+
+  // Track location and update distance
+  useEffect(() => {
+    if (!locationPermission || !user) return;
+
+    const partnerUserId = user.unsafeMetadata?.partner_user_id as string | undefined;
+    const coupleId = user.unsafeMetadata?.coupleId as string | undefined;
+    const partnerCode = user.unsafeMetadata?.partnerCode as string | undefined;
+    const isLinked = !!coupleId || !!partnerCode;
+    
+    if (!isLinked || !partnerUserId) return;
+
+    let locationSubscription: Location.LocationSubscription | null = null;
+
+    const startTracking = async () => {
+      try {
+        // Update location every 30 seconds
+        locationSubscription = await Location.watchPositionAsync(
+          {
+            accuracy: Location.Accuracy.Balanced,
+            timeInterval: 30000, // 30 seconds
+            distanceInterval: 50, // 50 meters
+          },
+          async (location) => {
+            const { latitude, longitude } = location.coords;
+
+            // Get location name
+            const locationName = await getLocationName(latitude, longitude);
+            setMyLocation(locationName);
+
+            // Update my location in database
+            await supabase
+              .from('users')
+              .upsert({
+                id: user.id,
+                latitude,
+                longitude,
+                location_name: locationName,
+                location_updated_at: new Date().toISOString(),
+              });
+
+            // Get partner's location
+            const { data: partnerData } = await supabase
+              .from('users')
+              .select('latitude, longitude, location_name, location_updated_at')
+              .eq('id', partnerUserId)
+              .single();
+
+            if (partnerData?.latitude && partnerData?.longitude) {
+              // Set partner location name
+              setPartnerLocation(partnerData.location_name || 'Unknown');
+              
+              // Check if partner's location is recent (within last 5 minutes)
+              const partnerLocationAge = Date.now() - new Date(partnerData.location_updated_at).getTime();
+              if (partnerLocationAge < 5 * 60 * 1000) {
+                const dist = calculateDistance(
+                  latitude,
+                  longitude,
+                  partnerData.latitude,
+                  partnerData.longitude
+                );
+                setDistance(dist);
+              } else {
+                setDistance(null); // Partner location too old
+              }
+            }
+          }
+        );
+      } catch (error) {
+        console.error('Error tracking location:', error);
+      }
+    };
+
+    startTracking();
+
+    return () => {
+      if (locationSubscription) {
+        locationSubscription.remove();
+      }
+    };
+  }, [locationPermission, user]);
 
   if (!isLoaded) {
     return (
@@ -221,6 +467,91 @@ export default function HomeScreen() {
               <Feather name="menu" size={24} color={colors.text} />
             </Pressable>
           </View>
+
+          {/* Streak Section */}
+          {isLinked && (
+            <View style={[styles.streakCard, { backgroundColor: colors.card, borderColor: colors.border }]}>
+              <View style={styles.streakContent}>
+                <View style={styles.streakIcon}>
+                  <Text style={styles.streakEmoji}>🔥</Text>
+                </View>
+                <View style={styles.streakText}>
+                  <Text style={[styles.streakNumber, { color: colors.text }]}>
+                    {streak} {streak === 1 ? 'day' : 'days'}
+                  </Text>
+                  <Text style={[styles.streakLabel, { color: colors.mutedForeground }]}>
+                    {streak === 0 ? 'Start your streak!' : 'Keep it going!'}
+                  </Text>
+                </View>
+              </View>
+            </View>
+          )}
+
+          {/* Distance Section */}
+          {isLinked && (
+            <View style={[styles.distanceCard, { backgroundColor: colors.card, borderColor: colors.border }]}>
+              {/* Visual Distance Display */}
+              {distance !== null && (
+                <View style={styles.visualDistanceContainer}>
+                  <Text style={[styles.visualDistanceNumber, { color: colors.text }]}>
+                    {distance < 1
+                      ? `${(distance * 5280).toFixed(1)} Feet`
+                      : `${distance.toFixed(1)} Miles`
+                    }
+                  </Text>
+                  <View style={styles.waypointLine}>
+                    <View style={[styles.waypoint, { backgroundColor: colors.primary }]}>
+                      <Feather name="map-pin" size={12} color={colors.background} />
+                    </View>
+                    <View style={[styles.connectingLine, { backgroundColor: colors.primary }]} />
+                    <View style={[styles.waypoint, { backgroundColor: colors.primary }]}>
+                      <Feather name="map-pin" size={12} color={colors.background} />
+                    </View>
+                  </View>
+                  <Text style={[styles.distanceLabel, { color: colors.mutedForeground }]}>
+                    {getDistanceMessage(distance)}
+                  </Text>
+                </View>
+              )}
+
+              {/* Individual Locations */}
+              <View style={styles.locationsContainer}>
+                {/* My Location */}
+                <View style={styles.locationRow}>
+                  <Text style={[styles.locationTitle, { color: colors.text }]}>Your location</Text>
+                  {myLocation ? (
+                    <Text style={[styles.locationValue, { color: colors.mutedForeground }]}>
+                      {myLocation}
+                    </Text>
+                  ) : (
+                    <Pressable onPress={() => setShowAddressModal(true)}>
+                      <Text style={[styles.addLocationButton, { color: colors.primary }]}>
+                        + Add manually
+                      </Text>
+                    </Pressable>
+                  )}
+                </View>
+
+                {/* Partner Location */}
+                <View style={styles.locationRow}>
+                  <Text style={[styles.locationTitle, { color: colors.text }]}>
+                    {partnerName ? `${partnerName}'s location` : "Partner's location"}
+                  </Text>
+                  {partnerLocation ? (
+                    <Text style={[styles.locationValue, { color: colors.mutedForeground }]}>
+                      {partnerLocation}
+                    </Text>
+                  ) : (
+                    <Pressable onPress={() => setShowPartnerAddressModal(true)}>
+                      <Text style={[styles.addLocationButton, { color: colors.primary }]}>
+                        + Add manually
+                      </Text>
+                    </Pressable>
+                  )}
+                </View>
+              </View>
+            </View>
+          )}
 
         {/* Anniversary Date Section - Moved to middle */}
         {anniversaryDate && daysTogether !== null && (
@@ -432,6 +763,98 @@ export default function HomeScreen() {
         </Pressable>
       </Modal>
 
+      {/* Add Manual Address Modal */}
+      <Modal
+        visible={showAddressModal}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setShowAddressModal(false)}
+      >
+        <Pressable style={styles.modalOverlay} onPress={() => setShowAddressModal(false)}>
+          <View style={[styles.modalContent, { backgroundColor: colors.card, borderColor: colors.border }]}>
+            <Text style={[styles.modalTitle, { color: colors.text }]}>Add your location</Text>
+            <Text style={[styles.modalSubtitle, { color: colors.mutedForeground }]}>
+              Enter your address or city
+            </Text>
+            <TextInput
+              style={[styles.editInput, { backgroundColor: colors.input, borderColor: colors.border, color: colors.text }]}
+              value={manualAddress}
+              onChangeText={setManualAddress}
+              placeholder="e.g., New York, NY or 123 Main St"
+              placeholderTextColor={colors.mutedForeground}
+              autoCapitalize="words"
+            />
+            <View style={styles.modalButtons}>
+              <Pressable
+                style={[styles.modalButton, styles.cancelButton, { borderColor: colors.border }]}
+                onPress={() => {
+                  setShowAddressModal(false);
+                  setManualAddress('');
+                }}
+              >
+                <Text style={[styles.modalButtonText, { color: colors.text }]}>Cancel</Text>
+              </Pressable>
+              <Pressable
+                style={[styles.modalButton, styles.saveButton, { backgroundColor: colors.primary, borderColor: colors.primary, opacity: isGeocodingAddress ? 0.6 : 1 }]}
+                onPress={saveManualAddress}
+                disabled={isGeocodingAddress || !manualAddress.trim()}
+              >
+                <Text style={[styles.modalButtonText, { color: colors.primaryForeground }]}>
+                  {isGeocodingAddress ? 'Saving...' : 'Save'}
+                </Text>
+              </Pressable>
+            </View>
+          </View>
+        </Pressable>
+      </Modal>
+
+      {/* Add Partner Address Modal */}
+      <Modal
+        visible={showPartnerAddressModal}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setShowPartnerAddressModal(false)}
+      >
+        <Pressable style={styles.modalOverlay} onPress={() => setShowPartnerAddressModal(false)}>
+          <View style={[styles.modalContent, { backgroundColor: colors.card, borderColor: colors.border }]}>
+            <Text style={[styles.modalTitle, { color: colors.text }]}>
+              Add {partnerName ? `${partnerName}'s` : "partner's"} location
+            </Text>
+            <Text style={[styles.modalSubtitle, { color: colors.mutedForeground }]}>
+              Enter their address or city
+            </Text>
+            <TextInput
+              style={[styles.editInput, { backgroundColor: colors.input, borderColor: colors.border, color: colors.text }]}
+              value={partnerManualAddress}
+              onChangeText={setPartnerManualAddress}
+              placeholder="e.g., Los Angeles, CA or 456 Oak Ave"
+              placeholderTextColor={colors.mutedForeground}
+              autoCapitalize="words"
+            />
+            <View style={styles.modalButtons}>
+              <Pressable
+                style={[styles.modalButton, styles.cancelButton, { borderColor: colors.border }]}
+                onPress={() => {
+                  setShowPartnerAddressModal(false);
+                  setPartnerManualAddress('');
+                }}
+              >
+                <Text style={[styles.modalButtonText, { color: colors.text }]}>Cancel</Text>
+              </Pressable>
+              <Pressable
+                style={[styles.modalButton, styles.saveButton, { backgroundColor: colors.primary, borderColor: colors.primary, opacity: isGeocodingPartnerAddress ? 0.6 : 1 }]}
+                onPress={savePartnerManualAddress}
+                disabled={isGeocodingPartnerAddress || !partnerManualAddress.trim()}
+              >
+                <Text style={[styles.modalButtonText, { color: colors.primaryForeground }]}>
+                  {isGeocodingPartnerAddress ? 'Saving...' : 'Save'}
+                </Text>
+              </Pressable>
+            </View>
+          </View>
+        </Pressable>
+      </Modal>
+
       <NavigationDrawer
         visible={showNavigationDrawer}
         onClose={() => setShowNavigationDrawer(false)}
@@ -476,6 +899,41 @@ const styles = StyleSheet.create({
     fontFamily: "System",
     fontWeight: '600',
     marginBottom: 16,
+  },
+  streakCard: {
+    borderRadius: 4,
+    padding: 20,
+    borderWidth: 1,
+    marginBottom: 24,
+  },
+  streakContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 16,
+  },
+  streakIcon: {
+    width: 60,
+    height: 60,
+    borderRadius: 30,
+    backgroundColor: 'rgba(255, 107, 53, 0.1)',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  streakEmoji: {
+    fontSize: 32,
+  },
+  streakText: {
+    flex: 1,
+  },
+  streakNumber: {
+    fontSize: 24,
+    fontWeight: '700',
+    fontFamily: 'System',
+    marginBottom: 4,
+  },
+  streakLabel: {
+    fontSize: 14,
+    fontFamily: 'System',
   },
   moodContainer: {
     flexDirection: 'row',
@@ -678,5 +1136,113 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '600',
     fontFamily: 'System',
+  },
+  distanceCard: {
+    borderRadius: 4,
+    padding: 20,
+    borderWidth: 1,
+    marginBottom: 24,
+  },
+  distanceContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 16,
+  },
+  distanceIcon: {
+    width: 60,
+    height: 60,
+    borderRadius: 30,
+    backgroundColor: 'rgba(0, 229, 255, 0.1)',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  distanceText: {
+    flex: 1,
+  },
+  distanceNumber: {
+    fontSize: 24,
+    fontWeight: '700',
+    fontFamily: 'System',
+    marginBottom: 4,
+  },
+  distanceLabel: {
+    fontSize: 14,
+    fontFamily: 'System',
+  },
+  distanceHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 16,
+    marginBottom: 16,
+    paddingBottom: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: 'rgba(0, 229, 255, 0.2)',
+  },
+  distanceHeaderText: {
+    flex: 1,
+  },
+  locationsContainer: {
+    gap: 12,
+  },
+  locationRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  locationTitle: {
+    fontSize: 14,
+    fontWeight: '500',
+    fontFamily: 'System',
+  },
+  locationValue: {
+    fontSize: 14,
+    fontFamily: 'System',
+  },
+  addLocationButton: {
+    fontSize: 14,
+    fontWeight: '600',
+    fontFamily: 'System',
+  },
+  modalSubtitle: {
+    fontSize: 14,
+    marginBottom: 16,
+    textAlign: 'center',
+    fontFamily: 'System',
+  },
+  visualDistanceContainer: {
+    alignItems: 'center',
+    paddingVertical: 16,
+    marginBottom: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: 'rgba(0, 229, 255, 0.2)',
+  },
+  visualDistanceNumber: {
+    fontSize: 32,
+    fontWeight: '700',
+    fontFamily: 'System',
+    marginBottom: 12,
+  },
+  waypointLine: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 8,
+    width: 200,
+  },
+  waypoint: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    alignItems: 'center',
+    justifyContent: 'center',
+    shadowColor: '#00E5FF',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.3,
+    shadowRadius: 4,
+    elevation: 4,
+  },
+  connectingLine: {
+    flex: 1,
+    height: 3,
+    marginHorizontal: 4,
   },
 });

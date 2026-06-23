@@ -52,9 +52,8 @@ export default function MoreScreen() {
         {/* Stats banner */}
         <View style={[styles.statsBanner, { backgroundColor: colors.card, borderColor: colors.border }]}>
           {[
-            { icon: "🌊", value: String(streak), label: "streak" },
+            { icon: "🔥", value: String(streak), label: "day streak" },
             { icon: "💙", value: isLinked ? "Linked" : "Solo", label: "status" },
-            { icon: "💬", value: "7", label: "prompts" },
           ].map((s, i) => (
             <React.Fragment key={s.label}>
               {i > 0 && <View style={[styles.statDivider, { backgroundColor: colors.border }]} />}
@@ -76,7 +75,15 @@ export default function MoreScreen() {
             <Pressable
               key={f.id}
               style={({ pressed }) => [styles.featureCard, { backgroundColor: colors.card, borderColor: colors.border, opacity: pressed ? 0.8 : 1 }]}
-              onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); router.push(f.route as any); }}
+              onPress={() => {
+                console.log('Navigating to:', f.route);
+                Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                try {
+                  router.push(f.route as any);
+                } catch (error) {
+                  console.error('Navigation error:', error);
+                }
+              }}
             >
               <View style={[styles.featureIcon, { backgroundColor: `${featureColor}14`, borderColor: `${featureColor}28`, borderWidth: 1 }]}>
                 <Feather name={f.icon as any} size={22} color={featureColor} />

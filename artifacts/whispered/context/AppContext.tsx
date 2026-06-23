@@ -37,6 +37,7 @@ interface AppContextValue {
   setPartnerMood: (m: Mood) => void;
   streak: number;
   setStreak: (n: number) => void;
+  calculateStreak: () => Promise<void>;
   refreshCouple: () => Promise<void>;
   isLoadingCouple: boolean;
 }
@@ -54,6 +55,7 @@ export const AppContext = createContext<AppContextValue>({
   setPartnerMood: () => {},
   streak: 0,
   setStreak: () => {},
+  calculateStreak: async () => {},
   refreshCouple: async () => {},
   isLoadingCouple: false,
 });
@@ -172,6 +174,78 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     AsyncStorage.setItem("streak", String(n));
   };
 
+  // Calculate streak based on consecutive days with messages
+  const calculateStreak = useCallback(async () => {
+    if (!user) return;
+    
+    const partnerUserId = user.unsafeMetadata?.partner_user_id as string | undefined;
+    if (!partnerUserId) {
+      setStreakState(0);
+      return;
+    }
+
+    try {
+      // Get messages grouped by date
+      const { data: messages, error } = await supabase
+        .from('messages')
+        .select('created_at')
+        .or(`from_user_id.eq.${user.id},to_user_id.eq.${user.id},from_user_id.eq.${partnerUserId},to_user_id.eq.${partnerUserId}`)
+        .order('created_at', { ascending: false });
+
+      if (error) throw error;
+
+      if (!messages || messages.length === 0) {
+        setStreakState(0);
+        return;
+      }
+
+      // Get unique dates
+      const dates = messages.map(m => new Date(m.created_at).toISOString().split('T')[0]);
+      const uniqueDates = [...new Set(dates)].sort().reverse();
+      
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      const todayStr = today.toISOString().split('T')[0];
+      
+      const yesterday = new Date(today);
+      yesterday.setDate(yesterday.getDate() - 1);
+      const yesterdayStr = yesterday.toISOString().split('T')[0];
+
+      // Check if streak is still active (message today or yesterday)
+      if (uniqueDates[0] !== todayStr && uniqueDates[0] !== yesterdayStr) {
+        setStreakState(0);
+        return;
+      }
+
+      // Count consecutive days
+      let streak = 0;
+      let currentDate = new Date(uniqueDates[0]);
+      
+      for (const dateStr of uniqueDates) {
+        const msgDate = new Date(dateStr);
+        msgDate.setHours(0, 0, 0, 0);
+        
+        if (msgDate.getTime() === currentDate.getTime()) {
+          streak++;
+          currentDate.setDate(currentDate.getDate() - 1);
+        } else {
+          break;
+        }
+      }
+
+      setStreakState(streak);
+    } catch (err) {
+      console.error('Failed to calculate streak:', err);
+    }
+  }, [user]);
+
+  // Calculate streak when user changes
+  useEffect(() => {
+    if (user) {
+      calculateStreak();
+    }
+  }, [user, calculateStreak]);
+
   const domain = process.env.EXPO_PUBLIC_DOMAIN;
   const baseUrl = domain ? `https://${domain}` : "";
 
@@ -278,6 +352,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         setPartnerMood,
         streak,
         setStreak,
+        calculateStreak,
         refreshCouple,
         isLoadingCouple,
       }}
