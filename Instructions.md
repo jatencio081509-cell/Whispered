@@ -1,6 +1,6 @@
 # Whispered - Setup & Contribution Instructions
 
-This guide is separated into **Mac** and **Windows** sections for clarity.
+This guide is separated into **Mac** and **Windows** sections for clarity, followed by a comprehensive **Errors & Troubleshooting** section.
 
 ---
 
@@ -118,68 +118,142 @@ git push origin main
 
 ---
 
-## Common Errors & Fixes
+## Errors & Troubleshooting
 
-### Error: `npm install` fails or gets stuck
+This section is organized by category to help you quickly find and fix issues.
 
-**Possible causes:** Corrupted cache, network issues, or platform-specific packages.
+### 1. Installation & Dependency Errors
 
+#### `npm install` fails or hangs
 **Fix:**
-
 ```bash
 npm cache clean --force
 rm -rf node_modules package-lock.json
 npm install --legacy-peer-deps
 ```
 
-### Error: `EBADPLATFORM` or rollup-related errors
-
-This usually happens because some packages try to install macOS binaries on Windows (or vice versa).
-
+#### `EBADPLATFORM` or rollup-related platform errors
 **Fix:**
-
 ```bash
 rm -rf node_modules package-lock.json
 npm install --no-optional --ignore-scripts --legacy-peer-deps
 ```
 
-### Error: `expo` command not found
-
+#### Peer dependency warnings / errors
 **Fix:**
-
 ```bash
-npx expo --version
+npm install --legacy-peer-deps
 ```
 
-Or reinstall the CLI:
-
-```bash
-npm install -g expo-cli
-```
-
-### Error after pulling new code: App won't start or modules are missing
-
+#### `node_modules` corrupted after pulling code
 **Fix:**
-
-```bash
-npx expo start --clear
-```
-
-If that doesn't work:
-
 ```bash
 rm -rf node_modules
 npm install
 npx expo start --clear
 ```
 
-### Error: "No projectId found" (Push Notifications)
+### 2. Expo & Development Server Errors
 
-Make sure your `app.json` has the correct `projectId` under `extra.eas`.
+#### "Unable to resolve module"
+**Fix:**
+```bash
+npx expo start --clear
+rm -rf node_modules
+npm install
+```
 
-### Still having issues?
+#### Metro bundler crashes or shows red screen
+**Fix:**
+```bash
+npx expo start --clear
+```
 
-Try these commands in order:
+#### "JavaScript heap out of memory"
+**Fix:**
+```bash
+export NODE_OPTIONS=--max-old-space-size=4096
+npx expo start --clear
+```
+
+#### Expo Go app not connecting to dev server
+- Make sure phone and computer are on the **same Wi-Fi**.
+- Try `npx expo start --lan` or `--localhost`.
+- Restart both your phone and computer.
+
+### 3. Git & Version Control Errors
+
+#### "You have divergent branches" or merge conflicts
+**Fix:**
+```bash
+git pull --rebase origin main
+# or
+git pull origin main
+```
+
+#### Large file warnings when pushing
+**Fix:** Add large files to `.gitignore` or use Git LFS.
+
+#### Accidental force push issues
+**Fix:** Avoid `--force` unless you're sure. Use `--force-with-lease` instead.
+
+### 4. Authentication (Clerk) Errors
+
+#### Sign in button does nothing
+- Check the console for `[SignIn]` logs.
+- Make sure you're using the latest version of the code.
+- Try signing out from Clerk Dashboard → Users → End all sessions.
+
+#### "Clerk has been loaded with development keys" warning
+This is normal in development. Ignore it unless deploying to production.
+
+#### Multiple GoTrueClient instances warning
+This is caused by Clerk + Supabase both managing auth. It usually doesn't break anything but can cause weird session behavior.
+
+### 5. Push Notification Errors
+
+#### "No projectId found"
+Make sure your `app.json` contains:
+```json
+"extra": {
+  "eas": {
+    "projectId": "your-project-id-here"
+  }
+}
+```
+
+#### Push token registration fails or times out
+The app now handles this gracefully in the background. If it fails, notifications simply won't work until the next successful registration.
+
+### 6. Location Errors
+
+#### Location permission denied
+- Go to your phone settings → Apps → Expo Go → Allow location access.
+- On iOS, also check **Precise Location**.
+
+#### Location not updating / "Distance unavailable"
+- Make sure both users have opened the app recently (location updates every 30 seconds).
+- Check if one person has manually entered an address.
+
+### 7. Rare / Miscellaneous Errors
+
+#### TypeScript errors after pulling code
+**Fix:**
+```bash
+npx tsc --noEmit
+```
+
+#### Supabase connection errors
+- Check your Supabase URL and keys in environment variables.
+- Make sure you're using the correct Supabase client (`supabase` vs `supabaseAdmin`).
+
+#### App works on one device but not another
+- Clear cache: `npx expo start --clear`
+- Make sure both devices are using the latest version of the code.
+
+### General Troubleshooting Commands
+
+Try these in order when you're stuck:
 
 ```bash
 npm cache clean --force
