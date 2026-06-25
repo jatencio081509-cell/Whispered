@@ -15,16 +15,26 @@ cd Whispered
 
 ### 2. Install Dependencies
 
+**Recommended:** Use `pnpm` (this project uses pnpm workspaces and catalogs):
+
 ```bash
 cd artifacts/whispered
-npm install
+pnpm install
+```
 
-# Optional: If you prefer pnpm
-# pnpm install
+Alternative (if you prefer npm):
+```bash
+npm install --legacy-peer-deps
 ```
 
 ### 3. Run the App with Expo Go
 
+**Using pnpm (Recommended):**
+```bash
+pnpm dev
+```
+
+Or simply:
 ```bash
 npx expo start --clear
 ```
@@ -40,9 +50,8 @@ git pull origin main
 ```
 
 After pulling, reinstall dependencies if new packages were added:
-
 ```bash
-npm install
+pnpm install
 ```
 
 ### 5. Pushing Your Changes
@@ -73,16 +82,26 @@ cd Whispered
 
 ### 2. Install Dependencies
 
+**Recommended:** Use `pnpm`:
+
 ```bash
 cd artifacts\whispered
-npm install
+pnpm install
+```
 
-# Optional: If you prefer pnpm
-# pnpm install
+Alternative:
+```bash
+npm install --legacy-peer-deps
 ```
 
 ### 3. Run the App with Expo Go
 
+**Using pnpm (Recommended):**
+```bash
+pnpm dev
+```
+
+Or:
 ```bash
 npx expo start --clear
 ```
@@ -98,9 +117,8 @@ git pull origin main
 ```
 
 After pulling, reinstall dependencies if needed:
-
 ```bash
-npm install
+pnpm install
 ```
 
 ### 5. Pushing Your Changes
@@ -140,50 +158,46 @@ npm install --no-optional --ignore-scripts --legacy-peer-deps
 ```
 
 #### `EACCES: permission denied` when installing global packages (e.g. pnpm)
-This is very common on Mac. It happens because npm tries to install global packages into a system folder that requires admin rights.
+This is very common on Mac.
 
-**Quick Fix (using sudo):**
+**Quick Fix:**
 ```bash
 sudo npm install -g pnpm
 ```
 
-**Better Long-Term Fix (Recommended):**
+**Better Long-Term Fix:**
 ```bash
-# 1. Create a folder for global npm packages
 mkdir ~/.npm-global
-
-# 2. Tell npm to use this folder
 npm config set prefix '~/.npm-global'
-
-# 3. Add the folder to your PATH (add this to ~/.zshrc or ~/.bash_profile)
 export PATH=~/.npm-global/bin:$PATH
-
-# 4. Reload your terminal
 source ~/.zshrc
-
-# 5. Now install pnpm without sudo
 npm install -g pnpm
 ```
 
-#### `Unsupported protocol` or `Unsupported URL Type` (e.g. `workspace:*` or `catalog:`)
+#### `Unsupported protocol` or `Unsupported URL Type` (`workspace:*` or `catalog:`)
 This project uses **pnpm Catalogs** and **Workspaces**.
 
-`npm` does **not** support these protocols. You must use `pnpm`.
+`npm` does **not** support these. Use `pnpm` instead.
 
 **Fix:**
 ```bash
-# 1. Install pnpm (if you don't have it)
 npm install -g pnpm
-
-# 2. Install dependencies with pnpm
 cd artifacts/whispered
 pnpm install
 ```
 
-If you still get errors after switching to pnpm:
+#### `ERESOLVE unable to resolve dependency tree` (peer dependency conflict)
+This happens because of version mismatches between `expo` and `@clerk/expo`.
+
+**Fix:**
 ```bash
-rm -rf node_modules pnpm-lock.yaml
+cd artifacts/whispered
 pnpm install
+```
+
+If you must use npm:
+```bash
+npm install --legacy-peer-deps
 ```
 
 #### Peer dependency warnings / errors
@@ -255,52 +269,40 @@ git pull origin main
 This is normal in development. Ignore it unless deploying to production.
 
 #### Multiple GoTrueClient instances warning
-This is caused by Clerk + Supabase both managing auth. It usually doesn't break anything but can cause weird session behavior.
+This is caused by Clerk + Supabase both managing auth.
 
 ### 5. Push Notification Errors
 
 #### "No projectId found"
-Make sure your `app.json` contains:
-```json
-"extra": {
-  "eas": {
-    "projectId": "your-project-id-here"
-  }
-}
-```
+Make sure your `app.json` contains the `projectId` under `extra.eas`.
 
 #### Push token registration fails or times out
-The app now handles this gracefully in the background. If it fails, notifications simply won't work until the next successful registration.
+Handled gracefully in the background.
 
 ### 6. Location Errors
 
 #### Location permission denied
-- Go to your phone settings → Apps → Expo Go → Allow location access.
-- On iOS, also check **Precise Location**.
+Check phone settings → Expo Go → Location access.
 
 #### Location not updating / "Distance unavailable"
-- Make sure both users have opened the app recently (location updates every 30 seconds).
-- Check if one person has manually entered an address.
+Ensure both users have recently opened the app.
 
 ### 7. Rare / Miscellaneous Errors
 
 #### TypeScript errors after pulling code
-**Fix:**
 ```bash
 npx tsc --noEmit
 ```
 
 #### Supabase connection errors
-- Check your Supabase URL and keys in environment variables.
-- Make sure you're using the correct Supabase client (`supabase` vs `supabaseAdmin`).
+Check Supabase credentials and client usage.
 
 #### App works on one device but not another
-- Clear cache: `npx expo start --clear`
-- Make sure both devices are using the latest version of the code.
+```bash
+npx expo start --clear
+```
 
 ### General Troubleshooting Commands
-
-Try these in order when you're stuck:
 
 ```bash
 npm cache clean --force
