@@ -139,6 +139,23 @@ rm -rf node_modules package-lock.json
 npm install --no-optional --ignore-scripts --legacy-peer-deps
 ```
 
+#### `Unsupported protocol` or `Unsupported URL Type` errors (e.g. `workspace:*`)
+This usually happens when using `npm` instead of `pnpm` on a project that uses workspace protocols.
+
+**Fix:**
+```bash
+# Option 1: Use pnpm instead
+pnpm install
+
+# Option 2: If you must use npm
+npm install --legacy-peer-deps
+```
+If the error persists, delete lockfile and try again:
+```bash
+rm -rf node_modules pnpm-lock.yaml package-lock.json
+pnpm install
+```
+
 #### Peer dependency warnings / errors
 **Fix:**
 ```bash
