@@ -118,11 +118,73 @@ git push origin main
 
 ---
 
-### General Notes
+## Common Errors & Fixes
 
-- Always pull the latest changes before starting work:
-  ```bash
-  git pull origin main
-  ```
-- Use clear and descriptive commit messages.
-- If you run into issues after pulling, try `npx expo start --clear`.
+### Error: `npm install` fails or gets stuck
+
+**Possible causes:** Corrupted cache, network issues, or platform-specific packages.
+
+**Fix:**
+
+```bash
+npm cache clean --force
+rm -rf node_modules package-lock.json
+npm install --legacy-peer-deps
+```
+
+### Error: `EBADPLATFORM` or rollup-related errors
+
+This usually happens because some packages try to install macOS binaries on Windows (or vice versa).
+
+**Fix:**
+
+```bash
+rm -rf node_modules package-lock.json
+npm install --no-optional --ignore-scripts --legacy-peer-deps
+```
+
+### Error: `expo` command not found
+
+**Fix:**
+
+```bash
+npx expo --version
+```
+
+Or reinstall the CLI:
+
+```bash
+npm install -g expo-cli
+```
+
+### Error after pulling new code: App won't start or modules are missing
+
+**Fix:**
+
+```bash
+npx expo start --clear
+```
+
+If that doesn't work:
+
+```bash
+rm -rf node_modules
+npm install
+npx expo start --clear
+```
+
+### Error: "No projectId found" (Push Notifications)
+
+Make sure your `app.json` has the correct `projectId` under `extra.eas`.
+
+### Still having issues?
+
+Try these commands in order:
+
+```bash
+npm cache clean --force
+rm -rf node_modules package-lock.json
+npm install --legacy-peer-deps
+npx expo install --fix
+npx expo start --clear
+```
