@@ -240,6 +240,25 @@ npx expo start --clear
 
 ### 2. Expo & Development Server Errors
 
+#### iOS Bundling failed with "Unable to determine event arguments for onModeChange"
+This is a React Native Codegen error. It usually happens when `node_modules` is corrupted (especially after mixing `npm` and `pnpm`).
+
+**Fix:**
+```bash
+cd artifacts/whispered
+rm -rf node_modules pnpm-lock.yaml .expo
+pnpm install
+npx expo start --clear
+```
+
+If it still fails, try:
+```bash
+rm -rf node_modules pnpm-lock.yaml package-lock.json .expo
+pnpm store prune
+pnpm install
+npx expo start --clear
+```
+
 #### "Unable to resolve module"
 **Fix:**
 ```bash
@@ -280,7 +299,7 @@ git pull origin main
 **Fix:** Add large files to `.gitignore` or use Git LFS.
 
 #### Accidental force push issues
-**Fix:** Avoid `--force` unless you're sure. Use `--force-with-lease` instead.
+**Fix:** Avoid `--force` unless you're sure. Use `--force-with-lease" instead.
 
 ### 4. Authentication (Clerk) Errors
 
