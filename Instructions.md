@@ -139,8 +139,34 @@ rm -rf node_modules package-lock.json
 npm install --no-optional --ignore-scripts --legacy-peer-deps
 ```
 
+#### `EACCES: permission denied` when installing global packages (e.g. pnpm)
+This is very common on Mac. It happens because npm tries to install global packages into a system folder that requires admin rights.
+
+**Quick Fix (using sudo):**
+```bash
+sudo npm install -g pnpm
+```
+
+**Better Long-Term Fix (Recommended):**
+```bash
+# 1. Create a folder for global npm packages
+mkdir ~/.npm-global
+
+# 2. Tell npm to use this folder
+npm config set prefix '~/.npm-global'
+
+# 3. Add the folder to your PATH (add this to ~/.zshrc or ~/.bash_profile)
+export PATH=~/.npm-global/bin:$PATH
+
+# 4. Reload your terminal
+source ~/.zshrc
+
+# 5. Now install pnpm without sudo
+npm install -g pnpm
+```
+
 #### `Unsupported protocol` or `Unsupported URL Type` (e.g. `workspace:*` or `catalog:`)
-This project uses **pnpm Catalogs** and **Workspaces** (you'll see `catalog:` and `workspace:*` in `package.json`).
+This project uses **pnpm Catalogs** and **Workspaces**.
 
 `npm` does **not** support these protocols. You must use `pnpm`.
 
