@@ -187,7 +187,7 @@ pnpm install
 ```
 
 #### `ERESOLVE unable to resolve dependency tree` (peer dependency conflict)
-This happens because of version mismatches between `expo` and `@clerk/expo`.
+This happens because of version mismatches between packages (e.g. `expo` and `@clerk/expo`).
 
 **Fix:**
 ```bash
@@ -198,6 +198,30 @@ pnpm install
 If you must use npm:
 ```bash
 npm install --legacy-peer-deps
+```
+
+#### Installing a specific or correct version of a package
+If a dependency is installed at the wrong version, you can force install the correct one:
+
+**Using pnpm:**
+```bash
+pnpm add package-name@desired-version
+```
+
+**Using npm:**
+```bash
+npm install package-name@desired-version --legacy-peer-deps
+```
+
+After changing versions, it's recommended to clean and reinstall:
+```bash
+rm -rf node_modules pnpm-lock.yaml package-lock.json
+pnpm install
+```
+
+For Expo-related packages, use:
+```bash
+npx expo install package-name
 ```
 
 #### Peer dependency warnings / errors
