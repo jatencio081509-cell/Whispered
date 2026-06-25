@@ -345,6 +345,46 @@ Check Supabase credentials and client usage.
 npx expo start --clear
 ```
 
+### 8. Expo Doctor Checks
+
+These are common issues found by running `npx expo-doctor`.
+
+#### Local environment files not ignored (e.g. `.env.local`)
+**Problem:** `.env*.local` files are committed or not in `.gitignore`.
+
+**Fix:**
+```bash
+echo ".env*.local" >> .gitignore
+
+# If already committed:
+git rm --cached .env.local
+git commit -m "Stop tracking .env.local"
+```
+
+#### Missing asset in app.json (e.g. adaptive-icon.png)
+**Problem:** `app.json` references an image that doesn't exist.
+
+**Fix:** Either create the missing file or remove/update the reference in `app.json`.
+
+#### Metro config overrides
+**Problem:** Custom `metro.config.js` is conflicting with Expo's recommended settings.
+
+**Fix:** Try replacing your `metro.config.js` with:
+```js
+const { getDefaultConfig } = require('expo/metro-config');
+module.exports = getDefaultConfig(__dirname);
+```
+
+#### Duplicate dependencies (e.g. multiple versions of React)
+**Problem:** The same package exists in multiple `node_modules` folders (common in monorepos).
+
+**Fix:**
+```bash
+cd artifacts/whispered
+rm -rf node_modules pnpm-lock.yaml
+pnpm install
+```
+
 ### General Troubleshooting Commands
 
 ```bash
