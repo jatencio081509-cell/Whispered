@@ -162,4 +162,5 @@ overrides:
 allowBuilds:
   browser-tabs-lock: true
   core-js: true
+  dtrace-provider: true
   esbuild: true

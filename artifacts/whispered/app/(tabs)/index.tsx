@@ -481,7 +481,7 @@ export default function HomeScreen() {
 
     const startTracking = async () => {
       try {
-        // Check if user has manual address set
+        // Check if user has manual address set as fallback
         const { data: myData } = await supabase
           .from('users')
           .select('manual_address, latitude, longitude, location_name')
@@ -490,23 +490,22 @@ export default function HomeScreen() {
 
         const hasManualAddress = myData?.manual_address && myData.manual_address.trim().length > 0;
 
-        // Only track with GPS if no manual address is set
-        if (!hasManualAddress) {
-          // Update location every 30 seconds
-          locationSubscription = await Location.watchPositionAsync(
-            {
-              accuracy: Location.Accuracy.Balanced,
-              timeInterval: 30000, // 30 seconds
-              distanceInterval: 50, // 50 meters
-            },
-            async (location) => {
+        // Always track with GPS every 30 seconds, with fallback to manual address
+        locationSubscription = await Location.watchPositionAsync(
+          {
+            accuracy: Location.Accuracy.Balanced,
+            timeInterval: 30000, // 30 seconds
+            distanceInterval: 50, // 50 meters
+          },
+          async (location) => {
+            try {
               const { latitude, longitude } = location.coords;
 
-              // Get location name
+              // Get location name from GPS
               const locationName = await getLocationName(latitude, longitude);
               setMyLocation(locationName);
 
-              // Update my location in database
+              // Update my location in database with GPS coordinates
               await supabase
                 .from('users')
                 .upsert({
@@ -529,10 +528,10 @@ export default function HomeScreen() {
                 setPartnerLocation(partnerData.location_name || 'Unknown');
                 
                 // Check if partner has manual address (always valid) or if GPS location is recent
-                const hasManualAddress = partnerData.manual_address && partnerData.manual_address.trim().length > 0;
+                const partnerHasManualAddress = partnerData.manual_address && partnerData.manual_address.trim().length > 0;
                 const partnerLocationAge = partnerData.location_updated_at ? Date.now() - new Date(partnerData.location_updated_at).getTime() : Infinity;
                 
-                if (hasManualAddress || partnerLocationAge < 5 * 60 * 1000) {
+                if (partnerHasManualAddress || partnerLocationAge < 5 * 60 * 1000) {
                   const dist = calculateDistance(
                     latitude,
                     longitude,
@@ -547,43 +546,45 @@ export default function HomeScreen() {
                 setPartnerLocation(null);
                 setDistance(null);
               }
-            }
-          );
-        } else {
-          // Use manual address for distance calculation
-          if (myData?.latitude && myData?.longitude) {
-            setMyLocation(myData.location_name || 'Unknown');
-            
-            // Get partner's location
-            const { data: partnerData } = await supabase
-              .from('users')
-              .select('latitude, longitude, location_name, location_updated_at, manual_address')
-              .eq('id', partnerUserId)
-              .single();
+            } catch (gpsError) {
+              console.error('GPS tracking error, falling back to manual address:', gpsError);
+              
+              // Fallback to manual address if GPS fails
+              if (hasManualAddress && myData?.latitude && myData?.longitude) {
+                setMyLocation(myData.location_name || 'Unknown');
+                
+                // Get partner's location
+                const { data: partnerData } = await supabase
+                  .from('users')
+                  .select('latitude, longitude, location_name, location_updated_at, manual_address')
+                  .eq('id', partnerUserId)
+                  .single();
 
-            if (partnerData?.latitude && partnerData?.longitude) {
-              setPartnerLocation(partnerData.location_name || 'Unknown');
-              
-              // Check if partner has manual address (always valid) or if GPS location is recent
-              const hasManualAddress = partnerData.manual_address && partnerData.manual_address.trim().length > 0;
-              const partnerLocationAge = partnerData.location_updated_at ? Date.now() - new Date(partnerData.location_updated_at).getTime() : Infinity;
-              
-              if (hasManualAddress || partnerLocationAge < 5 * 60 * 1000) {
-                const dist = calculateDistance(
-                  myData.latitude,
-                  myData.longitude,
-                  partnerData.latitude,
-                  partnerData.longitude
-                );
-                setDistance(dist);
-              } else {
-                setDistance(null);
+                if (partnerData?.latitude && partnerData?.longitude) {
+                  setPartnerLocation(partnerData.location_name || 'Unknown');
+                  
+                  // Check if partner has manual address (always valid) or if GPS location is recent
+                  const partnerHasManualAddress = partnerData.manual_address && partnerData.manual_address.trim().length > 0;
+                  const partnerLocationAge = partnerData.location_updated_at ? Date.now() - new Date(partnerData.location_updated_at).getTime() : Infinity;
+                  
+                  if (partnerHasManualAddress || partnerLocationAge < 5 * 60 * 1000) {
+                    const dist = calculateDistance(
+                      myData.latitude,
+                      myData.longitude,
+                      partnerData.latitude,
+                      partnerData.longitude
+                    );
+                    setDistance(dist);
+                  } else {
+                    setDistance(null);
+                  }
+                }
               }
             }
           }
-        }
+        );
       } catch (error) {
-        console.error('Error tracking location:', error);
+        console.error('Error starting location tracking:', error);
       }
     };
 

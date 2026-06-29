@@ -11,10 +11,15 @@
       "resizeMode": "contain",
       "backgroundColor": "#04060E"
     },
-    "assetBundlePatterns": ["**/*"],
+    "assetBundlePatterns": [
+      "**/*"
+    ],
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "com.yourcompany.whispered"
+      "bundleIdentifier": "com.yourcompany.whispered",
+      "infoPlist": {
+        "ITSAppUsesNonExemptEncryption": false
+      }
     },
     "android": {
       "adaptiveIcon": {
@@ -23,6 +28,9 @@
       },
       "package": "com.yourcompany.whispered",
       "permissions": [
+        "RECEIVE_BOOT_COMPLETED",
+        "VIBRATE",
+        "SCHEDULE_EXACT_ALARM",
         "RECEIVE_BOOT_COMPLETED",
         "VIBRATE",
         "SCHEDULE_EXACT_ALARM"
@@ -35,12 +43,21 @@
       "expo-router",
       "expo-font",
       "expo-secure-store",
-      "expo-notifications"
+      "expo-notifications",
+      "@react-native-community/datetimepicker"
     ],
     "extra": {
       "eas": {
-        "projectId": "a714edce-efea-415e-b9df-6bc0c9ca6187"
+        "projectId": "d4b6acf7-3b8d-4f71-a37b-319af2797373"
       }
+    },
+    "owner": "jatencio081509",
+    "runtimeVersion": {
+      "policy": "appVersion"
+    },
+    "updates": {
+      "url": "https://u.expo.dev/d4b6acf7-3b8d-4f71-a37b-319af2797373"
     }
-  }
+  },
+  "owner": "jatencio081509"
 }

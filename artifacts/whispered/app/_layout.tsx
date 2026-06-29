@@ -167,6 +167,18 @@ function RootLayoutNav() {
           name="settings/index"
           options={{ presentation: "modal", animation: "slide_from_bottom" }}
         />
+        <Stack.Screen
+          name="plant"
+          options={{ presentation: "card", animation: "slide_from_right" }}
+        />
+        <Stack.Screen
+          name="pet"
+          options={{ presentation: "card", animation: "slide_from_right" }}
+        />
+        <Stack.Screen
+          name="games"
+          options={{ presentation: "card", animation: "slide_from_right" }}
+        />
       </Stack>
     </AuthGate>
   );

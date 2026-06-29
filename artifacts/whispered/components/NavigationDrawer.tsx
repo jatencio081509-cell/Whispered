@@ -20,7 +20,7 @@ interface NavigationDrawerProps {
 
 const NAVIGATION_ITEMS = [
   { name: 'Main', icon: 'home', route: '/' },
-  { name: 'Wordle', icon: 'grid', route: '/(tabs)/wordle' },
+  { name: 'Home', icon: 'grid', route: '/(tabs)/home' },
   { name: 'Chat', icon: 'message-circle', route: '/(tabs)/chat' },
   { name: 'Memories', icon: 'image', route: '/(tabs)/memories' },
   { name: 'More', icon: 'grid', route: '/(tabs)/more' },

@@ -9,7 +9,7 @@ export default function TabLayout() {
         <Label>Main</Label>
       </NativeTabs.Trigger>
       
-      <NativeTabs.Trigger name="wordle">
+      <NativeTabs.Trigger name="home">
         <Icon sf={{ default: "gamecontroller", selected: "gamecontroller.fill" }} />
         <Label>Home</Label>
       </NativeTabs.Trigger>
