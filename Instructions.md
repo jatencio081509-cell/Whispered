@@ -13,7 +13,17 @@ git clone https://github.com/jatencio081509-cell/Whispered.git
 cd Whispered
 ```
 
-### 2. Install Dependencies
+### 2. Set Up Environment Variables (Important!)
+
+Create a file called `.env.local` inside the `artifacts/whispered` folder and add your Clerk key:
+
+```env
+EXPO_PUBLIC_CLERK_PUBLISHABLE_KEY=pk_test_xxxxxxxxxxxxxxxxxxxxxxxx
+```
+
+> **Note:** Never commit `.env.local` or any file containing your real keys.
+
+### 3. Install Dependencies
 
 **Recommended:** Use `pnpm` (this project uses pnpm workspaces and catalogs):
 
@@ -27,7 +37,7 @@ Alternative (if you prefer npm):
 npm install --legacy-peer-deps
 ```
 
-### 3. Run the App with Expo Go
+### 4. Run the App with Expo Go
 
 **Using pnpm (Recommended):**
 ```bash
@@ -43,7 +53,7 @@ npx expo start --clear
 - Scan the QR code shown in the terminal.
 - Make sure your phone and Mac are on the same Wi-Fi.
 
-### 4. Pulling New Commits (Getting Latest Changes)
+### 5. Pulling New Commits (Getting Latest Changes)
 
 ```bash
 git pull origin main
@@ -54,7 +64,7 @@ After pulling, reinstall dependencies if new packages were added:
 pnpm install
 ```
 
-### 5. Pushing Your Changes
+### 6. Pushing Your Changes
 
 ```bash
 # Stage your changes
@@ -80,7 +90,17 @@ git clone https://github.com/jatencio081509-cell/Whispered.git
 cd Whispered
 ```
 
-### 2. Install Dependencies
+### 2. Set Up Environment Variables (Important!)
+
+Create a file called `.env.local` inside the `artifacts/whispered` folder and add your Clerk key:
+
+```env
+EXPO_PUBLIC_CLERK_PUBLISHABLE_KEY=pk_test_xxxxxxxxxxxxxxxxxxxxxxxx
+```
+
+> **Note:** Never commit `.env.local` or any file containing your real keys.
+
+### 3. Install Dependencies
 
 **Recommended:** Use `pnpm`:
 
@@ -94,7 +114,7 @@ Alternative:
 npm install --legacy-peer-deps
 ```
 
-### 3. Run the App with Expo Go
+### 4. Run the App with Expo Go
 
 **Using pnpm (Recommended):**
 ```bash
@@ -110,7 +130,7 @@ npx expo start --clear
 - Scan the QR code shown in the terminal.
 - Make sure your phone and PC are on the same Wi-Fi network.
 
-### 4. Pulling New Commits (Getting Latest Changes)
+### 5. Pulling New Commits (Getting Latest Changes)
 
 ```bash
 git pull origin main
@@ -121,7 +141,7 @@ After pulling, reinstall dependencies if needed:
 pnpm install
 ```
 
-### 5. Pushing Your Changes
+### 6. Pushing Your Changes
 
 ```bash
 # Stage your changes
@@ -303,16 +323,25 @@ git pull origin main
 
 ### 4. Authentication (Clerk) Errors
 
-#### Sign in button does nothing
-- Check the console for `[SignIn]` logs.
-- Make sure you're using the latest version of the code.
-- Try signing out from Clerk Dashboard → Users → End all sessions.
+#### Missing Clerk Publishable Key
+If you see an error like:
 
-#### "Clerk has been loaded with development keys" warning
-This is normal in development. Ignore it unless deploying to production.
+> `ReferenceError: Property 'pk_test_...' doesn't exist`
 
-#### Multiple GoTrueClient instances warning
-This is caused by Clerk + Supabase both managing auth.
+It means you're either:
+- Hardcoding the key directly in code (wrong), or
+- Missing the environment variable.
+
+**Fix:**
+Create a file called `.env.local` inside `artifacts/whispered` and add:
+```env
+EXPO_PUBLIC_CLERK_PUBLISHABLE_KEY=pk_test_your_key_here
+```
+
+Then restart with:
+```bash
+npx expo start --clear
+```
 
 ### 5. Push Notification Errors
 
