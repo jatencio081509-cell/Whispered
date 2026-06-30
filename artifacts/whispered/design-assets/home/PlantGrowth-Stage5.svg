@@ -1,0 +1,23 @@
+<svg width="150" height="180" viewBox="0 0 150 180" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <style>
+      .pot { fill: var(--card, #F8FAFC); stroke: var(--border, #E2E8F0); stroke-width: 2; }
+      .soil { fill: var(--muted, #94A3B8); }
+      .stem { fill: var(--primary, #0EA5E9); }
+      .leaf { fill: var(--accent, #22C55E); }
+    </style>
+  </defs>
+  <!-- Pot -->
+  <rect x="15" y="110" width="120" height="55" rx="8" class="pot"/>
+  <!-- Soil -->
+  <rect x="20" y="98" width="110" height="20" rx="4" class="soil"/>
+  <!-- Stem -->
+  <rect x="65" y="15" width="14" height="85" rx="7" class="stem"/>
+  <!-- Leaves -->
+  <ellipse cx="38" cy="40" rx="20" ry="10" class="leaf" transform="rotate(-40 38 40)"/>
+  <ellipse cx="108" cy="40" rx="20" ry="10" class="leaf" transform="rotate(40 108 40)"/>
+  <ellipse cx="65" cy="12" rx="18" ry="10" class="leaf"/>
+  <ellipse cx="95" cy="55" rx="16" ry="8" class="leaf" transform="rotate(35 95 55)"/>
+  <ellipse cx="48" cy="62" rx="16" ry="8" class="leaf" transform="rotate(-35 48 62)"/>
+  <ellipse cx="72" cy="75" rx="14" ry="7" class="leaf" transform="rotate(25 72 75)"/>
+</svg>

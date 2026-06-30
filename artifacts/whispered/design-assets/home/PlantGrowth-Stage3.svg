@@ -1,0 +1,21 @@
+<svg width="130" height="160" viewBox="0 0 130 160" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <style>
+      .pot { fill: var(--card, #F8FAFC); stroke: var(--border, #E2E8F0); stroke-width: 2; }
+      .soil { fill: var(--muted, #94A3B8); }
+      .stem { fill: var(--primary, #0EA5E9); }
+      .leaf { fill: var(--accent, #22C55E); }
+    </style>
+  </defs>
+  <!-- Pot -->
+  <rect x="25" y="100" width="80" height="42" rx="8" class="pot"/>
+  <!-- Soil -->
+  <rect x="30" y="92" width="70" height="15" rx="4" class="soil"/>
+  <!-- Stem -->
+  <rect x="58" y="35" width="10" height="58" rx="5" class="stem"/>
+  <!-- Leaves -->
+  <ellipse cx="42" cy="50" rx="16" ry="8" class="leaf" transform="rotate(-30 42 50)"/>
+  <ellipse cx="88" cy="50" rx="16" ry="8" class="leaf" transform="rotate(30 88 50)"/>
+  <ellipse cx="60" cy="30" rx="14" ry="8" class="leaf"/>
+  <ellipse cx="78" cy="65" rx="12" ry="6" class="leaf" transform="rotate(40 78 65)"/>
+</svg>
