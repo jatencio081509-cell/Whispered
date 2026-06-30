@@ -1,8 +1,0 @@
-<svg width="40" height="40" viewBox="0 0 40 40" xmlns="http://www.w3.org/2000/svg">
-  <defs>
-    <style>
-      .icon { fill: var(--primary, #0EA5E9); }
-    </style>
-  </defs>
-  <path class="icon" d="M20 12a8 8 0 100 16 8 8 0 000-16zm-1.5 12.5V25h3v-0.5a1.5 1.5 0 013 0v0.5h1.5v-3h-0.5a1.5 1.5 0 010-3h0.5v-3h-1.5v0.5a1.5 1.5 0 01-3 0V16h-3v0.5a1.5 1.5 0 01-3 0V16H13v3h0.5a1.5 1.5 0 010 3H13v3h1.5z"/>
-</svg>
