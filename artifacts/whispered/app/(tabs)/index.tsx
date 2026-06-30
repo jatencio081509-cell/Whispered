@@ -2,14 +2,14 @@ import React, { useEffect, useRef, useState } from 'react';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Feather } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
-import { useUser } from '@clerk/expo';
+import { useUser, useAuth } from '@clerk/expo';
 import { useColors } from '@/hooks/useColors';
 import { useFocusEffect } from 'expo-router';
 import { supabase } from '@/lib/supabase';
 import { useApp } from '@/context/AppContext';
 import * as Location from 'expo-location';
 
-import { Animated, Easing, View, Text, Pressable, StyleSheet, ScrollView, Modal, TextInput } from 'react-native';
+import { Animated, Easing, View, Text, Pressable, StyleSheet, ScrollView, Modal, TextInput, Alert } from 'react-native';
 import Svg, { Circle } from 'react-native-svg';
 import NavigationDrawer from '@/components/NavigationDrawer';
 import ThemeBackground from '@/components/ThemeBackground';
@@ -27,6 +27,7 @@ export default function HomeScreen() {
   const insets = useSafeAreaInsets();
   const router = useRouter();
   const { user, isLoaded } = useUser();
+  const { signOut } = useAuth();
   const colors = useColors();
   const { myMood, setMyMood, partnerMood, streak } = useApp();
 
@@ -605,6 +606,29 @@ export default function HomeScreen() {
     );
   }
 
+  const handleSignOut = async () => {
+    Alert.alert(
+      'Sign Out',
+      'Are you sure you want to sign out?',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Sign Out',
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              await signOut();
+              router.replace('/(auth)/welcome');
+            } catch (err) {
+              console.error('Sign out failed', err);
+              Alert.alert('Error', 'Failed to sign out. Please try again.');
+            }
+          },
+        },
+      ]
+    );
+  };
+
   const coupleId = user?.unsafeMetadata?.coupleId as string | undefined;
   const partnerCode = user?.unsafeMetadata?.partnerCode as string | undefined;
   const partnerName = user?.unsafeMetadata?.partnerName as string | undefined;
@@ -769,9 +793,14 @@ export default function HomeScreen() {
                 {user?.firstName || 'there'}
               </Text>
             </View>
-            <Pressable onPress={() => setShowNavigationDrawer(true)}>
-              <Feather name="menu" size={24} color={colors.text} />
-            </Pressable>
+            <View style={styles.headerActions}>
+              <Pressable onPress={handleSignOut} style={styles.headerButton}>
+                <Feather name="log-out" size={20} color={colors.mutedForeground} />
+              </Pressable>
+              <Pressable onPress={() => setShowNavigationDrawer(true)} style={styles.headerButton}>
+                <Feather name="menu" size={24} color={colors.text} />
+              </Pressable>
+            </View>
           </View>
 
           {/* Streak Section */}
@@ -1418,6 +1447,14 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     padding: 20,
+  },
+  headerActions: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+  },
+  headerButton: {
+    padding: 8,
   },
   modalContent: {
     borderRadius: 4,

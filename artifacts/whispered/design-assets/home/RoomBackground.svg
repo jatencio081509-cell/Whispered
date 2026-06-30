@@ -1,0 +1,50 @@
+<svg width="375" height="812" viewBox="0 0 375 812" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <!-- Theme color variables - edit these in Sketch -->
+    <style>
+      .wall-gradient-1 { fill: var(--wall-color-1, #E8F4F8); }
+      .wall-gradient-2 { fill: var(--wall-color-2, #D1E8F0); }
+      .wall-gradient-3 { fill: var(--wall-color-3, #C5E0E8); }
+      .floor-gradient-1 { fill: var(--floor-color-1, #D4E8F0); }
+      .floor-gradient-2 { fill: var(--floor-color-2, #C8DCE8); }
+      .floor-gradient-3 { fill: var(--floor-color-3, #B8D0E0); }
+      .ambient-light { fill: var(--ambient-color, rgba(2, 132, 199, 0.15)); }
+      .floor-shadow { fill: var(--shadow-color, rgba(0,0,0,0.08)); }
+    </style>
+    
+    <!-- Wall gradient -->
+    <linearGradient id="wallGradient" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" class="wall-gradient-1"/>
+      <stop offset="50%" class="wall-gradient-2"/>
+      <stop offset="100%" class="wall-gradient-3"/>
+    </linearGradient>
+    
+    <!-- Floor gradient -->
+    <linearGradient id="floorGradient" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" class="floor-gradient-1"/>
+      <stop offset="50%" class="floor-gradient-2"/>
+      <stop offset="100%" class="floor-gradient-3"/>
+    </linearGradient>
+  </defs>
+  
+  <!-- Wall (75% of screen) -->
+  <rect x="0" y="0" width="375" height="609" fill="url(#wallGradient)" class="wall-gradient-1"/>
+  
+  <!-- Ambient light overlay -->
+  <rect x="0" y="0" width="375" height="609" class="ambient-light" opacity="0.4"/>
+  
+  <!-- Wall texture overlay -->
+  <rect x="0" y="0" width="375" height="609" fill="rgba(0,0,0,0.02)"/>
+  
+  <!-- Floor shadow -->
+  <rect x="0" y="589" width="375" height="20" class="floor-shadow"/>
+  
+  <!-- Floor (25% of screen) -->
+  <rect x="0" y="609" width="375" height="203" fill="url(#floorGradient)" class="floor-gradient-1"/>
+  
+  <!-- Content placeholder area -->
+  <rect x="0" y="0" width="375" height="812" fill="none" stroke="rgba(0,0,0,0.1)" stroke-dasharray="5,5"/>
+  <text x="187.5" y="406" text-anchor="middle" font-family="System" font-size="14" fill="rgba(0,0,0,0.3)">
+    Room Content Area
+  </text>
+</svg>

@@ -1,0 +1,119 @@
+{
+  "component": "MemoryFrame",
+  "description": "Physical picture frame displaying recent memory with floating animation",
+  "dimensions": {
+    "width": 220,
+    "height": 180,
+    "borderWidth": 8,
+    "borderRadius": 12
+  },
+  "position": {
+    "top": 40,
+    "left": "50%",
+    "transform": "translateX(-110px)"
+  },
+  "colors": {
+    "outerFrame": "theme.card",
+    "innerFrame": "theme.background",
+    "accent": "theme.primary",
+    "shadow": "rgba(0,0,0,0.15)"
+  },
+  "gradients": {
+    "frameBorder": ["theme.card", "theme.primary", "theme.card"]
+  },
+  "animations": {
+    "float": {
+      "duration": 3000,
+      "yRange": [0, -4]
+    },
+    "glow": {
+      "duration": 2000,
+      "opacityRange": [0.3, 0.6]
+    }
+  },
+  "layers": [
+    {
+      "name": "Frame Shadow",
+      "type": "shadow",
+      "offset": { "x": 0, "y": 12 },
+      "blur": 8,
+      "opacity": 0.15
+    },
+    {
+      "name": "Outer Frame",
+      "type": "linear-gradient",
+      "borderRadius": 12,
+      "padding": 8,
+      "shadow": {
+        "offset": { "x": 0, "y": 4 },
+        "blur": 8,
+        "opacity": 0.2
+      }
+    },
+    {
+      "name": "Inner Frame",
+      "type": "container",
+      "borderRadius": 6,
+      "backgroundColor": "theme.background",
+      "overflow": "hidden"
+    },
+    {
+      "name": "Glow Effect",
+      "type": "overlay",
+      "opacity": "animated",
+      "backgroundColor": "theme.primary"
+    },
+    {
+      "name": "Memory Image",
+      "type": "image",
+      "fit": "cover",
+      "width": "100%",
+      "height": "100%"
+    },
+    {
+      "name": "Placeholder (empty state)",
+      "type": "container",
+      "backgroundColor": "theme.muted",
+      "items": [
+        {
+          "name": "Placeholder Icon",
+          "type": "circle",
+          "width": 48,
+          "height": 48,
+          "backgroundColor": "theme.primary",
+          "opacity": 0.3
+        },
+        {
+          "name": "Placeholder Lines",
+          "type": "lines",
+          "width": 80,
+          "height": 8,
+          "backgroundColor": "theme.border",
+          "opacity": 0.5,
+          "count": 2
+        }
+      ]
+    },
+    {
+      "name": "Frame Details",
+      "type": "decorative-dots",
+      "size": 8,
+      "borderRadius": 4,
+      "opacity": 0.4,
+      "positions": [
+        { "top": 12, "left": 12 },
+        { "top": 12, "right": 12 }
+      ]
+    }
+  ],
+  "states": {
+    "empty": {
+      "showPlaceholder": true,
+      "hideImage": true
+    },
+    "withImage": {
+      "showPlaceholder": false,
+      "showImage": true
+    }
+  }
+}

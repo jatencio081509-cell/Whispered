@@ -1,0 +1,79 @@
+<svg width="90" height="90" viewBox="0 0 90 90" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <!-- Theme color variables - edit these in Sketch -->
+    <style>
+      .body-gradient-1 { fill: var(--pet-body-1, #FFFFFF); }
+      .body-gradient-2 { fill: var(--pet-body-2, #0284C7); }
+      .ear-color { fill: var(--pet-ear-color, #14B8A6); }
+      .eye-white { fill: #FFFFFF; }
+      .eye-pupil { fill: var(--pet-eye-color, #082F49); }
+      .nose-color { fill: var(--pet-nose-color, #EC4899); }
+      .whisker-color { fill: var(--pet-whisker-color, rgba(0,0,0,0.2)); }
+      .tail-color { fill: var(--pet-tail-color, #14B8A6); }
+      .leg-color { fill: var(--pet-body-1, #FFFFFF); }
+      .shadow-color { fill: var(--shadow-color, rgba(0,0,0,0.12)); }
+      .level-dot-active { fill: var(--level-dot-active, #FFFFFF); }
+      .level-dot-inactive { fill: var(--level-dot-inactive, rgba(0,0,0,0.2)); }
+    </style>
+    
+    <!-- Body gradient -->
+    <linearGradient id="bodyGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" class="body-gradient-1"/>
+      <stop offset="100%" class="body-gradient-2"/>
+    </linearGradient>
+  </defs>
+  
+  <!-- Shadow -->
+  <ellipse cx="45" cy="82" rx="25" ry="3" class="shadow-color"/>
+  
+  <!-- Body -->
+  <rect x="20" y="38" width="50" height="35" rx="17" fill="url(#bodyGradient)" class="body-gradient-1"/>
+  
+  <!-- Head -->
+  <rect x="22" y="18" width="45" height="32" rx="16" class="body-gradient-1"/>
+  
+  <!-- Left ear (triangle) -->
+  <polygon points="26,10 34,22 18,22" class="ear-color" transform="rotate(-15 26 16)"/>
+  
+  <!-- Right ear (triangle) -->
+  <polygon points="64,10 72,22 56,22" class="ear-color" transform="rotate(15 64 16)"/>
+  
+  <!-- Left eye (almond shape) -->
+  <ellipse cx="35" cy="30" rx="5" ry="6" class="eye-white"/>
+  <ellipse cx="35" cy="30" rx="2" ry="4" class="eye-pupil"/>
+  
+  <!-- Right eye (almond shape) -->
+  <ellipse cx="55" cy="30" rx="5" ry="6" class="eye-white"/>
+  <ellipse cx="55" cy="30" rx="2" ry="4" class="eye-pupil"/>
+  
+  <!-- Nose (triangle) -->
+  <polygon points="45,38 40,42 50,42" class="nose-color"/>
+  
+  <!-- Left whisker -->
+  <rect x="25" y="44"宽度="16" height="1" class="whisker-color"/>
+  
+  <!-- Right whisker -->
+  <rect x="49" y="44" width="16" height="1" class="whisker-color"/>
+  
+  <!-- Tail -->
+  <rect x="62" y="44" width="14" height="5" rx="2.5" class="tail-color"/>
+  
+  <!-- Front left leg -->
+  <rect x="26" y="63" width="8" height="14" rx="4" class="leg-color"/>
+  
+  <!-- Front right leg -->
+  <rect x="38" y="63" width="8" height="14" rx="4" class="leg-color"/>
+  
+  <!-- Back left leg -->
+  <rect x="50" y="63" width="8" height="14" rx="4" class="leg-color"/>
+  
+  <!-- Back right leg -->
+  <rect x="62" y="63" width="8" height="14" rx="4" class="leg-color"/>
+  
+  <!-- Level indicator dots -->
+  <g transform="translate(45, 88)">
+    <circle cx="-10" cy="0" r="2.5" class="level-dot-active"/>
+    <circle cx="0" cy="0" r="2.5" class="level-dot-inactive"/>
+    <circle cx="10" cy="0" r="2.5" class="level-dot-inactive"/>
+  </g>
+</svg>

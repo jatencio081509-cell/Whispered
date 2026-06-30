@@ -5,31 +5,36 @@ import {
   Pressable,
   StyleSheet,
   Platform,
-  ScrollView,
-  Image,
+  Alert,
 } from 'react-native';
 import { useColors } from '@/hooks/useColors';
 import { useRouter } from 'expo-router';
 import NavigationDrawer from '@/components/NavigationDrawer';
-import ThemeBackground from '@/components/ThemeBackground';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Feather } from '@expo/vector-icons';
-import { useUser } from '@clerk/expo';
+import { useUser, useAuth } from '@clerk/expo';
 import { useApp } from '@/context/AppContext';
 import { supabase } from '@/lib/supabase';
+import RoomBackground from '@/components/home/RoomBackground';
+import MemoryFrame from '@/components/home/MemoryFrame';
+import PetCompanion from '@/components/home/PetCompanion';
+import PlantGrowth from '@/components/home/PlantGrowth';
+import MoodLamp from '@/components/home/MoodLamp';
 
 export default function HomeScreen() {
   const colors = useColors();
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const { user, isLoaded } = useUser();
-  const { myMood, setMyMood, partnerMood } = useApp();
+  const { signOut } = useAuth();
+  const { myMood, partnerMood } = useApp();
   const [showNavigationDrawer, setShowNavigationDrawer] = useState(false);
   const topPad = Platform.OS === "web" ? insets.top + 67 : insets.top;
   
   const [recentMemory, setRecentMemory] = useState<any>(null);
   const [plantLevel, setPlantLevel] = useState(1);
   const [petLevel, setPetLevel] = useState(1);
+  const [petType, setPetType] = useState<'cat' | 'dog' | 'fish'>('dog');
 
   useEffect(() => {
     if (!user) return;
@@ -52,7 +57,42 @@ export default function HomeScreen() {
       }
     };
 
+    const fetchPlantData = async () => {
+      try {
+        const { data, error } = await supabase
+          .from('users')
+          .select('plant_level')
+          .eq('id', user.id)
+          .single();
+        
+        if (data && !error) {
+          setPlantLevel(data.plant_level || 1);
+        }
+      } catch (error) {
+        console.error('Error fetching plant data:', error);
+      }
+    };
+
+    const fetchPetData = async () => {
+      try {
+        const { data, error } = await supabase
+          .from('users')
+          .select('pet_level, pet_type')
+          .eq('id', user.id)
+          .single();
+        
+        if (data && !error) {
+          setPetLevel(data.pet_level || 1);
+          setPetType(data.pet_type || 'dog');
+        }
+      } catch (error) {
+        console.error('Error fetching pet data:', error);
+      }
+    };
+
     fetchRecentMemory();
+    fetchPlantData();
+    fetchPetData();
   }, [user]);
 
   if (!isLoaded) {
@@ -63,109 +103,95 @@ export default function HomeScreen() {
     );
   }
 
-  const partnerName = user?.unsafeMetadata?.partnerName as string | undefined;
-  const combinedMood = myMood || partnerMood || '😊';
+  const handleSignOut = async () => {
+    Alert.alert(
+      'Sign Out',
+      'Are you sure you want to sign out?',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Sign Out',
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              await signOut();
+              router.replace('/(auth)/welcome');
+            } catch (err) {
+              console.error('Sign out failed', err);
+              Alert.alert('Error', 'Failed to sign out. Please try again.');
+            }
+          },
+        },
+      ]
+    );
+  };
 
   return (
-    <View style={[styles.container, { backgroundColor: colors.background }]}>
-      <ThemeBackground>
-      <View style={[styles.wall, { paddingTop: topPad + 12 }]}>
-        {/* Header */}
-        <View style={[styles.headerRow]}>
-          <Text style={[styles.title, { color: colors.text }]}>Our Home</Text>
-          <Pressable onPress={() => setShowNavigationDrawer(true)}>
-            <Feather name="menu" size={24} color={colors.text} />
-          </Pressable>
-        </View>
-
-        {/* Wall with furniture */}
-        <View style={styles.wallContent}>
-          
-          {/* Picture Frame - Top Center */}
-          <Pressable 
-            style={[styles.pictureFrame, { borderColor: colors.border }]}
-            onPress={() => router.push('/(tabs)/memories')}
-          >
-            <View style={[styles.frameInner, { backgroundColor: colors.card }]}>
-              {recentMemory?.image_url ? (
-                <Image 
-                  source={{ uri: recentMemory.image_url }} 
-                  style={styles.frameImage}
-                  resizeMode="cover"
-                />
-              ) : (
-                <View style={[styles.framePlaceholder, { backgroundColor: colors.mutedForeground }]}>
-                  <Text style={[styles.framePlaceholderText, { color: colors.text }]}>
-                    {recentMemory?.text || recentMemory?.caption || 'No memory yet'}
-                  </Text>
-                </View>
-              )}
+    <View style={styles.container}>
+      <RoomBackground>
+        <View style={[styles.room, { paddingTop: topPad + 12 }]}>
+          {/* Header */}
+          <View style={[styles.headerRow]}>
+            <Text style={[styles.title, { color: colors.text }]}>Our Home</Text>
+            <View style={styles.headerActions}>
+              <Pressable onPress={handleSignOut} style={styles.headerButton}>
+                <Feather name="log-out" size={20} color={colors.mutedForeground} />
+              </Pressable>
+              <Pressable onPress={() => setShowNavigationDrawer(true)} style={styles.headerButton}>
+                <Feather name="menu" size={24} color={colors.text} />
+              </Pressable>
             </View>
-            <View style={[styles.frameShadow, { backgroundColor: 'rgba(0,0,0,0.2)' }]} />
-          </Pressable>
-
-          {/* Mood Lamp - Top Right */}
-          <View style={[styles.lampContainer]}>
-            <View style={[styles.lampBase, { backgroundColor: colors.card }]}>
-              <View style={[styles.lampStand, { backgroundColor: colors.border }]} />
-              <View style={[styles.lampShade, { backgroundColor: colors.primary }]}>
-                <Text style={styles.lampLight}>{combinedMood}</Text>
-              </View>
-            </View>
-            <Text style={[styles.lampLabel, { color: colors.mutedForeground }]}>Mood Lamp</Text>
           </View>
 
-          {/* Plant - Bottom Left */}
-          <Pressable 
-            style={styles.plantContainer}
-            onPress={() => router.push('/plant')}
-          >
-            <View style={[styles.plantPot, { backgroundColor: colors.card }]}>
-              <Text style={styles.plantEmoji}>�</Text>
-            </View>
-            <View style={[styles.plantShadow, { backgroundColor: 'rgba(0,0,0,0.15)' }]} />
-            <Text style={[styles.itemLabel, { color: colors.mutedForeground }]}>Our Plant</Text>
-          </Pressable>
+          {/* Room elements */}
+          <View style={styles.roomContent}>
+            {/* Memory Frame - Top Center */}
+            <MemoryFrame memory={recentMemory} />
 
-          {/* Pet - Bottom Right */}
-          <Pressable 
-            style={styles.petContainer}
-            onPress={() => router.push('/pet')}
-          >
-            <Text style={styles.petEmoji}>🐕</Text>
-            <View style={[styles.petShadow, { backgroundColor: 'rgba(0,0,0,0.15)' }]} />
-            <Text style={[styles.itemLabel, { color: colors.mutedForeground }]}>Our Pet</Text>
-          </Pressable>
+            {/* Mood Lamps */}
+            <MoodLamp mood={myMood || '😊'} isPartner={false} position="left" />
+            <MoodLamp mood={partnerMood || '😊'} isPartner={true} position="right" />
 
-          {/* Games Shelf - Bottom Center */}
-          <Pressable 
-            style={[styles.shelfContainer, { backgroundColor: colors.card, borderColor: colors.border }]}
-            onPress={() => router.push('/games')}
-          >
-            <View style={styles.shelfSurface}>
-              <Text style={styles.bookEmoji}>📚</Text>
-              <Text style={styles.gameEmoji}>🎮</Text>
-              <Text style={styles.bookEmoji}>📖</Text>
-            </View>
-            <View style={[styles.shelfSupport, { backgroundColor: colors.border }]} />
-            <Text style={[styles.itemLabel, { color: colors.mutedForeground }]}>Games Shelf</Text>
-          </Pressable>
+            {/* Plant - Bottom Left */}
+            <PlantGrowth level={plantLevel} />
 
+            {/* Pet - Bottom Right */}
+            <PetCompanion petType={petType} level={petLevel} />
+
+            {/* Games Shelf - Bottom Center */}
+            <Pressable 
+              style={[styles.gamesShelf, { backgroundColor: colors.card, borderColor: colors.border }]}
+              onPress={() => router.push('/games')}
+            >
+              <View style={styles.shelfSurface}>
+                <View style={[styles.shelfItem, { backgroundColor: colors.primary }]}>
+                  <Feather name="grid" size={20} color={colors.primaryForeground} />
+                </View>
+                <View style={[styles.shelfItem, { backgroundColor: colors.accent }]}>
+                  <Feather name="grid" size={20} color={colors.accentForeground} />
+                </View>
+                <View style={[styles.shelfItem, { backgroundColor: colors.rose }]}>
+                  <Feather name="heart" size={20} color={colors.primaryForeground} />
+                </View>
+              </View>
+              <View style={[styles.shelfSupport, { backgroundColor: colors.border }]} />
+              <Text style={[styles.shelfLabel, { color: colors.mutedForeground }]}>Games</Text>
+            </Pressable>
+          </View>
         </View>
-      </View>
 
-      <NavigationDrawer
-        visible={showNavigationDrawer}
-        onClose={() => setShowNavigationDrawer(false)}
-      />
-      </ThemeBackground>
+        <NavigationDrawer
+          visible={showNavigationDrawer}
+          onClose={() => setShowNavigationDrawer(false)}
+        />
+      </RoomBackground>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
   container: { flex: 1 },
-  wall: {
+  room: {
     flex: 1,
     paddingHorizontal: 20,
   },
@@ -175,141 +201,37 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingBottom: 20,
   },
+  headerActions: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+  },
+  headerButton: {
+    padding: 8,
+  },
   title: {
     fontSize: 28,
     fontFamily: "System",
     fontWeight: '600',
   },
-  wallContent: {
+  roomContent: {
     flex: 1,
     position: 'relative',
-    height: 600,
   },
-  pictureFrame: {
+  gamesShelf: {
     position: 'absolute',
-    top: 20,
+    bottom: 40,
     left: '50%',
-    transform: [{ translateX: -100 }],
-    width: 200,
-    height: 160,
-    borderWidth: 8,
-    borderRadius: 4,
-    padding: 4,
-  },
-  frameInner: {
-    flex: 1,
-    borderRadius: 2,
-    overflow: 'hidden',
-  },
-  frameImage: {
-    width: '100%',
-    height: '100%',
-  },
-  framePlaceholder: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    padding: 8,
-  },
-  framePlaceholderText: {
-    fontSize: 12,
-    textAlign: 'center',
-    fontFamily: "System",
-  },
-  frameShadow: {
-    position: 'absolute',
-    bottom: -8,
-    left: 8,
-    right: -8,
-    height: 8,
-    borderRadius: 4,
-  },
-  lampContainer: {
-    position: 'absolute',
-    top: 40,
-    right: 20,
-    alignItems: 'center',
-  },
-  lampBase: {
-    width: 60,
-    height: 20,
-    borderRadius: 30,
-    marginBottom: 4,
-  },
-  lampStand: {
-    width: 4,
-    height: 80,
-    alignSelf: 'center',
-    borderRadius: 2,
-  },
-  lampShade: {
-    width: 50,
-    height: 50,
-    borderRadius: 25,
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginBottom: 4,
-  },
-  lampLight: {
-    fontSize: 24,
-  },
-  lampLabel: {
-    fontSize: 12,
-    marginTop: 4,
-    fontFamily: "System",
-  },
-  plantContainer: {
-    position: 'absolute',
-    bottom: 80,
-    left: 30,
-    alignItems: 'center',
-  },
-  plantPot: {
-    width: 80,
-    height: 80,
-    borderRadius: 40,
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginBottom: 4,
-  },
-  plantEmoji: {
-    fontSize: 40,
-  },
-  plantShadow: {
-    position: 'absolute',
-    bottom: -6,
-    left: 10,
-    right: 10,
-    height: 6,
-    borderRadius: 3,
-  },
-  petContainer: {
-    position: 'absolute',
-    bottom: 80,
-    right: 30,
-    alignItems: 'center',
-  },
-  petEmoji: {
-    fontSize: 50,
-    marginBottom: 4,
-  },
-  petShadow: {
-    position: 'absolute',
-    bottom: -8,
-    left: 15,
-    right: 15,
-    height: 8,
-    borderRadius: 4,
-  },
-  shelfContainer: {
-    position: 'absolute',
-    bottom: 20,
-    left: '50%',
-    transform: [{ translateX: -75 }],
-    width: 150,
+    transform: [{ translateX: -60 }],
+    width: 120,
+    padding: 12,
+    borderRadius: 12,
     borderWidth: 1,
-    borderRadius: 4,
-    padding: 8,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.15,
+    shadowRadius: 8,
+    elevation: 8,
   },
   shelfSurface: {
     flexDirection: 'row',
@@ -317,18 +239,19 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginBottom: 8,
   },
-  bookEmoji: {
-    fontSize: 24,
-  },
-  gameEmoji: {
-    fontSize: 28,
+  shelfItem: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   shelfSupport: {
     height: 4,
     borderRadius: 2,
-    marginBottom: 4,
+    marginBottom: 6,
   },
-  itemLabel: {
+  shelfLabel: {
     fontSize: 12,
     textAlign: 'center',
     fontFamily: "System",

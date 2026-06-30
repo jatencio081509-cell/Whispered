@@ -1,0 +1,76 @@
+<svg width="100" height="100" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <!-- Theme color variables - edit these in Sketch -->
+    <style>
+      .body-gradient-1 { fill: var(--pet-body-1, #FFFFFF); }
+      .body-gradient-2 { fill: var(--pet-body-2, #0284C7); }
+      .ear-color { fill: var(--pet-ear-color, #14B8A6); }
+      .eye-white { fill: #FFFFFF; }
+      .eye-pupil { fill: var(--pet-eye-color, #082F49); }
+      .nose-color { fill: var(--pet-nose-color, #082F49); }
+      .mouth-color { fill: var(--pet-mouth-color, rgba(0,0,0,0.2)); }
+      .tail-color { fill: var(--pet-tail-color, #14B8A6); }
+      .leg-color { fill: var(--pet-body-1, #FFFFFF); }
+      .shadow-color { fill: var(--shadow-color, rgba(0,0,0,0.12)); }
+      .level-dot-active { fill: var(--level-dot-active, #FFFFFF); }
+      .level-dot-inactive { fill: var(--level-dot-inactive, rgba(0,0,0,0.2)); }
+    </style>
+    
+    <!-- Body gradient -->
+    <linearGradient id="bodyGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" class="body-gradient-1"/>
+      <stop offset="100%" class="body-gradient-2"/>
+    </linearGradient>
+  </defs>
+  
+  <!-- Shadow -->
+  <ellipse cx="50" cy="92" rx="30" ry="4" class="shadow-color"/>
+  
+  <!-- Body -->
+  <rect x="20" y="40" width="60" height="40" rx="20" fill="url(#bodyGradient)" class="body-gradient-1"/>
+  
+  <!-- Head -->
+  <rect x="25" y="20" width="50" height="35" rx="17" class="body-gradient-1"/>
+  
+  <!-- Left ear -->
+  <rect x="27" y="10" width="18" height="20" rx="9" class="ear-color" transform="rotate(-20 36 20)"/>
+  
+  <!-- Right ear -->
+  <rect x="55" y="10" width="18" height="20" rx="9" class="ear-color" transform="rotate(20 64 20)"/>
+  
+  <!-- Left eye -->
+  <circle cx="38" cy="32" r="5" class="eye-white"/>
+  <circle cx="38" cy="32" r="2.5" class="eye-pupil"/>
+  
+  <!-- Right eye -->
+  <circle cx="62" cy="32" r="5" class="eye-white"/>
+  <circle cx="62" cy="32" r="2.5" class="eye-pupil"/>
+  
+  <!-- Nose -->
+  <rect x="44" y="40" width="12" height="6" rx="3" class="nose-color"/>
+  
+  <!-- Mouth -->
+  <rect x="42" y="46" width="16" height="3" rx="1.5" class="mouth-color"/>
+  
+  <!-- Tail -->
+  <rect x="72" y="48" width="16" height="6" rx="3" class="tail-color"/>
+  
+  <!-- Front left leg -->
+  <rect x="28" y="68" width="10" height="16" rx="5" class="leg-color"/>
+  
+  <!-- Front right leg -->
+  <rect x="42" y="68" width="10" height="16" rx="5" class="leg-color"/>
+  
+  <!-- Back left leg -->
+  <rect x="58" y="68" width="10" height="16" rx="5" class="leg-color"/>
+  
+  <!-- Back right leg -->
+  <rect x="72" y="68" width="10" height="16" rx="5" class="leg-color"/>
+  
+  <!-- Level indicator dots -->
+  <g transform="translate(50, 98)">
+    <circle cx="-12" cy="0" r="3" class="level-dot-active"/>
+    <circle cx="0" cy="0" r="3" class="level-dot-inactive"/>
+    <circle cx="12" cy="0" r="3" class="level-dot-inactive"/>
+  </g>
+</svg>
