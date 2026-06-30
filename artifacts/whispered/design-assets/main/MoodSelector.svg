@@ -1,0 +1,19 @@
+<svg width="280" height="90" viewBox="0 0 280 90" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <style>
+      .card { fill: var(--card, #FFFFFF); stroke: var(--border, #E2E8F0); stroke-width: 1; }
+      .label { fill: var(--muted-foreground, #64748B); font-family: Inter, sans-serif; font-size: 11px; }
+      .mood-text { fill: var(--text, #0F172A); font-family: Inter, sans-serif; font-size: 15px; font-weight: 600; }
+    </style>
+  </defs>
+
+  <!-- Your Mood Card -->
+  <rect x="10" y="10" width="120" height="70" rx="12" class="card"/>
+  <text x="70" y="30" text-anchor="middle" class="label">Your mood</text>
+  <text x="70" y="55" text-anchor="middle" class="mood-text">😊 Happy</text>
+
+  <!-- Partner Mood Card -->
+  <rect x="150" y="10" width="120" height="70" rx="12" class="card"/>
+  <text x="210" y="30" text-anchor="middle" class="label">Partner's mood</text>
+  <text x="210" y="55" text-anchor="middle" class="mood-text">😌 Calm</text>
+</svg>

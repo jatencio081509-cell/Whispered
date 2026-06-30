@@ -1,0 +1,20 @@
+<svg width="120" height="120" viewBox="0 0 120 120" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <style>
+      .progress-bg { fill: none; stroke: var(--border, #E2E8F0); stroke-width: 8; }
+      .progress { fill: none; stroke: var(--primary, #0EA5E9); stroke-width: 8; stroke-linecap="round"; }
+      .center-text { fill: var(--text, #0F172A); font-family: Inter, sans-serif; }
+    </style>
+  </defs>
+
+  <!-- Background Circle -->
+  <circle cx="60" cy="60" r="50" class="progress-bg"/>
+
+  <!-- Progress Arc (example: 65%) -->
+  <circle cx="60" cy="60" r="50" class="progress"
+          stroke-dasharray="314" stroke-dashoffset="110"/>
+
+  <!-- Center Content -->
+  <text x="60" y="55" text-anchor="middle" class="center-text" font-size="22" font-weight="700">237</text>
+  <text x="60" y="72" text-anchor="middle" class="center-text" font-size="12" fill="var(--muted-foreground, #64748B)">days</text>
+</svg>
