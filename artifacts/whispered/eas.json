@@ -22,6 +22,13 @@
         "buildType": "apk"
       }
     },
+    "appetize-ios": {
+      "developmentClient": true,
+      "distribution": "internal",
+      "ios": {
+        "simulator": true
+      }
+    },
     "production": {
       "ios": {
         "simulator": false
