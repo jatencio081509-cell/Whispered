@@ -27,7 +27,7 @@
       "distribution": "internal",
       "ios": {
         "simulator": true,
-        "postInstall": "node -e \"const fs=require('fs');const p='node_modules/react-native/scripts/cocoapods/spm.rb';if(fs.existsSync(p)){let c=fs.readFileSync(p,'utf8');c=c.replace(/package_product_dependencies/g,'// package_product_dependencies');fs.writeFileSync(p,c);console.log('SPM patch applied');}else{console.log('spm.rb not found');}\""
+        "postInstall": "echo 'Removing ClerkGoogleSignIn to fix SPM crash' && rm -rf Pods/ClerkGoogleSignIn || true && node -e \"const fs=require('fs');const p='node_modules/react-native/scripts/cocoapods/spm.rb';if(fs.existsSync(p)){let c=fs.readFileSync(p,'utf8');c=c.replace(/package_product_dependencies/g,'// package_product_dependencies');fs.writeFileSync(p,c);console.log('SPM patch applied');}\""
       }
     },
     "production": {
