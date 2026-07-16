@@ -1,5 +1,5 @@
 import React, { useRef, useEffect } from 'react';
-import { View, StyleSheet, Pressable, Image, Animated } from 'react-native';
+import { View, StyleSheet, Pressable, Image, Animated, Text } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useColors } from '@/hooks/useColors';
 import { useRouter } from 'expo-router';
@@ -20,12 +20,12 @@ export default function MemoryFrame({ memory, onPress }: MemoryFrameProps) {
       Animated.sequence([
         Animated.timing(floatAnimation, {
           toValue: 1,
-          duration: 3000,
+          duration: 4000,
           useNativeDriver: true,
         }),
         Animated.timing(floatAnimation, {
           toValue: 0,
-          duration: 3000,
+          duration: 4000,
           useNativeDriver: true,
         }),
       ])
@@ -35,12 +35,12 @@ export default function MemoryFrame({ memory, onPress }: MemoryFrameProps) {
       Animated.sequence([
         Animated.timing(glowAnimation, {
           toValue: 1,
-          duration: 2000,
+          duration: 2500,
           useNativeDriver: true,
         }),
         Animated.timing(glowAnimation, {
           toValue: 0,
-          duration: 2000,
+          duration: 2500,
           useNativeDriver: true,
         }),
       ])
@@ -60,7 +60,13 @@ export default function MemoryFrame({ memory, onPress }: MemoryFrameProps) {
       {
         translateY: floatAnimation.interpolate({
           inputRange: [0, 1],
-          outputRange: [0, -4],
+          outputRange: [0, -6],
+        }),
+      },
+      {
+        scale: floatAnimation.interpolate({
+          inputRange: [0, 1],
+          outputRange: [1, 1.02],
         }),
       },
     ],
@@ -69,20 +75,9 @@ export default function MemoryFrame({ memory, onPress }: MemoryFrameProps) {
   const glowOpacity = {
     opacity: glowAnimation.interpolate({
       inputRange: [0, 1],
-      outputRange: [0.3, 0.6],
+      outputRange: [0.2, 0.5],
     }),
   };
-
-  const getFrameColors = () => {
-    return {
-      outer: colors.card,
-      inner: colors.background,
-      accent: colors.primary,
-      shadow: 'rgba(0,0,0,0.15)',
-    };
-  };
-
-  const frameColors = getFrameColors();
 
   const handlePress = () => {
     if (onPress) {
@@ -96,17 +91,17 @@ export default function MemoryFrame({ memory, onPress }: MemoryFrameProps) {
     <Pressable onPress={handlePress} style={styles.container}>
       <Animated.View style={[floatTransform]}>
         {/* Frame shadow */}
-        <View style={[styles.frameShadow, { backgroundColor: frameColors.shadow }]} />
+        <View style={[styles.frameShadow, { backgroundColor: 'rgba(0,0,0,0.2)' }]} />
         
         {/* Outer frame */}
         <LinearGradient
-          colors={[frameColors.outer, frameColors.accent, frameColors.outer]}
+          colors={[colors.card, colors.primary, colors.card]}
           style={styles.outerFrame}
           start={{ x: 0, y: 0 }}
           end={{ x: 1, y: 1 }}
         >
           {/* Inner frame */}
-          <View style={[styles.innerFrame, { backgroundColor: frameColors.inner }]}>
+          <View style={[styles.innerFrame, { backgroundColor: colors.background }]}>
             {/* Glow effect */}
             <Animated.View style={[styles.glowEffect, glowOpacity, { backgroundColor: colors.primary }]} />
             
@@ -120,20 +115,26 @@ export default function MemoryFrame({ memory, onPress }: MemoryFrameProps) {
             ) : (
               <View style={[styles.placeholder, { backgroundColor: colors.muted }]}>
                 <View style={styles.placeholderContent}>
-                  <View style={[styles.placeholderIcon, { backgroundColor: colors.primary }]} />
-                  <View style={[styles.placeholderLines]}>
-                    <View style={[styles.placeholderLine, { backgroundColor: colors.border }]} />
-                    <View style={[styles.placeholderLine, { backgroundColor: colors.border }]} />
-                  </View>
+                  <Text style={[styles.placeholderEmoji, { color: colors.primary }]}>📸</Text>
+                  <Text style={[styles.placeholderText, { color: colors.mutedForeground }]}>No memory yet</Text>
                 </View>
               </View>
             )}
           </View>
         </LinearGradient>
 
+        {/* Caption overlay */}
+        {memory?.caption && (
+          <View style={[styles.captionOverlay, { backgroundColor: 'rgba(0,0,0,0.6)' }]}>
+            <Text style={[styles.captionText, { color: '#fff' }]} numberOfLines={2}>
+              {memory.caption}
+            </Text>
+          </View>
+        )}
+
         {/* Frame details */}
-        <View style={[styles.frameDetail, { backgroundColor: colors.border }]} />
-        <View style={[styles.frameDetail, styles.frameDetailRight, { backgroundColor: colors.border }]} />
+        <View style={[styles.frameDetail, { backgroundColor: colors.primary }]} />
+        <View style={[styles.frameDetail, styles.frameDetailRight, { backgroundColor: colors.primary }]} />
       </Animated.View>
     </Pressable>
   );
@@ -151,26 +152,26 @@ const styles = StyleSheet.create({
   },
   frameShadow: {
     position: 'absolute',
-    bottom: -12,
-    left: 12,
-    right: -12,
-    height: 12,
-    borderRadius: 8,
+    bottom: -16,
+    left: 16,
+    right: -16,
+    height: 16,
+    borderRadius: 12,
   },
   outerFrame: {
     width: '100%',
     height: '100%',
-    borderRadius: 12,
-    padding: 8,
+    borderRadius: 16,
+    padding: 10,
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.2,
-    shadowRadius: 8,
-    elevation: 8,
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.25,
+    shadowRadius: 12,
+    elevation: 12,
   },
   innerFrame: {
     flex: 1,
-    borderRadius: 6,
+    borderRadius: 10,
     overflow: 'hidden',
     position: 'relative',
   },
@@ -180,7 +181,7 @@ const styles = StyleSheet.create({
     left: 0,
     right: 0,
     bottom: 0,
-    opacity: 0.2,
+    opacity: 0.15,
   },
   memoryImage: {
     width: '100%',
@@ -194,35 +195,40 @@ const styles = StyleSheet.create({
   },
   placeholderContent: {
     alignItems: 'center',
-    gap: 12,
-  },
-  placeholderIcon: {
-    width: 48,
-    height: 48,
-    borderRadius: 24,
-    opacity: 0.3,
-  },
-  placeholderLines: {
     gap: 8,
-    alignItems: 'center',
   },
-  placeholderLine: {
-    width: 80,
-    height: 8,
-    borderRadius: 4,
-    opacity: 0.5,
+  placeholderEmoji: {
+    fontSize: 32,
+  },
+  placeholderText: {
+    fontSize: 12,
+    fontFamily: 'System',
+  },
+  captionOverlay: {
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
+    padding: 8,
+    borderBottomLeftRadius: 10,
+    borderBottomRightRadius: 10,
+  },
+  captionText: {
+    fontSize: 11,
+    fontFamily: 'System',
+    fontWeight: '500',
   },
   frameDetail: {
     position: 'absolute',
-    top: 12,
-    left: 12,
-    width: 8,
-    height: 8,
-    borderRadius: 4,
-    opacity: 0.4,
+    top: 14,
+    left: 14,
+    width: 10,
+    height: 10,
+    borderRadius: 5,
+    opacity: 0.6,
   },
   frameDetailRight: {
     left: 'auto',
-    right: 12,
+    right: 14,
   },
 });

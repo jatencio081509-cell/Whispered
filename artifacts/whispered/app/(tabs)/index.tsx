@@ -13,6 +13,10 @@ import { Animated, Easing, View, Text, Pressable, StyleSheet, ScrollView, Modal,
 import Svg, { Circle } from 'react-native-svg';
 import NavigationDrawer from '@/components/NavigationDrawer';
 import ThemeBackground from '@/components/ThemeBackground';
+import Button from '@/components/ui/Button';
+import Card from '@/components/ui/Card';
+import Input from '@/components/ui/Input';
+import Badge from '@/components/ui/Badge';
 
 const MOODS = [
   { emoji: '😊', label: 'Happy' },
@@ -805,7 +809,7 @@ export default function HomeScreen() {
 
           {/* Streak Section */}
           {isLinked && (
-            <View style={[styles.streakCard, { backgroundColor: colors.card, borderColor: colors.border }]}>
+            <Card variant="elevated" style={styles.streakCard}>
               <View style={styles.streakContent}>
                 <View style={styles.streakIcon}>
                   <Text style={styles.streakEmoji}>🔥</Text>
@@ -819,12 +823,12 @@ export default function HomeScreen() {
                   </Text>
                 </View>
               </View>
-            </View>
+            </Card>
           )}
 
           {/* Distance Section */}
           {isLinked && (
-            <View style={[styles.distanceCard, { backgroundColor: colors.card, borderColor: colors.border }]}>
+            <Card style={styles.distanceCard}>
               {/* Visual Distance Display */}
               <View style={styles.visualDistanceContainer}>
                 <Text style={[styles.visualDistanceNumber, { color: colors.text }]}>
@@ -849,14 +853,14 @@ export default function HomeScreen() {
                 </Text>
               </View>
 
-            </View>
+            </Card>
           )}
 
           {/* Individual Location Cards */}
           {isLinked && (
             <View style={styles.locationCardsContainer}>
               {/* My Location Card */}
-              <View style={[styles.locationCard, { backgroundColor: colors.card, borderColor: colors.border }]}>
+              <Card style={styles.locationCard}>
                 <Text style={[styles.locationCardTitle, { color: colors.text }]}>Your location</Text>
                 {myLocation ? (
                   <Text style={[styles.locationCardValue, { color: colors.mutedForeground }]}>
@@ -869,10 +873,10 @@ export default function HomeScreen() {
                     </Text>
                   </Pressable>
                 )}
-              </View>
+              </Card>
 
               {/* Partner Location Card */}
-              <View style={[styles.locationCard, { backgroundColor: colors.card, borderColor: colors.border }]}>
+              <Card style={styles.locationCard}>
                 <Text style={[styles.locationCardTitle, { color: colors.text }]}>
                   {partnerName ? `${partnerName}'s location` : "Partner's location"}
                 </Text>
@@ -892,7 +896,7 @@ export default function HomeScreen() {
                     </Text>
                   </Pressable>
                 )}
-              </View>
+              </Card>
             </View>
           )}
 

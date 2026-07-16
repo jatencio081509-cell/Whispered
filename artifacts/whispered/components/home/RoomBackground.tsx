@@ -19,12 +19,12 @@ export default function RoomBackground({ children }: RoomBackgroundProps) {
       Animated.sequence([
         Animated.timing(ambientGlow, {
           toValue: 1,
-          duration: 4000,
+          duration: 5000,
           useNativeDriver: true,
         }),
         Animated.timing(ambientGlow, {
           toValue: 0,
-          duration: 4000,
+          duration: 5000,
           useNativeDriver: true,
         }),
       ])
@@ -34,12 +34,12 @@ export default function RoomBackground({ children }: RoomBackgroundProps) {
       Animated.sequence([
         Animated.timing(wallTexture, {
           toValue: 1,
-          duration: 6000,
+          duration: 7000,
           useNativeDriver: true,
         }),
         Animated.timing(wallTexture, {
           toValue: 0,
-          duration: 6000,
+          duration: 7000,
           useNativeDriver: true,
         }),
       ])
@@ -57,14 +57,14 @@ export default function RoomBackground({ children }: RoomBackgroundProps) {
   const ambientPulse = {
     opacity: ambientGlow.interpolate({
       inputRange: [0, 1],
-      outputRange: [0.3, 0.5],
+      outputRange: [0.25, 0.45],
     }),
   };
 
   const textureShift = {
     opacity: wallTexture.interpolate({
       inputRange: [0, 1],
-      outputRange: [0.1, 0.2],
+      outputRange: [0.08, 0.15],
     }),
   };
 
@@ -105,17 +105,17 @@ export default function RoomBackground({ children }: RoomBackgroundProps) {
   const getAmbientColor = () => {
     switch (theme) {
       case 'ocean':
-        return 'rgba(2, 132, 199, 0.15)';
+        return 'rgba(2, 132, 199, 0.12)';
       case 'romance':
-        return 'rgba(190, 24, 93, 0.12)';
+        return 'rgba(190, 24, 93, 0.1)';
       case 'futuristic':
-        return 'rgba(0, 229, 255, 0.1)';
+        return 'rgba(0, 229, 255, 0.08)';
       case 'simplistic':
-        return 'rgba(64, 64, 64, 0.08)';
+        return 'rgba(64, 64, 64, 0.06)';
       case 'nature':
-        return 'rgba(63, 125, 32, 0.1)';
+        return 'rgba(63, 125, 32, 0.08)';
       default:
-        return 'rgba(128, 128, 128, 0.1)';
+        return 'rgba(128, 128, 128, 0.08)';
     }
   };
 
@@ -123,7 +123,7 @@ export default function RoomBackground({ children }: RoomBackgroundProps) {
     <View style={styles.container}>
       {/* Wall */}
       <LinearGradient
-        colors={getWallGradient()}
+        colors={getWallGradient() as any}
         style={styles.wall}
       />
       
@@ -135,12 +135,12 @@ export default function RoomBackground({ children }: RoomBackgroundProps) {
       
       {/* Floor */}
       <LinearGradient
-        colors={getFloorGradient()}
+        colors={getFloorGradient() as any}
         style={styles.floor}
       />
       
       {/* Floor shadow */}
-      <View style={[styles.floorShadow, { backgroundColor: 'rgba(0,0,0,0.08)' }]} />
+      <View style={[styles.floorShadow, { backgroundColor: 'rgba(0,0,0,0.06)' }]} />
       
       {/* Room content */}
       <View style={styles.content}>
@@ -160,14 +160,14 @@ const styles = StyleSheet.create({
     top: 0,
     left: 0,
     right: 0,
-    height: '75%',
+    height: '70%',
   },
   ambientLight: {
     position: 'absolute',
     top: 0,
     left: 0,
     right: 0,
-    height: '75%',
+    height: '70%',
     pointerEvents: 'none',
   },
   wallTexture: {
@@ -175,8 +175,8 @@ const styles = StyleSheet.create({
     top: 0,
     left: 0,
     right: 0,
-    height: '75%',
-    backgroundColor: 'rgba(0,0,0,0.02)',
+    height: '70%',
+    backgroundColor: 'rgba(0,0,0,0.015)',
     pointerEvents: 'none',
   },
   floor: {
@@ -184,14 +184,14 @@ const styles = StyleSheet.create({
     bottom: 0,
     left: 0,
     right: 0,
-    height: '25%',
+    height: '30%',
   },
   floorShadow: {
     position: 'absolute',
-    bottom: '25%',
+    bottom: '30%',
     left: 0,
     right: 0,
-    height: 20,
+    height: 24,
     pointerEvents: 'none',
   },
   content: {

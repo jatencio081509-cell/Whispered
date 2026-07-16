@@ -23,6 +23,10 @@ import ThemeBackground from '@/components/ThemeBackground';
 import * as ImagePicker from 'expo-image-picker';
 import * as FileSystem from 'expo-file-system/legacy';
 import { supabase } from '@/lib/supabase';
+import Button from '@/components/ui/Button';
+import Card from '@/components/ui/Card';
+import Input from '@/components/ui/Input';
+import Badge from '@/components/ui/Badge';
 
 export default function MemoriesScreen() {
   const { user, isLoaded } = useUser();
@@ -458,18 +462,18 @@ export default function MemoriesScreen() {
           <Text style={[styles.emptyText, { color: colors.mutedForeground }]}>
             No memories yet.
           </Text>
-          <Pressable onPress={openAddModal} style={styles.addFirstButton}>
-            <Text style={{ color: '#fff', fontWeight: '600' }}>
-              Add your first memory
-            </Text>
-          </Pressable>
+          <Button 
+            title="Add your first memory" 
+            onPress={openAddModal}
+            style={{ marginTop: 16 }}
+          />
         </View>
       ) : (
         <FlatList
           data={memories}
           keyExtractor={(item) => item.id}
           renderItem={({ item }) => (
-            <View style={styles.memoryCard}>
+            <Card style={styles.memoryCard}>
               {item.image_url && imageData[item.id] ? (
                 <Image
                   source={{ uri: imageData[item.id] }}
@@ -483,21 +487,26 @@ export default function MemoriesScreen() {
               ) : null}
               {editingMemory === item.id ? (
                 <View style={styles.editContainer}>
-                  <TextInput
-                    style={[styles.editInput, { color: colors.foreground, backgroundColor: colors.card }]}
+                  <Input
                     value={editCaption}
                     onChangeText={setEditCaption}
                     placeholder="Edit caption..."
-                    placeholderTextColor={colors.mutedForeground}
                     multiline
+                    numberOfLines={3}
                   />
                   <View style={styles.editButtons}>
-                    <Pressable onPress={() => setEditingMemory(null)} style={styles.editButton}>
-                      <Text style={{ color: colors.mutedForeground }}>Cancel</Text>
-                    </Pressable>
-                    <Pressable onPress={updateCaption} style={styles.editButton}>
-                      <Text style={{ color: colors.primary }}>Save</Text>
-                    </Pressable>
+                    <Button
+                      title="Cancel"
+                      onPress={() => setEditingMemory(null)}
+                      variant="secondary"
+                      size="small"
+                    />
+                    <Button
+                      title="Save"
+                      onPress={updateCaption}
+                      variant="primary"
+                      size="small"
+                    />
                   </View>
                 </View>
               ) : (
@@ -522,14 +531,11 @@ export default function MemoriesScreen() {
                       : (reaction.user_id === user?.id ? 'You' : reaction.user_id);
                     
                     return (
-                      <Pressable
+                      <Badge
                         key={index}
-                        onPress={() => removeReaction(item.id, reaction.emoji)}
-                        style={styles.reactionBubble}
-                      >
-                        <Text style={styles.reactionEmoji}>{reaction.emoji}</Text>
-                        <Text style={styles.reactionUser}>{userName}</Text>
-                      </Pressable>
+                        text={`${reaction.emoji} ${userName}`}
+                        variant="default"
+                      />
                     );
                   })}
                 </View>
@@ -583,7 +589,7 @@ export default function MemoriesScreen() {
                   })}
                 </View>
               )}
-            </View>
+            </Card>
           )}
           contentContainerStyle={{ padding: 16, paddingBottom: 120 }}
         />
@@ -622,13 +628,12 @@ export default function MemoriesScreen() {
               )}
             </Pressable>
 
-            <TextInput
+            <Input
               value={newMemoryText}
               onChangeText={setNewMemoryText}
               placeholder="Write a caption..."
-              placeholderTextColor={colors.mutedForeground}
-              style={styles.memoryInput}
               multiline
+              numberOfLines={3}
             />
 
             {adding && (
@@ -651,29 +656,24 @@ export default function MemoriesScreen() {
             )}
 
             <View style={styles.modalButtons}>
-              <Pressable
+              <Button
+                title="Cancel"
                 onPress={() => {
                   setShowAddModal(false);
                   setNewMemoryText('');
                   setSelectedImage(null);
                 }}
-                style={styles.cancelButton}
                 disabled={adding}
-              >
-                <Text style={{ color: colors.foreground }}>Cancel</Text>
-              </Pressable>
-
-              <Pressable
+                variant="secondary"
+                style={{ flex: 1 }}
+              />
+              <Button
+                title="Save Memory"
                 onPress={addMemory}
                 disabled={(!newMemoryText.trim() && !selectedImage) || adding}
-                style={[styles.saveButton, ((!newMemoryText.trim() && !selectedImage) || adding) && styles.saveButtonDisabled]}
-              >
-                {adding ? (
-                  <ActivityIndicator color="#fff" size="small" />
-                ) : (
-                  <Text style={{ color: '#fff', fontWeight: '600' }}>Save Memory</Text>
-                )}
-              </Pressable>
+                loading={adding}
+                style={{ flex: 1 }}
+              />
             </View>
           </View>
         </KeyboardAvoidingView>

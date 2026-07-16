@@ -20,6 +20,9 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import NavigationDrawer from '@/components/NavigationDrawer';
 import ThemeBackground from '@/components/ThemeBackground';
 import { supabase } from '@/lib/supabase';
+import Button from '@/components/ui/Button';
+import Card from '@/components/ui/Card';
+import Input from '@/components/ui/Input';
 
 type Message = {
   id: string;
@@ -260,9 +263,11 @@ export default function ChatScreen() {
           <Text style={[styles.subtitle, { color: colors.mutedForeground, textAlign: 'center', marginTop: 8 }]}>
             Link with your partner to start chatting
           </Text>
-          <Pressable onPress={() => router.push('/(auth)/link-partner')} style={[styles.button, { backgroundColor: colors.primary, marginTop: 24 }]}>
-            <Text style={[styles.buttonText, { color: colors.primaryForeground }]}>Link Partner</Text>
-          </Pressable>
+          <Button 
+            title="Link Partner" 
+            onPress={() => router.push('/(auth)/link-partner')} 
+            style={{ marginTop: 24 }}
+          />
         </View>
       </View>
     );
@@ -322,13 +327,15 @@ export default function ChatScreen() {
             returnKeyType="send"
             multiline={false}
           />
-          <Pressable
+          <Button
+            title="Send"
             onPress={sendMessage}
-            style={[styles.sendButton, !input.trim() && styles.sendButtonDisabled]}
             disabled={!input.trim()}
-          >
-            <Feather name="send" size={18} color={input.trim() ? colors.primary : colors.mutedForeground} />
-          </Pressable>
+            variant="primary"
+            size="small"
+            icon={<Feather name="send" size={18} />}
+            style={styles.sendButton}
+          />
         </View>
       </View>
 
@@ -364,8 +371,7 @@ const styles = StyleSheet.create({
   inputBar: { paddingHorizontal: 12, paddingTop: 10, backgroundColor: 'rgba(0, 0, 0, 0.8)', borderTopWidth: 1, borderTopColor: 'rgba(0, 229, 255, 0.2)' },
   inputContainer: { flexDirection: 'row', alignItems: 'center', backgroundColor: 'rgba(0, 0, 0, 0.6)', borderRadius: 4, paddingHorizontal: 4, paddingVertical: 4, borderWidth: 1, borderColor: 'rgba(0, 229, 255, 0.2)' },
   input: { flex: 1, color: '#FFFFFF', fontSize: 16, paddingHorizontal: 16, paddingVertical: 10, maxHeight: 100, fontFamily: 'System' },
-  sendButton: { width: 36, height: 36, borderRadius: 4, backgroundColor: '#00E5FF', justifyContent: 'center', alignItems: 'center', marginLeft: 6 },
-  sendButtonDisabled: { backgroundColor: 'rgba(0, 0, 0, 0.6)' },
+  sendButton: { width: 36, height: 36, marginLeft: 6 },
   jumpToBottomButton: {
     position: 'absolute',
     bottom: 80,
@@ -381,6 +387,4 @@ const styles = StyleSheet.create({
   },
   title: { fontSize: 20, fontWeight: '600', fontFamily: 'System' },
   subtitle: { fontSize: 16, fontFamily: 'System' },
-  button: { paddingVertical: 14, paddingHorizontal: 32, borderRadius: 4, borderWidth: 1, borderColor: '#00E5FF' },
-  buttonText: { fontSize: 16, fontWeight: '600', fontFamily: 'System' },
 });

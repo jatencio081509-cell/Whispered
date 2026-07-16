@@ -19,6 +19,10 @@ import * as Haptics from "expo-haptics";
 import { useUser } from "@clerk/expo";
 import { supabase } from "@/lib/supabase";
 import NavigationDrawer from '@/components/NavigationDrawer';
+import Button from '@/components/ui/Button';
+import Card from '@/components/ui/Card';
+import Input from '@/components/ui/Input';
+import Badge from '@/components/ui/Badge';
 
 interface Goal {
   id: string;
@@ -243,10 +247,13 @@ export default function GoalsScreen() {
           </View>
           <Text style={[styles.emptyTitle, { color: colors.text }]}>No goals yet</Text>
           <Text style={[styles.emptySubtitle, { color: colors.mutedForeground }]}>Set shared goals with your partner</Text>
-          <Pressable style={[styles.emptyBtn, { borderColor: colors.primary, borderWidth: 1 }]} onPress={() => setShowModal(true)}>
-            <Feather name="plus" size={16} color={colors.primary} />
-            <Text style={[styles.emptyBtnText, { color: colors.primary }]}>Add goal</Text>
-          </Pressable>
+          <Button 
+            title="Add goal" 
+            onPress={() => setShowModal(true)}
+            variant="outline"
+            size="medium"
+            icon={<Feather name="plus" size={16} color={colors.primary} />}
+          />
         </View>
       ) : (
         <FlatList
@@ -254,8 +261,8 @@ export default function GoalsScreen() {
           keyExtractor={(g) => g.id}
           contentContainerStyle={[styles.list, { paddingBottom: insets.bottom + 100 }]}
           renderItem={({ item: goal }) => (
-            <Pressable
-              style={[styles.goalCard, { backgroundColor: colors.card, borderColor: colors.border }]}
+            <Card
+              style={styles.goalCard}
               onLongPress={() => deleteGoal(goal.id)}
             >
               <View style={styles.goalHeader}>
@@ -274,9 +281,7 @@ export default function GoalsScreen() {
                   }]}>{goal.title}</Text>
                 </View>
                 {goal.user_id === user?.id && (
-                  <View style={[styles.youBadge, { backgroundColor: `${colors.primary}20` }]}>
-                    <Text style={[styles.youText, { color: colors.primary }]}>You</Text>
-                  </View>
+                  <Badge text="You" variant="primary" />
                 )}
               </View>
               
@@ -284,15 +289,13 @@ export default function GoalsScreen() {
               
               <View style={styles.goalFooter}>
                 {goal.category && (
-                  <View style={[styles.categoryBadge, { backgroundColor: `${colors.primary}15` }]}>
-                    <Text style={[styles.categoryText, { color: colors.primary }]}>{goal.category}</Text>
-                  </View>
+                  <Badge text={goal.category} variant="default" />
                 )}
                 <Text style={[styles.targetDate, { color: colors.mutedForeground }]}>
                   <Feather name="calendar" size={12} color={colors.mutedForeground} /> {formatDate(goal.target_date)}
                 </Text>
               </View>
-            </Pressable>
+            </Card>
           )}
         />
       )}
@@ -307,22 +310,19 @@ export default function GoalsScreen() {
             <View style={[styles.modalHandle, { backgroundColor: colors.border }]} />
             <Text style={[styles.modalTitle, { color: colors.text }]}>New goal</Text>
             
-            <TextInput
-              style={[styles.titleInput, { backgroundColor: colors.input, borderColor: colors.border, color: colors.text }]}
+            <Input
               value={title}
               onChangeText={setTitle}
               placeholder="Goal title"
-              placeholderTextColor={colors.mutedForeground}
+              icon="target"
             />
             
-            <TextInput
-              style={[styles.descriptionInput, { backgroundColor: colors.input, borderColor: colors.border, color: colors.text }]}
+            <Input
               value={description}
               onChangeText={setDescription}
               placeholder="Description (optional)"
-              placeholderTextColor={colors.mutedForeground}
               multiline
-              textAlignVertical="top"
+              numberOfLines={3}
             />
 
             <Text style={[styles.label, { color: colors.mutedForeground }]}>Category</Text>
@@ -339,28 +339,26 @@ export default function GoalsScreen() {
             </View>
 
             <Text style={[styles.label, { color: colors.mutedForeground }]}>Target date (optional)</Text>
-            <TextInput
-              style={[styles.dateInput, { backgroundColor: colors.input, borderColor: colors.border, color: colors.text }]}
+            <Input
               value={targetDate}
               onChangeText={setTargetDate}
               placeholder="YYYY-MM-DD"
-              placeholderTextColor={colors.mutedForeground}
+              icon="calendar"
             />
 
             <View style={styles.modalButtons}>
-              <Pressable
-                style={[styles.modalCancelBtn, { borderColor: colors.border }]}
+              <Button
+                title="Cancel"
                 onPress={() => { setShowModal(false); setTitle(""); setDescription(""); setCategory(""); setTargetDate(""); }}
-              >
-                <Text style={[styles.modalCancelText, { color: colors.mutedForeground }]}>Cancel</Text>
-              </Pressable>
-              <Pressable style={[styles.modalSaveBtn, { backgroundColor: colors.primary }]} onPress={addGoal} disabled={isSaving}>
-                {isSaving ? (
-                  <ActivityIndicator color={colors.primaryForeground} size="small" />
-                ) : (
-                  <Text style={[styles.modalSaveText, { color: colors.primaryForeground }]}>Save goal</Text>
-                )}
-              </Pressable>
+                variant="secondary"
+                style={{ flex: 1 }}
+              />
+              <Button
+                title="Save goal"
+                onPress={addGoal}
+                loading={isSaving}
+                style={{ flex: 1 }}
+              />
             </View>
           </View>
         </KeyboardAvoidingView>
@@ -410,35 +408,22 @@ const styles = StyleSheet.create({
   emptyIcon: { width: 72, height: 72, borderRadius: 4, alignItems: "center", justifyContent: "center", borderWidth: 1, borderColor: 'rgba(0, 229, 255, 0.2)', backgroundColor: 'rgba(0, 0, 0, 0.6)' },
   emptyTitle: { fontSize: 16, fontFamily: "System", fontWeight: '600' },
   emptySubtitle: { fontSize: 14, fontFamily: "System", textAlign: "center" },
-  emptyBtn: { flexDirection: "row", alignItems: "center", gap: 8, paddingHorizontal: 20, paddingVertical: 12, borderRadius: 4, marginTop: 8, borderWidth: 1, borderColor: 'rgba(0, 229, 255, 0.2)' },
-  emptyBtnText: { fontSize: 14, fontFamily: "System", fontWeight: '500' },
   list: { padding: 16, gap: 12 },
-  goalCard: { borderRadius: 4, borderWidth: 1, padding: 16, gap: 12, borderColor: 'rgba(0, 229, 255, 0.2)', backgroundColor: 'rgba(0, 0, 0, 0.6)' },
+  goalCard: { gap: 12 },
   goalHeader: { flexDirection: "row", justifyContent: "space-between", alignItems: "flex-start" },
   goalMeta: { flexDirection: "row", alignItems: "center", gap: 12, flex: 1 },
   goalTitle: { fontSize: 16, fontFamily: "System", fontWeight: '600', flex: 1 },
   goalDescription: { fontSize: 14, fontFamily: "System", lineHeight: 20 },
-  goalFooter: { flexDirection: "row", justifyContent: "space-between", alignItems: "center" },
-  categoryBadge: { paddingHorizontal: 8, paddingVertical: 4, borderRadius: 4 },
-  categoryText: { fontSize: 10, fontFamily: "System", fontWeight: '600' },
+  goalFooter: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", gap: 8 },
   targetDate: { fontSize: 12, fontFamily: "System" },
-  youBadge: { paddingHorizontal: 8, paddingVertical: 4, borderRadius: 4 },
-  youText: { fontSize: 10, fontFamily: "System", fontWeight: '600' },
   modalOverlay: { flex: 1, backgroundColor: "rgba(0,0,0,0.8)", justifyContent: "flex-end" },
   modalSheet: { borderTopLeftRadius: 4, borderTopRightRadius: 4, borderWidth: 1, padding: 24, gap: 16, borderColor: 'rgba(0, 229, 255, 0.2)', backgroundColor: 'rgba(0, 0, 0, 0.8)' },
   modalHandle: { width: 36, height: 4, borderRadius: 2, alignSelf: "center", marginBottom: 4, backgroundColor: 'rgba(0, 229, 255, 0.2)' },
   modalTitle: { fontSize: 16, fontFamily: "System", fontWeight: '600' },
-  titleInput: { height: 48, borderRadius: 4, borderWidth: 1, padding: 14, fontSize: 16, fontFamily: "System", backgroundColor: 'rgba(0, 0, 0, 0.6)', borderColor: 'rgba(0, 229, 255, 0.2)' },
-  descriptionInput: { minHeight: 80, borderRadius: 4, borderWidth: 1, padding: 14, fontSize: 14, fontFamily: "System", backgroundColor: 'rgba(0, 0, 0, 0.6)', borderColor: 'rgba(0, 229, 255, 0.2)' },
   label: { fontSize: 12, fontFamily: "System", fontWeight: '500', marginBottom: 8 },
   categorySelector: { flexDirection: "row", gap: 8, flexWrap: "wrap" },
   categoryOption: { paddingHorizontal: 12, paddingVertical: 8, borderRadius: 4, borderWidth: 1, borderColor: 'rgba(0, 229, 255, 0.2)' },
   categoryOptionSelected: { borderWidth: 2, borderColor: '#00E5FF' },
   categoryOptionText: { fontSize: 12, fontFamily: "System", fontWeight: '500' },
-  dateInput: { height: 48, borderRadius: 4, borderWidth: 1, padding: 14, fontSize: 14, fontFamily: "System", backgroundColor: 'rgba(0, 0, 0, 0.6)', borderColor: 'rgba(0, 229, 255, 0.2)' },
   modalButtons: { flexDirection: "row", gap: 12 },
-  modalCancelBtn: { flex: 1, height: 48, borderRadius: 4, alignItems: "center", justifyContent: "center", borderWidth: 1, backgroundColor: 'rgba(0, 0, 0, 0.6)', borderColor: 'rgba(0, 229, 255, 0.2)' },
-  modalCancelText: { fontSize: 14, fontFamily: "System", fontWeight: '500' },
-  modalSaveBtn: { flex: 1, height: 48, borderRadius: 4, alignItems: "center", justifyContent: "center", backgroundColor: '#00E5FF', borderWidth: 1, borderColor: '#00E5FF' },
-  modalSaveText: { fontSize: 14, fontFamily: "System", fontWeight: '600', color: "#030712" },
 });

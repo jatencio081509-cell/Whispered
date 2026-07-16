@@ -16,6 +16,9 @@ import * as Haptics from "expo-haptics";
 import NavigationDrawer from '@/components/NavigationDrawer';
 import ThemeBackground from '@/components/ThemeBackground';
 import { useUser } from '@clerk/expo';
+import Button from '@/components/ui/Button';
+import Card from '@/components/ui/Card';
+import Badge from '@/components/ui/Badge';
 
 const FEATURES = [
   { id: "goals",    label: "Goals",         description: "Track shared dreams",   icon: "target",        color: "#00E5FF", route: "/goals"    },
@@ -50,21 +53,20 @@ export default function MoreScreen() {
         </View>
 
         {/* Stats banner */}
-        <View style={[styles.statsBanner, { backgroundColor: colors.card, borderColor: colors.border }]}>
-          {[
-            { icon: "🔥", value: String(streak), label: "day streak" },
-            { icon: "💙", value: isLinked ? "Linked" : "Solo", label: "status" },
-          ].map((s, i) => (
-            <React.Fragment key={s.label}>
-              {i > 0 && <View style={[styles.statDivider, { backgroundColor: colors.border }]} />}
-              <View style={styles.statItem}>
-                <Text style={{ fontSize: 18 }}>{s.icon}</Text>
-                <Text style={[styles.statNumber, { color: colors.text }]}>{s.value}</Text>
-                <Text style={[styles.statLabel, { color: colors.mutedForeground }]}>{s.label}</Text>
-              </View>
-            </React.Fragment>
-          ))}
-        </View>
+        <Card variant="elevated" style={styles.statsBanner}>
+          <View style={styles.statsRow}>
+            <View style={styles.statItem}>
+              <Text style={styles.statIcon}>🔥</Text>
+              <Text style={[styles.statNumber, { color: colors.text }]}>{streak}</Text>
+              <Text style={[styles.statLabel, { color: colors.mutedForeground }]}>day streak</Text>
+            </View>
+            <View style={[styles.statDivider, { backgroundColor: colors.border }]} />
+            <View style={styles.statItem}>
+              <Text style={styles.statIcon}>💙</Text>
+              <Badge text={isLinked ? "Linked" : "Solo"} variant={isLinked ? "success" : "default"} />
+            </View>
+          </View>
+        </Card>
 
         {/* Feature list */}
         <View style={styles.grid}>
@@ -72,18 +74,17 @@ export default function MoreScreen() {
             (() => {
               const featureColor = f.color === "theme" ? colors.primary : f.color;
               return (
-            <Pressable
+            <Card
               key={f.id}
-              style={({ pressed }) => [styles.featureCard, { backgroundColor: colors.card, borderColor: colors.border, opacity: pressed ? 0.8 : 1 }]}
               onPress={() => {
                 console.log('Navigating to:', f.route);
-                Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
                 try {
                   router.push(f.route as any);
                 } catch (error) {
                   console.error('Navigation error:', error);
                 }
               }}
+              style={styles.featureCard}
             >
               <View style={[styles.featureIcon, { backgroundColor: `${featureColor}14`, borderColor: `${featureColor}28`, borderWidth: 1 }]}>
                 <Feather name={f.icon as any} size={22} color={featureColor} />
@@ -93,7 +94,7 @@ export default function MoreScreen() {
                 <Text style={[styles.featureDesc, { color: colors.mutedForeground }]}>{f.description}</Text>
               </View>
               <Feather name="chevron-right" size={16} color={colors.mutedForeground} />
-            </Pressable>
+            </Card>
               );
             })()
           ))}
@@ -114,13 +115,15 @@ const styles = StyleSheet.create({
   inner: { paddingHorizontal: 20, gap: 20 },
   headerRow: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 4 },
   title: { fontSize: 24, fontFamily: "System", fontWeight: '600' },
-  statsBanner: { flexDirection: "row", borderRadius: 4, borderWidth: 1, padding: 16, alignItems: "center", borderColor: 'rgba(0, 229, 255, 0.2)', backgroundColor: 'rgba(0, 0, 0, 0.6)' },
+  statsBanner: { padding: 16 },
+  statsRow: { flexDirection: "row", alignItems: "center" },
   statItem: { flex: 1, alignItems: "center", gap: 4 },
+  statIcon: { fontSize: 18 },
   statNumber: { fontSize: 14, fontFamily: "System", fontWeight: '600' },
   statLabel: { fontSize: 10, fontFamily: "System" },
-  statDivider: { width: 1, height: 32, marginHorizontal: 8, backgroundColor: 'rgba(0, 229, 255, 0.2)' },
+  statDivider: { width: 1, height: 32, marginHorizontal: 8 },
   grid: { gap: 10 },
-  featureCard: { flexDirection: "row", alignItems: "center", gap: 14, padding: 16, borderRadius: 4, borderWidth: 1, borderColor: 'rgba(0, 229, 255, 0.2)' },
+  featureCard: { flexDirection: "row", alignItems: "center", gap: 14, padding: 16 },
   featureIcon: { width: 48, height: 48, borderRadius: 4, alignItems: "center", justifyContent: "center" },
   featureText: { flex: 1 },
   featureLabel: { fontSize: 15, fontFamily: "System", fontWeight: '600' },
